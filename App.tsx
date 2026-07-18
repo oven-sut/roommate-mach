@@ -33,8 +33,12 @@ const API_URL = (
   (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000')
 ).replace(/\/$/, '');
 
+const GOOGLE_WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ??
+  '321662329412-3ushmghqqa4letiaj3aumnqb55i6tdb6.apps.googleusercontent.com';
+
 const GOOGLE_CLIENT_ID = Platform.select({
-  web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  web: GOOGLE_WEB_CLIENT_ID,
   android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
 });
@@ -190,7 +194,8 @@ function AuthScreen({
 
   const loginWithGoogle = async () => {
     if (!GOOGLE_CLIENT_ID) {
-      setMessage({ type: 'error', text: 'ยังไม่ได้ตั้งค่า Google Client ID สำหรับอุปกรณ์นี้' });
+      const platformName = Platform.OS === 'android' ? 'Android' : 'iOS';
+      setMessage({ type: 'error', text: `ยังไม่ได้ตั้งค่า Google Client ID สำหรับ ${platformName}` });
       return;
     }
     await promptGoogleAsync();
