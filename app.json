@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "temp-app",
-    "slug": "temp-app",
+    "name": "Roommate Mach",
+    "slug": "roommate-mach",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
