@@ -1,4 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import {
   NotoSansThai_400Regular,
   NotoSansThai_600SemiBold,
@@ -20,6 +22,8 @@ import {
   View,
 } from 'react-native';
 
+WebBrowser.maybeCompleteAuthSession();
+
 type Screen = 'loading' | 'login' | 'register' | 'terms' | 'privacy';
 type AuthMode = 'login' | 'register';
 type LegalScreen = Extract<Screen, 'terms' | 'privacy'>;
@@ -28,6 +32,12 @@ const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
   (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000')
 ).replace(/\/$/, '');
+
+const GOOGLE_CLIENT_ID = Platform.select({
+  web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
 
 function getThaiApiMessage(status: number, message: unknown) {
   if (status === 409) return 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว';
@@ -130,10 +140,61 @@ function AuthScreen({
   const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_CLIENT_ID || 'google-sign-in-not-configured',
+    selectAccount: true,
+  });
 
   useEffect(() => {
     setMessage(null);
   }, [mode]);
+
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') return;
+
+    const idToken = googleResponse.params.id_token;
+    if (!idToken) {
+      setMessage({ type: 'error', text: 'Google ไม่ได้ส่งข้อมูลยืนยันตัวตนกลับมา' });
+      return;
+    }
+
+    const finishGoogleLogin = async () => {
+      setIsSubmitting(true);
+      setMessage(null);
+      try {
+        const response = await fetch(`${API_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const thaiMessage = response.status === 401
+            ? 'กรุณาใช้บัญชีนักศึกษา @g.sut.ac.th ที่ได้รับการยืนยันแล้ว'
+            : getThaiApiMessage(response.status, data.message);
+          throw new Error(thaiMessage);
+        }
+        setMessage({ type: 'success', text: `เข้าสู่ระบบด้วย Google สำเร็จ ยินดีต้อนรับ ${data.user.displayName}` });
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text: error instanceof Error ? error.message : 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    void finishGoogleLogin();
+  }, [googleResponse]);
+
+  const loginWithGoogle = async () => {
+    if (!GOOGLE_CLIENT_ID) {
+      setMessage({ type: 'error', text: 'ยังไม่ได้ตั้งค่า Google Client ID สำหรับอุปกรณ์นี้' });
+      return;
+    }
+    await promptGoogleAsync();
+  };
 
   const submit = async () => {
     if (!email.trim() || !password || (!isLogin && !displayName.trim())) {
@@ -315,7 +376,13 @@ function AuthScreen({
               <>
                 <View style={styles.dividerRow}><View style={styles.divider} /><Text style={styles.dividerText}>หรือดำเนินการต่อด้วย</Text><View style={styles.divider} /></View>
                 <View style={styles.socialRow}>
-                  <Pressable style={styles.socialButton}><Text style={styles.socialText}>G  Google</Text></Pressable>
+                  <Pressable
+                    disabled={!googleRequest || isSubmitting}
+                    onPress={loginWithGoogle}
+                    style={[styles.socialButton, (!googleRequest || isSubmitting) && styles.socialButtonDisabled]}
+                  >
+                    <Text style={styles.socialText}>G  Google</Text>
+                  </Pressable>
                   <Pressable style={styles.socialButton}><Text style={styles.socialText}>♢  SUT SSO</Text></Pressable>
                 </View>
               </>
@@ -568,6 +635,7 @@ const styles = StyleSheet.create({
   dividerText: { color: COLORS.muted, fontSize: 14, marginHorizontal: 14, fontFamily: 'NotoSansThai_400Regular' },
   socialRow: { flexDirection: 'row', gap: 14 },
   socialButton: { flex: 1, height: 62, borderWidth: 1.5, borderColor: COLORS.line, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
+  socialButtonDisabled: { opacity: 0.55 },
   socialText: { color: '#8E1830', fontSize: 16, fontFamily: 'NotoSansThai_700Bold' },
   switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 'auto', paddingTop: 52 },
   switchPrompt: { color: COLORS.muted, fontSize: 14, fontFamily: 'NotoSansThai_400Regular', marginRight: 6 },
