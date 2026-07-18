@@ -30,7 +30,7 @@ type LegalScreen = Extract<Screen, 'terms' | 'privacy'>;
 
 const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000')
+  (Platform.OS === 'android' ? 'http://10.0.2.2:8888' : 'http://localhost:8888')
 ).replace(/\/$/, '');
 
 const GOOGLE_WEB_CLIENT_ID =
