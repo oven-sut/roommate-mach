@@ -6,7 +6,7 @@ import {
   NotoSansThai_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/noto-sans-thai";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
@@ -21,6 +21,7 @@ import {
   TextInput,
   View,
   Platform,
+  Animated,
 } from "react-native";
 
 const C = {
@@ -2083,6 +2084,36 @@ function Config({ go }: { go: (x: Screen) => void }) {
   );
 }
 
+function SplashScreen() {
+  const logoOp = useRef(new Animated.Value(0)).current;
+  const logoTy = useRef(new Animated.Value(30)).current;
+  const textOp = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(logoOp, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.spring(logoTy, { toValue: 0, bounciness: 12, speed: 10, useNativeDriver: true }),
+      ]),
+      Animated.timing(textOp, { toValue: 1, duration: 600, useNativeDriver: true })
+    ]).start();
+  }, []);
+
+  return (
+    <View style={s.splash}>
+      <Animated.View style={{ opacity: logoOp, transform: [{ translateY: logoTy }], alignItems: "center" }}>
+        <Logo />
+      </Animated.View>
+      <Animated.Text style={[s.splashTag, { opacity: textOp }]}>
+        Find your people. Share your space.
+      </Animated.Text>
+      <Animated.Text style={[s.university, { opacity: textOp }]}>
+        SURANAREE UNIVERSITY OF TECHNOLOGY
+      </Animated.Text>
+    </View>
+  );
+}
+
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("splash");
   useEffect(() => {
@@ -2113,14 +2144,7 @@ function AppContent() {
     currentUserId = user.id;
     setScreen(user.role === "ADMIN" ? "dashboard" : "verify");
   };
-  if (screen === "splash")
-    return (
-      <View style={s.splash}>
-        <Logo />
-        <Text style={s.splashTag}>Find your people. Share your space.</Text>
-        <Text style={s.university}>SURANAREE UNIVERSITY OF TECHNOLOGY</Text>
-      </View>
-    );
+  if (screen === "splash") return <SplashScreen />;
   if (screen.startsWith("welcome")) return <Welcome screen={screen} go={go} />;
   if (screen === "login" || screen === "signup" || screen === "forgot")
     return <Auth mode={screen} go={go} onAuth={onAuth} />;
