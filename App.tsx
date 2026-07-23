@@ -9,7 +9,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View, Platform } from "react-native";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
+import * as ExpoNotifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Auth, Basics, Verify } from "./src/screens/auth";
 import { Config, Dashboard, Users } from "./src/screens/admin";
@@ -24,29 +24,31 @@ import { C } from "./src/theme/colors";
 import { s } from "./src/theme/styles";
 import type { Screen } from "./src/types/navigation";
 
-Notifications.setNotificationHandler({
+ExpoNotifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
 async function registerForPushNotificationsAsync() {
   let token;
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
+    await ExpoNotifications.setNotificationChannelAsync("default", {
       name: "default",
-      importance: Notifications.AndroidImportance.MAX,
+      importance: ExpoNotifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#FF231F7C",
     });
   }
   if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await ExpoNotifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
+      const { status } = await ExpoNotifications.requestPermissionsAsync();
       finalStatus = status;
     }
     if (finalStatus !== "granted") {
@@ -55,7 +57,7 @@ async function registerForPushNotificationsAsync() {
     }
     const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "";
     try {
-      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      token = (await ExpoNotifications.getExpoPushTokenAsync({ projectId })).data;
     } catch (e) {
       console.log("Failed to generate token", e);
     }
