@@ -8,6 +8,9 @@ import {
 } from "@expo-google-fonts/noto-sans-thai";
 import React, { useEffect, useState, useRef } from "react";
 import * as ImagePicker from "expo-image-picker";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import {
   ActivityIndicator,
   Alert,
@@ -2114,6 +2117,47 @@ function SplashScreen() {
   );
 }
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+async function registerForPushNotificationsAsync() {
+  let token;
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FF231F7C",
+    });
+  }
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") {
+      console.log("Failed to get push token for push notification!");
+      return;
+    }
+    const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "";
+    try {
+      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    } catch (e) {
+      console.log("Failed to generate token", e);
+    }
+  } else {
+    console.log("Must use physical device for Push Notifications");
+  }
+  return token;
+}
+
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("splash");
   useEffect(() => {
@@ -2123,6 +2167,16 @@ function AppContent() {
         try {
           const me = await api("/api/me");
           currentUserId = me.id;
+          
+          registerForPushNotificationsAsync().then((token) => {
+            if (token) {
+              api("/api/me", {
+                method: "PATCH",
+                body: JSON.stringify({ pushToken: token }),
+              }).catch(console.error);
+            }
+          });
+
           setScreen(
             me.role === "ADMIN"
               ? "dashboard"
