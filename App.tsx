@@ -79,9 +79,9 @@ function AppContent() {
           
           registerForPushNotificationsAsync().then((token) => {
             if (token) {
-              api("/api/me", {
-                method: "PATCH",
-                body: JSON.stringify({ pushToken: token }),
+              api("/api/push/register", {
+                method: "POST",
+                body: JSON.stringify({ token, device: Platform.OS }),
               }).catch(console.error);
             }
           });
