@@ -64,6 +64,7 @@ export const appState = {
   photos: [],
 } as any,
   questionnaireDraft: null as any,
+  questions: null as any,
 };
 export function saveToken(token: string | null) {
   accessToken = token;
