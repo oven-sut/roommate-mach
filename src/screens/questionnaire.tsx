@@ -146,6 +146,38 @@ const qs: Record<
   },
 };
 export function Intro({ go }: { go: (x: Screen) => void }) {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api("/api/me")
+      .then((me) => {
+        const saved = me.questionnaire?.answers || {};
+        appState.questionnaireDraft = Object.fromEntries(
+          Object.entries(qs).map(([key, value]) => {
+            const savedGroups = saved[key];
+            const mappedActive = value.groups.map((g, gi) => {
+              const savedItems = savedGroups?.[gi];
+              if (!savedItems || savedItems.length === 0) return [...g.active];
+              return savedItems.map((item: string) => g.items.indexOf(item)).filter((i: number) => i !== -1);
+            });
+            return [key, mappedActive];
+          })
+        );
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <ScreenShell>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color={C.orange} />
+        </View>
+      </ScreenShell>
+    );
+  }
+
   return (
     <ScreenShell>
       <Progress step={0} total={4} />
@@ -169,11 +201,14 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
 }
 export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => void }) {
   const d = qs[screen];
+  if (!appState.questionnaireDraft) {
+    appState.questionnaireDraft = Object.fromEntries(Object.entries(qs).map(([k, v]) => [k, v.groups.map(g => [...g.active])]));
+  }
   const [, rerender] = useState(0);
   const toggle = (group: number, item: number) => {
-    const active = d.groups[group].active;
-    d.groups[group].active = active.includes(item)
-      ? active.filter((x) => x !== item)
+    const active = appState.questionnaireDraft[screen][group];
+    appState.questionnaireDraft[screen][group] = active.includes(item)
+      ? active.filter((x: number) => x !== item)
       : [...active, item];
     rerender((x) => x + 1);
   };
@@ -183,8 +218,8 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
         const answers = Object.fromEntries(
           Object.entries(qs).map(([key, value]) => [
             key,
-            value.groups.map((g) =>
-              g.items.filter((_, i) => g.active.includes(i)),
+            value.groups.map((g, gi) =>
+              g.items.filter((_, i) => appState.questionnaireDraft[key][gi].includes(i)),
             ),
           ]),
         );
@@ -221,7 +256,7 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
               {g.items.map((x, i) => (
                 <Chip
                   key={x}
-                  active={g.active.includes(i)}
+                  active={appState.questionnaireDraft[screen][gi].includes(i)}
                   onPress={() => toggle(gi, i)}
                 >
                   {x}

@@ -7,7 +7,10 @@ import {
   useFonts,
 } from "@expo-google-fonts/noto-sans-thai";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, Platform } from "react-native";
+import * as Device from "expo-device";
+import * as ExpoNotifications from "expo-notifications";
+import Constants from "expo-constants";
 import { Auth, Basics, Verify } from "./src/screens/auth";
 import { Config, Dashboard, Users } from "./src/screens/admin";
 import { Feed, Filters, Match, Matches, Requests } from "./src/screens/discovery";
@@ -21,6 +24,49 @@ import { C } from "./src/theme/colors";
 import { s } from "./src/theme/styles";
 import type { Screen } from "./src/types/navigation";
 
+ExpoNotifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+async function registerForPushNotificationsAsync() {
+  let token;
+  if (Platform.OS === "android") {
+    await ExpoNotifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: ExpoNotifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FF231F7C",
+    });
+  }
+  if (Device.isDevice) {
+    const { status: existingStatus } = await ExpoNotifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== "granted") {
+      const { status } = await ExpoNotifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") {
+      console.log("Failed to get push token for push notification!");
+      return;
+    }
+    const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "";
+    try {
+      token = (await ExpoNotifications.getExpoPushTokenAsync({ projectId })).data;
+    } catch (e) {
+      console.log("Failed to generate token", e);
+    }
+  } else {
+    console.log("Must use physical device for Push Notifications");
+  }
+  return token;
+}
+
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("splash");
   useEffect(() => {
@@ -30,6 +76,16 @@ function AppContent() {
         try {
           const me = await api("/api/me");
           appState.currentUserId = me.id;
+          
+          registerForPushNotificationsAsync().then((token) => {
+            if (token) {
+              api("/api/push/register", {
+                method: "POST",
+                body: JSON.stringify({ token, device: Platform.OS }),
+              }).catch(console.error);
+            }
+          });
+
           setScreen(
             me.role === "ADMIN"
               ? "dashboard"
