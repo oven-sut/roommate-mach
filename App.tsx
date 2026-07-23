@@ -1,4 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import {
   NotoSansThai_400Regular,
   NotoSansThai_600SemiBold,
@@ -20,13 +22,26 @@ import {
   View,
 } from 'react-native';
 
-type Screen = 'loading' | 'login' | 'register';
-type AuthMode = Exclude<Screen, 'loading'>;
+WebBrowser.maybeCompleteAuthSession();
+
+type Screen = 'loading' | 'login' | 'register' | 'terms' | 'privacy';
+type AuthMode = 'login' | 'register';
+type LegalScreen = Extract<Screen, 'terms' | 'privacy'>;
 
 const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000')
+  (Platform.OS === 'android' ? 'http://10.0.2.2:8888' : 'http://localhost:8888')
 ).replace(/\/$/, '');
+
+const GOOGLE_WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ??
+  '321662329412-3ushmghqqa4letiaj3aumnqb55i6tdb6.apps.googleusercontent.com';
+
+const GOOGLE_CLIENT_ID = Platform.select({
+  web: GOOGLE_WEB_CLIENT_ID,
+  android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
 
 function getThaiApiMessage(status: number, message: unknown) {
   if (status === 409) return 'อีเมลนี้ถูกใช้สมัครสมาชิกแล้ว';
@@ -110,7 +125,15 @@ function Field({
   );
 }
 
-function AuthScreen({ mode, onChangeMode }: { mode: AuthMode; onChangeMode: () => void }) {
+function AuthScreen({
+  mode,
+  onChangeMode,
+  onOpenLegal,
+}: {
+  mode: AuthMode;
+  onChangeMode: () => void;
+  onOpenLegal: (screen: LegalScreen) => void;
+}) {
   const isLogin = mode === 'login';
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -121,10 +144,62 @@ function AuthScreen({ mode, onChangeMode }: { mode: AuthMode; onChangeMode: () =
   const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_CLIENT_ID || 'google-sign-in-not-configured',
+    selectAccount: true,
+  });
 
   useEffect(() => {
     setMessage(null);
   }, [mode]);
+
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') return;
+
+    const idToken = googleResponse.params.id_token;
+    if (!idToken) {
+      setMessage({ type: 'error', text: 'Google ไม่ได้ส่งข้อมูลยืนยันตัวตนกลับมา' });
+      return;
+    }
+
+    const finishGoogleLogin = async () => {
+      setIsSubmitting(true);
+      setMessage(null);
+      try {
+        const response = await fetch(`${API_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const thaiMessage = response.status === 401
+            ? 'กรุณาใช้บัญชีนักศึกษา @g.sut.ac.th ที่ได้รับการยืนยันแล้ว'
+            : getThaiApiMessage(response.status, data.message);
+          throw new Error(thaiMessage);
+        }
+        setMessage({ type: 'success', text: `เข้าสู่ระบบด้วย Google สำเร็จ ยินดีต้อนรับ ${data.user.displayName}` });
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text: error instanceof Error ? error.message : 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    void finishGoogleLogin();
+  }, [googleResponse]);
+
+  const loginWithGoogle = async () => {
+    if (!GOOGLE_CLIENT_ID) {
+      const platformName = Platform.OS === 'android' ? 'Android' : 'iOS';
+      setMessage({ type: 'error', text: `ยังไม่ได้ตั้งค่า Google Client ID สำหรับ ${platformName}` });
+      return;
+    }
+    await promptGoogleAsync();
+  };
 
   const submit = async () => {
     if (!email.trim() || !password || (!isLogin && !displayName.trim())) {
@@ -262,12 +337,18 @@ function AuthScreen({ mode, onChangeMode }: { mode: AuthMode; onChangeMode: () =
             )}
 
             {!isLogin && (
-              <Pressable style={[styles.checkRow, styles.termsRow]} onPress={() => setAcceptedTerms((value) => !value)}>
-                <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+              <View style={[styles.checkRow, styles.termsRow]}>
+                <Pressable style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]} onPress={() => setAcceptedTerms((value) => !value)}>
                   {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.optionText}>ฉันยอมรับ<Text style={styles.inlineLink}>ข้อกำหนดการใช้งาน</Text>และ<Text style={styles.inlineLink}>นโยบายความเป็นส่วนตัว</Text> พร้อมยืนยันว่าเป็นนักศึกษา มทส. ปัจจุบัน</Text>
-              </Pressable>
+                </Pressable>
+                <Text style={styles.optionText}>
+                  ฉันยอมรับ{' '}
+                  <Text style={styles.inlineLink} onPress={() => onOpenLegal('terms')}>ข้อกำหนดการใช้งาน</Text>
+                  {' '}และ{' '}
+                  <Text style={styles.inlineLink} onPress={() => onOpenLegal('privacy')}>นโยบายความเป็นส่วนตัว</Text>
+                  {' '}พร้อมยืนยันว่าเป็นนักศึกษา มทส. ปัจจุบัน
+                </Text>
+              </View>
             )}
 
             {message && (
@@ -300,8 +381,13 @@ function AuthScreen({ mode, onChangeMode }: { mode: AuthMode; onChangeMode: () =
               <>
                 <View style={styles.dividerRow}><View style={styles.divider} /><Text style={styles.dividerText}>หรือดำเนินการต่อด้วย</Text><View style={styles.divider} /></View>
                 <View style={styles.socialRow}>
-                  <Pressable style={styles.socialButton}><Text style={styles.socialText}>G  Google</Text></Pressable>
-                  <Pressable style={styles.socialButton}><Text style={styles.socialText}>♢  SUT SSO</Text></Pressable>
+                  <Pressable
+                    disabled={!googleRequest || isSubmitting}
+                    onPress={loginWithGoogle}
+                    style={[styles.socialButton, (!googleRequest || isSubmitting) && styles.socialButtonDisabled]}
+                  >
+                    <Text style={styles.socialText}>G  Google</Text>
+                  </Pressable>
                 </View>
               </>
             )}
@@ -317,6 +403,63 @@ function AuthScreen({ mode, onChangeMode }: { mode: AuthMode; onChangeMode: () =
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const TERMS_SECTIONS = [
+  ['1. การยอมรับข้อกำหนด', 'เมื่อสมัครสมาชิกหรือใช้งาน RoomieMatch ถือว่าคุณได้อ่าน เข้าใจ และยอมรับข้อกำหนดนี้แล้ว หากไม่ยอมรับ โปรดหยุดใช้งานแอป'],
+  ['2. คุณสมบัติผู้ใช้งาน', 'ผู้ใช้งานต้องเป็นนักศึกษามหาวิทยาลัยเทคโนโลยีสุรนารี ใช้ข้อมูลจริงของตนเอง และให้ข้อมูลที่ถูกต้องและเป็นปัจจุบัน เราอาจขอให้ยืนยันสถานะนักศึกษาและระงับบัญชีที่ไม่ผ่านการยืนยัน'],
+  ['3. บัญชีและความปลอดภัย', 'คุณมีหน้าที่รักษารหัสผ่านเป็นความลับ ห้ามขาย โอน ให้เช่า หรือให้บุคคลอื่นใช้บัญชี หากพบการเข้าถึงโดยไม่ได้รับอนุญาต โปรดเปลี่ยนรหัสผ่านและแจ้งผู้ดูแลทันที'],
+  ['4. การจับคู่', 'ผลการจับคู่เป็นเพียงคำแนะนำจากข้อมูลโปรไฟล์และแบบสอบถาม ไม่ใช่การรับรองตัวตน ความน่าเชื่อถือ หรือความปลอดภัยของบุคคลใด ผู้ใช้ต้องตรวจสอบข้อมูลและใช้วิจารณญาณก่อนพบปะหรือทำข้อตกลงร่วมกัน'],
+  ['5. พฤติกรรมที่ห้าม', 'ห้ามสวมรอย ให้ข้อมูลเท็จ คุกคาม กลั่นแกล้ง เลือกปฏิบัติ เผยแพร่เนื้อหาผิดกฎหมาย หลอกลวง เรียกเก็บเงิน ส่งสแปม เจาะระบบ หรือใช้ข้อมูลของผู้อื่นโดยไม่ได้รับอนุญาต'],
+  ['6. เนื้อหาและการสนทนา', 'คุณยังคงเป็นเจ้าของเนื้อหาที่อัปโหลด และอนุญาตให้เราประมวลผลเท่าที่จำเป็นต่อการให้บริการ การจับคู่ และความปลอดภัย โปรดอย่าส่งรหัสผ่าน ข้อมูลทางการเงิน หรือข้อมูลสำคัญให้บุคคลที่ยังไม่ไว้วางใจ'],
+  ['7. การพบปะและความปลอดภัย', 'ควรพบกันครั้งแรกในพื้นที่สาธารณะ แจ้งบุคคลที่ไว้ใจ และจัดการเดินทางด้วยตนเอง หากรู้สึกไม่ปลอดภัยให้ยุติการติดต่อ บล็อก และรายงานผู้ใช้นั้น กรณีฉุกเฉินโปรดติดต่อหน่วยงานฉุกเฉินโดยตรง'],
+  ['8. การรายงานและระงับบัญชี', 'เราอาจตรวจสอบ จำกัด ระงับ หรือลบบัญชีที่ฝ่าฝืนข้อกำหนด สร้างความเสี่ยงต่อผู้อื่น หรือใช้งานโดยทุจริต โดยอาจไม่แจ้งล่วงหน้าเมื่อจำเป็นด้านความปลอดภัย'],
+  ['9. ข้อจำกัดความรับผิด', 'RoomieMatch ไม่ได้เป็นนายหน้า คู่สัญญาเช่า หรือผู้รับประกันข้อตกลงระหว่างผู้ใช้ เราไม่รับผิดชอบต่อการตัดสินใจ การพบปะ ธุรกรรม หรือข้อพิพาทระหว่างผู้ใช้ ภายในขอบเขตที่กฎหมายอนุญาต'],
+  ['10. การเปลี่ยนแปลงและการติดต่อ', 'เราอาจปรับปรุงข้อกำหนดนี้และจะแจ้งการเปลี่ยนแปลงสำคัญผ่านแอป หากมีคำถาม โปรดติดต่อผู้ดูแล RoomieMatch ผ่านช่องทางที่ประกาศภายในแอป'],
+] as const;
+
+const PRIVACY_SECTIONS = [
+  ['1. ข้อมูลที่เราเก็บรวบรวม', 'เราอาจเก็บชื่อ–นามสกุล อีเมล SUT ข้อมูลยืนยันสถานะนักศึกษา รูปโปรไฟล์ คณะ ชั้นปี ความต้องการด้านที่พัก คำตอบแบบสอบถาม การจับคู่ ข้อความ การบล็อก การรายงาน และข้อมูลทางเทคนิคที่จำเป็นต่อการทำงานของระบบ'],
+  ['2. วัตถุประสงค์', 'เราใช้ข้อมูลเพื่อสร้างและดูแลบัญชี ยืนยันสถานะนักศึกษา แนะนำคู่ที่เหมาะสม ให้บริการแชตและการแจ้งเตือน ดูแลความปลอดภัย ป้องกันการทุจริต แก้ไขปัญหาทางเทคนิค และปรับปรุงบริการ'],
+  ['3. ฐานในการประมวลผล', 'เราประมวลผลข้อมูลเท่าที่จำเป็นต่อการให้บริการตามข้อตกลง ตามความยินยอม เพื่อประโยชน์โดยชอบด้วยกฎหมายด้านความปลอดภัย หรือเพื่อปฏิบัติตามกฎหมาย'],
+  ['4. ข้อมูลที่แสดงแก่ผู้อื่น', 'โปรไฟล์และความต้องการบางส่วนจะแสดงแก่ผู้ใช้รายอื่นเพื่อการค้นหาและจับคู่ แต่อีเมล รหัสผ่าน ข้อมูลยืนยันตัวตน บันทึกทางเทคนิค และรายละเอียดการรายงานจะไม่แสดงต่อผู้ใช้ทั่วไป'],
+  ['5. การเปิดเผยข้อมูล', 'เราอาจเปิดเผยข้อมูลเท่าที่จำเป็นแก่ผู้ให้บริการระบบคลาวด์ ฐานข้อมูล การยืนยันตัวตน การแจ้งเตือน ผู้ดูแลที่ได้รับอนุญาต หรือหน่วยงานที่มีอำนาจตามกฎหมาย เราไม่ขายข้อมูลส่วนบุคคลเพื่อการโฆษณา'],
+  ['6. ระยะเวลาการเก็บรักษา', 'เราเก็บข้อมูลระหว่างที่บัญชียังใช้งานและเท่าที่จำเป็นต่อวัตถุประสงค์ เมื่อผู้ใช้ลบบัญชี เราจะลบหรือทำให้ข้อมูลไม่สามารถระบุตัวบุคคลได้ เว้นแต่จำเป็นต้องเก็บเพื่อกฎหมาย ความปลอดภัย หรือข้อพิพาท'],
+  ['7. การรักษาความปลอดภัย', 'เราใช้มาตรการที่เหมาะสม เช่น การเข้ารหัสการรับส่งข้อมูล การแฮชรหัสผ่าน และการจำกัดสิทธิการเข้าถึง อย่างไรก็ตาม ไม่มีระบบใดรับประกันความปลอดภัยได้ทั้งหมด'],
+  ['8. สิทธิของคุณ', 'ภายใต้กฎหมาย คุณอาจขอเข้าถึง รับสำเนา แก้ไข ลบ จำกัด คัดค้าน หรือโอนข้อมูล รวมถึงถอนความยินยอมและร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคลได้'],
+  ['9. บริการภายนอกและการโอนข้อมูล', 'หากเลือกใช้ Google ข้อมูลจะอยู่ภายใต้นโยบายของ Google ด้วย ผู้ให้บริการบางรายอาจประมวลผลข้อมูลในต่างประเทศโดยมีมาตรการคุ้มครองที่เหมาะสม'],
+  ['10. การเปลี่ยนแปลงและการติดต่อ', 'เราอาจปรับปรุงนโยบายนี้และจะแจ้งการเปลี่ยนแปลงสำคัญผ่านแอป หากต้องการใช้สิทธิหรือสอบถามเรื่องข้อมูลส่วนบุคคล โปรดติดต่อผู้ดูแล RoomieMatch ผ่านช่องทางที่ประกาศภายในแอป'],
+] as const;
+
+function LegalPage({ screen, onBack }: { screen: LegalScreen; onBack: () => void }) {
+  const isTerms = screen === 'terms';
+  const sections = isTerms ? TERMS_SECTIONS : PRIVACY_SECTIONS;
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" />
+      <View style={styles.legalHeader}>
+        <Pressable style={[styles.headerIcon, styles.backIcon]} onPress={onBack} hitSlop={8}>
+          <Text style={[styles.headerIconText, styles.backIconText]}>‹</Text>
+        </Pressable>
+        <View style={styles.legalHeaderText}>
+          <Text style={styles.legalTitle}>{isTerms ? 'ข้อกำหนดการใช้งาน' : 'นโยบายความเป็นส่วนตัว'}</Text>
+          <Text style={styles.legalUpdated}>ปรับปรุงล่าสุด 18 กรกฎาคม 2569</Text>
+        </View>
+      </View>
+      <ScrollView contentContainerStyle={styles.legalContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.legalIntro}>
+          <Text style={styles.legalIntroText}>{isTerms ? 'โปรดอ่านข้อกำหนดนี้ก่อนสมัครและใช้งาน RoomieMatch' : 'RoomieMatch เคารพความเป็นส่วนตัวและใช้ข้อมูลเท่าที่จำเป็นต่อการให้บริการ'}</Text>
+        </View>
+        {sections.map(([title, body]) => (
+          <View style={styles.legalSection} key={title}>
+            <Text style={styles.legalSectionTitle}>{title}</Text>
+            <Text style={styles.legalBody}>{body}</Text>
+          </View>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -340,10 +483,13 @@ export default function App() {
       <StatusBar style={screen === 'loading' ? 'light' : 'dark'} />
       {screen === 'loading' || !fontsLoaded ? (
         <LoadingScreen />
+      ) : screen === 'terms' || screen === 'privacy' ? (
+        <LegalPage screen={screen} onBack={() => setScreen('register')} />
       ) : (
         <AuthScreen
           mode={screen}
           onChangeMode={() => setScreen(screen === 'login' ? 'register' : 'login')}
+          onOpenLegal={setScreen}
         />
       )}
     </View>
@@ -454,6 +600,16 @@ const styles = StyleSheet.create({
   forgotText: { color: '#F04416', fontSize: 14, fontFamily: 'NotoSansThai_700Bold' },
   inlineLink: { color: '#8E1830', fontFamily: 'NotoSansThai_700Bold' },
   termsRow: { alignItems: 'flex-start', marginBottom: 20 },
+  legalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 18, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.background },
+  legalHeaderText: { flex: 1 },
+  legalTitle: { color: COLORS.ink, fontSize: 21, fontFamily: 'NotoSansThai_800ExtraBold' },
+  legalUpdated: { color: COLORS.muted, fontSize: 12, marginTop: 2, fontFamily: 'NotoSansThai_400Regular' },
+  legalContent: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 22, paddingBottom: 48 },
+  legalIntro: { borderRadius: 18, backgroundColor: '#FFF0E9', padding: 18, marginBottom: 24 },
+  legalIntroText: { color: '#8E3217', fontSize: 14, lineHeight: 23, fontFamily: 'NotoSansThai_600SemiBold' },
+  legalSection: { marginBottom: 23 },
+  legalSectionTitle: { color: COLORS.ink, fontSize: 16, lineHeight: 25, marginBottom: 6, fontFamily: 'NotoSansThai_700Bold' },
+  legalBody: { color: '#725F62', fontSize: 14, lineHeight: 24, fontFamily: 'NotoSansThai_400Regular' },
   passwordStrength: { flexDirection: 'row', alignItems: 'center', marginTop: -10, marginBottom: 20, paddingHorizontal: 4 },
   strengthBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: '#EDE3DF', marginRight: 6 },
   strengthStrong: { backgroundColor: COLORS.primary },
@@ -483,6 +639,7 @@ const styles = StyleSheet.create({
   dividerText: { color: COLORS.muted, fontSize: 14, marginHorizontal: 14, fontFamily: 'NotoSansThai_400Regular' },
   socialRow: { flexDirection: 'row', gap: 14 },
   socialButton: { flex: 1, height: 62, borderWidth: 1.5, borderColor: COLORS.line, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
+  socialButtonDisabled: { opacity: 0.55 },
   socialText: { color: '#8E1830', fontSize: 16, fontFamily: 'NotoSansThai_700Bold' },
   switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 'auto', paddingTop: 52 },
   switchPrompt: { color: COLORS.muted, fontSize: 14, fontFamily: 'NotoSansThai_400Regular', marginRight: 6 },
