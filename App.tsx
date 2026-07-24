@@ -15,7 +15,7 @@ import { Auth, Basics, Verify } from "./src/screens/auth";
 import { Config, Dashboard, Users } from "./src/screens/admin";
 import { Feed, Filters, Match, Matches, Requests } from "./src/screens/discovery";
 import { Chat, Messages, Settings } from "./src/screens/messaging";
-import { Welcome } from "./src/screens/onboarding";
+import { AuthChoice, Welcome } from "./src/screens/onboarding";
 import { MyProfile, Notifications, Profile, Report } from "./src/screens/profile";
 import { Intro, Question, Summary } from "./src/screens/questionnaire";
 import { SplashScreen } from "./src/screens/splash";
@@ -108,6 +108,7 @@ function AppContent() {
   if (screen === "splash")
     return <SplashScreen onComplete={continueFromSplash} />;
   if (screen.startsWith("welcome")) return <Welcome screen={screen} go={go} />;
+  if (screen === "authChoice") return <AuthChoice go={go} />;
   if (screen === "login" || screen === "signup" || screen === "forgot")
     return <Auth mode={screen} go={go} onAuth={onAuth} />;
   if (screen === "verify") return <Verify go={go} />;

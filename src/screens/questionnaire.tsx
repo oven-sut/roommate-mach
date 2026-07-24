@@ -11,7 +11,7 @@ const next: Partial<Record<Screen, Screen>> = {
   splash: "welcome1",
   welcome1: "welcome2",
   welcome2: "welcome3",
-  welcome3: "login",
+  welcome3: "authChoice",
   signup: "verify",
   verify: "basics",
   basics: "housing",
