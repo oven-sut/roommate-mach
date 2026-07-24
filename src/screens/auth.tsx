@@ -1,11 +1,68 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
 import { api, appState, saveToken } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
+
+export function AuthChoice({ go }: { go: (x: Screen) => void }) {
+  return (
+    <LinearGradient
+      colors={["#70152E", "#8D1E32", "#B82F2D", "#D74825"]}
+      locations={[0, 0.38, 0.7, 1]}
+      start={{ x: 0.16, y: 0 }}
+      end={{ x: 0.84, y: 1 }}
+      style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}
+    >
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", width: "100%" }}>
+        <View style={{ transform: [{ scale: 1.2 }], marginBottom: 60 }}>
+          <Logo />
+        </View>
+        
+        <Pressable 
+          style={{
+            width: "80%",
+            backgroundColor: "rgba(255,255,255,0.25)",
+            paddingVertical: 18,
+            borderRadius: 8,
+            marginBottom: 20,
+            alignItems: "center"
+          }}
+          onPress={() => go("login")}
+        >
+          <Text style={{ color: "#fff", fontFamily: "NotoSansThai_700Bold", fontSize: 16 }}>Login</Text>
+        </Pressable>
+
+        <Pressable 
+          style={{
+            width: "80%",
+            backgroundColor: "rgba(255,255,255,0.25)",
+            paddingVertical: 18,
+            borderRadius: 8,
+            alignItems: "center"
+          }}
+          onPress={() => go("signup")}
+        >
+          <Text style={{ color: "#fff", fontFamily: "NotoSansThai_700Bold", fontSize: 16 }}>Register</Text>
+        </Pressable>
+      </View>
+
+      <Text style={{
+        color: "rgba(255,255,255,0.8)",
+        fontSize: 10,
+        fontFamily: "NotoSansThai_700Bold",
+        letterSpacing: 1,
+        position: "absolute",
+        bottom: 40
+      }}>
+        SURANAREE UNIVERSITY OF TECHNOLOGY
+      </Text>
+    </LinearGradient>
+  );
+}
 
 export function Auth({
   mode,
