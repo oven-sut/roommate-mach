@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Animated,
@@ -10,7 +10,6 @@ import {
   View,
 } from "react-native";
 import { Logo } from "../components/ui";
-import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 
 const KNOB_SIZE = 70;

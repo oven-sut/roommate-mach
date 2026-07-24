@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import type { MatchProfile, ProfileDraft } from "../types/models";
 
 export const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
@@ -8,25 +9,10 @@ let accessToken =
   Platform.OS === "web" && typeof localStorage !== "undefined"
     ? localStorage.getItem("roomie_token")
     : null;
-let activeConversationId: string | null = null;
-let activeConversationName = "Chat";
-let currentUserId: string | null = null;
-let activeProfile: any = null;
-const profileDraft: any = {
-  displayName: "",
-  age: "",
-  major: "",
-  gender: "",
-  bio: "",
-  year: 1,
-  roomType: "Single",
-  roommateGender: "Same gender",
-  zone: "Gate 1",
-  budgetMin: 2500,
-  budgetMax: 4500,
-  photos: [],
-};
-export async function api(path: string, options: RequestInit = {}) {
+export async function api<T = any>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -42,13 +28,13 @@ export async function api(path: string, options: RequestInit = {}) {
         ? data.message[0]
         : data.message || "Request failed",
     );
-  return data;
+  return data as T;
 }
 export const appState = {
   activeConversationId: null as string | null,
   activeConversationName: "Chat",
   currentUserId: null as string | null,
-  activeProfile: null as any,
+  activeProfile: null as MatchProfile | null,
   profileDraft: {
   displayName: "",
   age: "",
@@ -62,7 +48,7 @@ export const appState = {
   budgetMin: 2500,
   budgetMax: 4500,
   photos: [],
-} as any,
+  } as ProfileDraft,
   questionnaireDraft: null as Record<string, number[][]> | null,
   questions: null as Record<string, unknown> | null,
 };

@@ -1,10 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from "react-native";
-import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
-import { api, appState, saveToken } from "../services/api";
-import { C } from "../theme/colors";
+import { Pressable, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Button, Logo, ScreenShell } from "../components/ui";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
 

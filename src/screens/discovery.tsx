@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from "react-native";
-import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
-import { api, appState, saveToken } from "../services/api";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, SafeAreaView, Text, View } from "react-native";
+import { Button, Card, Chip, Field, Header, ScreenShell } from "../components/ui";
+import { api, appState } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
@@ -217,12 +216,6 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
   );
 }
 
-const people = [
-  ["Ploy", "92%", "Food Tech · matched 2h ago"],
-  ["Mind", "88%", "Mechatronics · matched today"],
-  ["Tan", "81%", "Civil Eng. · chatting"],
-  ["Baitoey", "78%", "IT · chatting"],
-];
 export function PersonRow({
   p,
   action,

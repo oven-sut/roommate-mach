@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from "react-native";
-import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
-import { api, appState, saveToken } from "../services/api";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, Text, View } from "react-native";
+import { Button, Card, Chip, Header, ScreenShell } from "../components/ui";
+import { api, appState } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
@@ -77,10 +76,11 @@ export function Notifications({ go }: { go: (x: Screen) => void }) {
     <ScreenShell>
       <Header
         title="Notifications"
+        back={() => go("feed")}
         right={`${items.filter((x) => !x.readAt).length} new`}
       />
       {items.length ? (
-        items.map((x, i) => (
+        items.map((x) => (
           <Pressable
             key={x.id}
             onPress={async () => {

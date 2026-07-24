@@ -34,7 +34,15 @@
           "cameraPermission": "Roommate Mach needs access to your camera so you can take student ID and profile pictures.",
           "microphonePermission": false
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "color": "#8F1938"
+        }
+      ],
+      "expo-status-bar"
     ]
   }
 }
