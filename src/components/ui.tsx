@@ -6,6 +6,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { C } from "../theme/colors";
@@ -163,15 +164,29 @@ export function ScreenShell({
   );
 }
 export function Logo({ dark = false }: { dark?: boolean }) {
+  const { width, height } = useWindowDimensions();
+  const compact = width < 370 || height < 720;
+
   return (
     <View style={{ alignItems: "center" }}>
       <Image
         source={require("../../assets/logo.png")}
-        style={s.logoImage}
+        style={[
+          s.logoImage,
+          compact && { width: 92, height: 92 },
+          width >= 600 && { width: 132, height: 132 },
+        ]}
         resizeMode="contain"
         accessibilityLabel="SUT Roommate Matcher logo"
       />
-      <Text style={[s.brand, dark && { color: C.ink }]}>
+      <Text
+        style={[
+          s.brand,
+          compact && { fontSize: 24, lineHeight: 33, marginTop: 14 },
+          width >= 600 && { fontSize: 32, lineHeight: 44 },
+          dark && { color: C.ink },
+        ]}
+      >
         SUT Roommate{`\n`}Matcher
       </Text>
     </View>
