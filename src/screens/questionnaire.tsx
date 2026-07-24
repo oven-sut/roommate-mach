@@ -26,25 +26,28 @@ const next: Partial<Record<Screen, Screen>> = {
   summary: "feed",
 };
 
+type QuestionData = { id: string; key: string; step: number; title: string; sub: string; groups: { label: string; items: string[]; active: number[] }[]; note?: string };
+type AnswerData = { questionId: string; selections: string[][] };
+
 export function Intro({ go }: { go: (x: Screen) => void }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([api("/api/me"), api("/api/questionnaire")])
-      .then(([me, qsData]) => {
-        appState.questions = Object.fromEntries(qsData.map((q: any) => [q.key, q]));
-        const saved: any = {};
+      .then(([me, qsData]: [any, QuestionData[]]) => {
+        appState.questions = Object.fromEntries(qsData.map((q) => [q.key, q]));
+        const saved: Record<string, string[][]> = {};
         if (me.answers) {
-          me.answers.forEach((ans: any) => {
-            const q = qsData.find((x: any) => x.id === ans.questionId);
+          me.answers.forEach((ans: AnswerData) => {
+            const q = qsData.find((x) => x.id === ans.questionId);
             if (q) saved[q.key] = ans.selections;
           });
         }
         appState.questionnaireDraft = Object.fromEntries(
-          qsData.map((value: any) => {
+          qsData.map((value) => {
             const key = value.key;
             const savedGroups = saved[key];
-            const mappedActive = value.groups.map((g: any, gi: number) => {
+            const mappedActive = value.groups.map((g, gi: number) => {
               const savedItems = savedGroups?.[gi];
               if (!savedItems || savedItems.length === 0) return [...g.active];
               return savedItems.map((item: string) => g.items.indexOf(item)).filter((i: number) => i !== -1);
@@ -89,28 +92,36 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
   );
 }
 export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => void }) {
-  const d = appState.questions[screen];
+  const d = appState.questions?.[screen] as QuestionData;
   if (!appState.questionnaireDraft) {
-    appState.questionnaireDraft = Object.fromEntries(Object.values(appState.questions).map((v: any) => [v.key, v.groups.map((g: any) => [...g.active])]));
+    appState.questionnaireDraft = Object.fromEntries(Object.values(appState.questions || {}).map((v) => {
+      const q = v as QuestionData;
+      return [q.key, q.groups.map((g) => [...g.active])];
+    }));
   }
   const [, rerender] = useState(0);
   const toggle = (group: number, item: number) => {
-    const active = appState.questionnaireDraft[screen][group];
-    appState.questionnaireDraft[screen][group] = active.includes(item)
-      ? active.filter((x: number) => x !== item)
-      : [...active, item];
+    const active = appState.questionnaireDraft?.[screen]?.[group] as number[];
+    if (appState.questionnaireDraft && appState.questionnaireDraft[screen]) {
+      appState.questionnaireDraft[screen][group] = active.includes(item)
+        ? active.filter((x: number) => x !== item)
+        : [...active, item];
+    }
     rerender((x) => x + 1);
   };
   const proceed = async () => {
     if (screen === "q6") {
       try {
         const answers = Object.fromEntries(
-          Object.values(appState.questions).map((value: any) => [
-            value.key,
-            value.groups.map((g: any, gi: number) =>
-              g.items.filter((_: any, i: number) => appState.questionnaireDraft[value.key][gi].includes(i)),
-            ),
-          ]),
+          Object.values(appState.questions || {}).map((value) => {
+            const q = value as QuestionData;
+            return [
+              q.key,
+              q.groups.map((g, gi: number) =>
+                g.items.filter((_, i: number) => appState.questionnaireDraft?.[q.key]?.[gi]?.includes(i)),
+              ),
+            ];
+          }),
         );
         await api("/api/questionnaire", {
           method: "PUT",
@@ -137,12 +148,12 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
       <Progress step={d.step} />
       <Text style={s.bigTitleLeft}>{d.title}</Text>
       <Text style={s.muted}>{d.sub}</Text>
-      {d.groups.map((g: any, gi: number) => (
+      {d.groups.map((g, gi: number) => (
         <View key={g.label + gi} style={{ marginTop: 22 }}>
           <Text style={s.label}>{g.label}</Text>
           <Card>
             <View style={s.wrap}>
-              {g.items.map((x: any, i: number) => (
+              {g.items.map((x, i: number) => (
                 <Chip
                   key={x}
                   active={appState.questionnaireDraft[screen][gi].includes(i)}
