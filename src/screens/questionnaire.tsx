@@ -156,7 +156,7 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
               {g.items.map((x, i: number) => (
                 <Chip
                   key={x}
-                  active={appState.questionnaireDraft[screen][gi].includes(i)}
+                  active={appState.questionnaireDraft?.[screen]?.[gi]?.includes(i) ?? false}
                   onPress={() => toggle(gi, i)}
                 >
                   {x}
