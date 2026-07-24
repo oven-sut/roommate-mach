@@ -35,6 +35,10 @@ export const s = StyleSheet.create({
     borderColor: "rgba(255,255,255,.3)",
   },
   logoText: { fontSize: 38, color: C.amber },
+  logoImage: {
+    width: 116,
+    height: 116,
+  },
   brand: {
     fontFamily: "NotoSansThai_800ExtraBold",
     fontSize: 28,
