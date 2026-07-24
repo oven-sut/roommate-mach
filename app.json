@@ -41,8 +41,7 @@
           "defaultChannel": "default",
           "color": "#8F1938"
         }
-      ],
-      "expo-status-bar"
+      ]
     ]
   }
 }
