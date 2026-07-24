@@ -9,7 +9,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ovensut.roommatemach"
+      "bundleIdentifier": "com.ovensut.roommatemach",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Roommate Mach uses your local network to connect to the Expo development server."
+      }
     },
     "android": {
       "package": "com.ovensut.roommatemach",
@@ -24,7 +27,14 @@
     "plugins": [
       "expo-font",
       "expo-web-browser",
-      "expo-status-bar"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Roommate Mach needs access to your photos so you can upload your student ID and profile pictures.",
+          "cameraPermission": "Roommate Mach needs access to your camera so you can take student ID and profile pictures.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

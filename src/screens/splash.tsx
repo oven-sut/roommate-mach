@@ -3,8 +3,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import {
   Animated,
   PanResponder,
+  SafeAreaView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Logo } from "../components/ui";
@@ -15,6 +17,8 @@ const KNOB_SIZE = 70;
 const TRACK_PADDING = 5;
 
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
+  const { width, height } = useWindowDimensions();
+  const compact = width < 370 || height < 720;
   const logoOp = useRef(new Animated.Value(0)).current;
   const logoTy = useRef(new Animated.Value(30)).current;
   const textOp = useRef(new Animated.Value(0)).current;
@@ -47,11 +51,13 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   }, [logoOp, logoTy, textOp]);
 
   useEffect(() => {
+    const knobSize = compact ? 56 : KNOB_SIZE;
     maxTravel.current = Math.max(
       0,
-      trackWidth - KNOB_SIZE - TRACK_PADDING * 2,
+      trackWidth - knobSize - TRACK_PADDING * 2,
     );
-  }, [trackWidth]);
+    dragX.setValue(0);
+  }, [compact, dragX, trackWidth]);
 
   const finish = () => {
     if (completed.current) return;
@@ -114,57 +120,84 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       end={{ x: 0.84, y: 1 }}
       style={s.splash}
     >
-      <Animated.View
-        style={{
-          opacity: logoOp,
-          transform: [{ translateY: logoTy }],
-          alignItems: "center",
-        }}
-      >
-        <Logo />
-      </Animated.View>
-
-      <Animated.Text style={[s.splashTag, { opacity: textOp }]}>
-        Find your people. Share your space.
-      </Animated.Text>
-
-      <Animated.View style={[local.sliderArea, { opacity: textOp }]}>
-        <Text style={local.hint}>SLIDE TO CONTINUE</Text>
-        <View
-          style={local.track}
-          onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
-        >
+      <SafeAreaView style={local.safe}>
+        <View style={local.hero}>
           <Animated.View
-            accessible
-            accessibilityRole="adjustable"
-            accessibilityLabel="Slide to continue"
-            accessibilityHint="Drag the arrow to the right to enter the app"
-            style={[
-              local.knob,
-              { transform: [{ translateX: dragX }] },
-            ]}
-            {...panResponder.panHandlers}
+            style={{
+              opacity: logoOp,
+              transform: [{ translateY: logoTy }],
+              alignItems: "center",
+            }}
           >
-            <Text style={local.arrow}>›</Text>
+            <Logo />
           </Animated.View>
-        </View>
-      </Animated.View>
 
-      <Animated.Text style={[s.university, { opacity: textOp }]}>
-        SURANAREE UNIVERSITY OF TECHNOLOGY
-      </Animated.Text>
+          <Animated.Text style={[s.splashTag, { opacity: textOp }]}>
+            Find your people. Share your space.
+          </Animated.Text>
+        </View>
+
+        <Animated.View
+          style={[
+            local.sliderArea,
+            compact && local.sliderAreaCompact,
+            { opacity: textOp },
+          ]}
+        >
+          <Text style={local.hint}>SLIDE TO CONTINUE</Text>
+          <View
+            style={[local.track, compact && local.trackCompact]}
+            onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+          >
+            <Animated.View
+              accessible
+              accessibilityRole="adjustable"
+              accessibilityLabel="Slide to continue"
+              accessibilityHint="Drag the arrow to the right to enter the app"
+              style={[
+                local.knob,
+                compact && local.knobCompact,
+                { transform: [{ translateX: dragX }] },
+              ]}
+              {...panResponder.panHandlers}
+            >
+              <Text style={[local.arrow, compact && local.arrowCompact]}>›</Text>
+            </Animated.View>
+          </View>
+        </Animated.View>
+
+        <Animated.Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={[local.university, { opacity: textOp }]}
+        >
+          SURANAREE UNIVERSITY OF TECHNOLOGY
+        </Animated.Text>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const local = StyleSheet.create({
+  safe: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  hero: {
+    flex: 1,
+    minHeight: 280,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sliderArea: {
-    position: "absolute",
-    bottom: 78,
     width: "82%",
     maxWidth: 350,
     alignItems: "center",
+    marginBottom: 28,
   },
+  sliderAreaCompact: { width: "88%", marginBottom: 18 },
   hint: {
     color: "rgba(255,255,255,0.72)",
     fontFamily: "NotoSansThai_600SemiBold",
@@ -180,6 +213,7 @@ const local = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#D58D7D",
   },
+  trackCompact: { height: 66, borderRadius: 33 },
   knob: {
     width: KNOB_SIZE,
     height: KNOB_SIZE,
@@ -193,11 +227,27 @@ const local = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 5,
   },
+  knobCompact: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
   arrow: {
     color: "#222944",
     fontSize: 48,
     lineHeight: 52,
     fontFamily: "NotoSansThai_700Bold",
     marginTop: -4,
+  },
+  arrowCompact: { fontSize: 40, lineHeight: 44 },
+  university: {
+    width: "100%",
+    maxWidth: 430,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#FFF1D6",
+    fontFamily: "NotoSansThai_700Bold",
+    fontSize: 10,
+    letterSpacing: 0.8,
   },
 });

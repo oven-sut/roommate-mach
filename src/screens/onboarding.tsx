@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
 import { api, appState, saveToken } from "../services/api";
 import { C } from "../theme/colors";
@@ -49,10 +49,12 @@ const onboarding = [
 ];
 
 export function Welcome({ screen, go }: { screen: Screen; go: (x: Screen) => void }) {
+  const { height } = useWindowDimensions();
+  const artHeight = Math.max(260, Math.min(410, height * 0.46));
   const d = onboarding.find((x) => x.screen === screen)!;
   return (
     <ScreenShell bottom={false}>
-      <View style={s.welcomeArt}>
+      <View style={[s.welcomeArt, { height: artHeight }]}>
         <Text style={screen === "welcome2" ? s.scoreArt : s.artText}>
           {d.art}
         </Text>
@@ -79,6 +81,9 @@ export function Welcome({ screen, go }: { screen: Screen; go: (x: Screen) => voi
 }
 
 export function AuthChoice({ go }: { go: (x: Screen) => void }) {
+  const { width, height } = useWindowDimensions();
+  const compact = width < 370 || height < 720;
+
   return (
     <LinearGradient
       colors={["#70152E", "#8D1E32", "#B82F2D", "#D74825"]}
@@ -87,34 +92,42 @@ export function AuthChoice({ go }: { go: (x: Screen) => void }) {
       end={{ x: 0.84, y: 1 }}
       style={choice.page}
     >
-      <View style={choice.content}>
-        <Logo />
-        <View style={choice.actions}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => go("login")}
-            style={({ pressed }) => [
-              choice.button,
-              pressed && choice.buttonPressed,
-            ]}
-          >
-            <Text style={choice.buttonText}>Login</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => go("signup")}
-            style={({ pressed }) => [
-              choice.button,
-              pressed && choice.buttonPressed,
-            ]}
-          >
-            <Text style={choice.buttonText}>Register</Text>
-          </Pressable>
+      <SafeAreaView style={choice.safe}>
+        <View style={[choice.content, compact && choice.contentCompact]}>
+          <Logo />
+          <View style={[choice.actions, compact && choice.actionsCompact]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => go("login")}
+              style={({ pressed }) => [
+                choice.button,
+                compact && choice.buttonCompact,
+                pressed && choice.buttonPressed,
+              ]}
+            >
+              <Text style={choice.buttonText}>Login</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => go("signup")}
+              style={({ pressed }) => [
+                choice.button,
+                compact && choice.buttonCompact,
+                pressed && choice.buttonPressed,
+              ]}
+            >
+              <Text style={choice.buttonText}>Register</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
-      <Text style={choice.university}>
-        SURANAREE UNIVERSITY OF TECHNOLOGY
-      </Text>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={choice.university}
+        >
+          SURANAREE UNIVERSITY OF TECHNOLOGY
+        </Text>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -122,21 +135,27 @@ export function AuthChoice({ go }: { go: (x: Screen) => void }) {
 const choice = StyleSheet.create({
   page: {
     flex: 1,
+  },
+  safe: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 36,
+    paddingHorizontal: 24,
   },
   content: {
+    flex: 1,
     width: "100%",
     maxWidth: 360,
     alignItems: "center",
-    transform: [{ translateY: -34 }],
+    justifyContent: "center",
+    paddingVertical: 24,
   },
+  contentCompact: { paddingVertical: 12 },
   actions: {
     width: "100%",
     gap: 34,
     marginTop: 58,
   },
+  actionsCompact: { gap: 20, marginTop: 28 },
   button: {
     height: 64,
     borderRadius: 6,
@@ -144,6 +163,7 @@ const choice = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(223, 166, 155, 0.76)",
   },
+  buttonCompact: { height: 54 },
   buttonPressed: {
     opacity: 0.76,
     transform: [{ scale: 0.99 }],
@@ -154,8 +174,10 @@ const choice = StyleSheet.create({
     fontSize: 16,
   },
   university: {
-    position: "absolute",
-    bottom: 40,
+    width: "100%",
+    maxWidth: 430,
+    marginBottom: 20,
+    textAlign: "center",
     color: "#FFF1D6",
     fontFamily: "NotoSansThai_700Bold",
     fontSize: 10,
