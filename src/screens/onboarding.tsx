@@ -11,7 +11,7 @@ const next: Partial<Record<Screen, Screen>> = {
   splash: "welcome1",
   welcome1: "welcome2",
   welcome2: "welcome3",
-  welcome3: "login",
+  welcome3: "authChoice",
   signup: "verify",
   verify: "basics",
   basics: "housing",
@@ -64,7 +64,7 @@ export function Welcome({ screen, go }: { screen: Screen; go: (x: Screen) => voi
         <View style={[s.dot, screen === "welcome3" && s.dotOn]} />
       </View>
       <View style={s.rowBetween}>
-        <Pressable onPress={() => go("login")}>
+        <Pressable onPress={() => go("authChoice")}>
           <Text style={s.muted}>Skip</Text>
         </Pressable>
         <View style={{ width: 110 }}>

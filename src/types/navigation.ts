@@ -1,5 +1,6 @@
 export type Screen =
   | "splash"
+  | "authChoice"
   | "welcome1"
   | "welcome2"
   | "welcome3"
