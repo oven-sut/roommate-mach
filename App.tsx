@@ -69,45 +69,44 @@ async function registerForPushNotificationsAsync() {
 
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("splash");
-  useEffect(() => {
-    if (screen !== "splash") return;
-    const t = setTimeout(async () => {
-      if (getAccessToken()) {
-        try {
-          const me = await api("/api/me");
-          appState.currentUserId = me.id;
-          
-          registerForPushNotificationsAsync().then((token) => {
-            if (token) {
-              api("/api/push/register", {
-                method: "POST",
-                body: JSON.stringify({ token, device: Platform.OS }),
-              }).catch(console.error);
-            }
-          });
+  const continueFromSplash = async () => {
+    if (getAccessToken()) {
+      try {
+        const me = await api("/api/me");
+        appState.currentUserId = me.id;
 
-          setScreen(
-            me.role === "ADMIN"
-              ? "dashboard"
-              : me.profile?.completed
-                ? "feed"
-                : "verify",
-          );
-        } catch {
-          saveToken(null);
-          setScreen("welcome1");
-        }
-      } else setScreen("welcome1");
-    }, 800);
-    return () => clearTimeout(t);
-  }, [screen]);
+        registerForPushNotificationsAsync().then((token) => {
+          if (token) {
+            api("/api/push/register", {
+              method: "POST",
+              body: JSON.stringify({ token, device: Platform.OS }),
+            }).catch(console.error);
+          }
+        });
+
+        setScreen(
+          me.role === "ADMIN"
+            ? "dashboard"
+            : me.profile?.completed
+              ? "feed"
+              : "verify",
+        );
+      } catch {
+        saveToken(null);
+        setScreen("welcome1");
+      }
+    } else {
+      setScreen("welcome1");
+    }
+  };
   const go = (x: Screen) => setScreen(x);
   const onAuth = (token: string, user: any) => {
     saveToken(token);
     appState.currentUserId = user.id;
     setScreen(user.role === "ADMIN" ? "dashboard" : "verify");
   };
-  if (screen === "splash") return <SplashScreen />;
+  if (screen === "splash")
+    return <SplashScreen onComplete={continueFromSplash} />;
   if (screen.startsWith("welcome")) return <Welcome screen={screen} go={go} />;
   if (screen === "login" || screen === "signup" || screen === "forgot")
     return <Auth mode={screen} go={go} onAuth={onAuth} />;

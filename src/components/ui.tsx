@@ -1,5 +1,13 @@
 import React from "react";
-import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 
@@ -157,9 +165,12 @@ export function ScreenShell({
 export function Logo({ dark = false }: { dark?: boolean }) {
   return (
     <View style={{ alignItems: "center" }}>
-      <View style={[s.logo, dark && { backgroundColor: C.wine }]}>
-        <Text style={s.logoText}>⌂</Text>
-      </View>
+      <Image
+        source={require("../../assets/logo.png")}
+        style={s.logoImage}
+        resizeMode="contain"
+        accessibilityLabel="SUT Roommate Matcher logo"
+      />
       <Text style={[s.brand, dark && { color: C.ink }]}>
         SUT Roommate{`\n`}Matcher
       </Text>
