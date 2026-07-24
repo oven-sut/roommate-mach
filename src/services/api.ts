@@ -63,7 +63,8 @@ export const appState = {
   budgetMax: 4500,
   photos: [],
 } as any,
-  questionnaireDraft: null as any,
+  questionnaireDraft: null as Record<string, number[][]> | null,
+  questions: null as Record<string, unknown> | null,
 };
 export function saveToken(token: string | null) {
   accessToken = token;

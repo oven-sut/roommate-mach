@@ -26,136 +26,28 @@ const next: Partial<Record<Screen, Screen>> = {
   summary: "feed",
 };
 
-const qs: Record<
-  string,
-  {
-    step: number;
-    title: string;
-    sub: string;
-    groups: { label: string; items: string[]; active: number[] }[];
-    note?: string;
-  }
-> = {
-  q1: {
-    step: 1,
-    title: "Sleep & wake",
-    sub: "Drag the handles to your usual range",
-    groups: [
-      { label: "☾  I usually sleep at", items: ["23:00 – 00:30"], active: [0] },
-      { label: "☀  I usually wake at", items: ["07:00 – 08:00"], active: [0] },
-    ],
-    note: "Based on your answers you’ll get the Night Owl tag on your card.",
-  },
-  q2: {
-    step: 2,
-    title: "Cleanliness",
-    sub: "Pick every habit that sounds like you",
-    groups: [
-      {
-        label: "",
-        items: [
-          "Spotless",
-          "Tidy-ish",
-          "Organized chaos",
-          "Dishes same day",
-          "Weekly deep clean",
-          "Laundry piles up",
-          "Shoes off inside",
-          "Shared chore chart",
-        ],
-        active: [0, 3, 6],
-      },
-      {
-        label: "How much does a clean room matter?",
-        items: ["4/5"],
-        active: [0],
-      },
-    ],
-    note: "Cleanliness is weighted 25% of your match score.",
-  },
-  q3: {
-    step: 3,
-    title: "Guests & social life",
-    sub: "Set your comfort zone for visitors",
-    groups: [
-      {
-        label: "ALLOW OVERNIGHT GUESTS?",
-        items: ["Yes", "Sometimes", "No"],
-        active: [1],
-      },
-      {
-        label: "GUESTS I’M OKAY WITH",
-        items: ["Close friends", "Study group", "Partner", "Family", "Anyone"],
-        active: [0, 1, 3],
-      },
-      {
-        label: "MY SOCIAL BATTERY",
-        items: ["Homebody", "Balanced", "Social hub"],
-        active: [1],
-      },
-    ],
-  },
-  q4: {
-    step: 4,
-    title: "Temperature & study",
-    sub: "Last one — the room environment",
-    groups: [
-      {
-        label: "AC TEMPERATURE AT NIGHT",
-        items: ["22–24°", "25–26°", "27°+"],
-        active: [1],
-      },
-      { label: "Quiet hours matter to me", items: ["5/5"], active: [0] },
-      {
-        label: "I MOSTLY STUDY",
-        items: ["In room", "Library", "Cafe / out"],
-        active: [0],
-      },
-    ],
-  },
-  q5: {
-    step: 5,
-    title: "Habits & Pets",
-    sub: "Be honest about your lifestyle",
-    groups: [
-      { label: "SMOKING", items: ["Yes", "No", "Outside only"], active: [1] },
-      {
-        label: "ALCOHOL / DRINKING",
-        items: ["Often", "Socially", "Never"],
-        active: [1],
-      },
-      {
-        label: "PETS IN THE ROOM",
-        items: ["Love them", "Have a pet", "Allergic/No"],
-        active: [0],
-      },
-    ],
-  },
-  q6: {
-    step: 6,
-    title: "Chores & Noise",
-    sub: "Living together smoothly",
-    groups: [
-      {
-        label: "CLEANING DUTIES",
-        items: ["Split equally", "Take turns", "Do my own"],
-        active: [0],
-      },
-      { label: "Noise tolerance", items: ["Moderate"], active: [0] },
-    ],
-  },
-};
+type QuestionData = { id: string; key: string; step: number; title: string; sub: string; groups: { label: string; items: string[]; active: number[] }[]; note?: string };
+type AnswerData = { questionId: string; selections: string[][] };
+
 export function Intro({ go }: { go: (x: Screen) => void }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api("/api/me")
-      .then((me) => {
-        const saved = me.questionnaire?.answers || {};
+    Promise.all([api("/api/me"), api("/api/questionnaire")])
+      .then(([me, qsData]: [any, QuestionData[]]) => {
+        appState.questions = Object.fromEntries(qsData.map((q) => [q.key, q]));
+        const saved: Record<string, string[][]> = {};
+        if (me.answers) {
+          me.answers.forEach((ans: AnswerData) => {
+            const q = qsData.find((x) => x.id === ans.questionId);
+            if (q) saved[q.key] = ans.selections;
+          });
+        }
         appState.questionnaireDraft = Object.fromEntries(
-          Object.entries(qs).map(([key, value]) => {
+          qsData.map((value) => {
+            const key = value.key;
             const savedGroups = saved[key];
-            const mappedActive = value.groups.map((g, gi) => {
+            const mappedActive = value.groups.map((g, gi: number) => {
               const savedItems = savedGroups?.[gi];
               if (!savedItems || savedItems.length === 0) return [...g.active];
               return savedItems.map((item: string) => g.items.indexOf(item)).filter((i: number) => i !== -1);
@@ -200,28 +92,36 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
   );
 }
 export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => void }) {
-  const d = qs[screen];
+  const d = appState.questions?.[screen] as QuestionData;
   if (!appState.questionnaireDraft) {
-    appState.questionnaireDraft = Object.fromEntries(Object.entries(qs).map(([k, v]) => [k, v.groups.map(g => [...g.active])]));
+    appState.questionnaireDraft = Object.fromEntries(Object.values(appState.questions || {}).map((v) => {
+      const q = v as QuestionData;
+      return [q.key, q.groups.map((g) => [...g.active])];
+    }));
   }
   const [, rerender] = useState(0);
   const toggle = (group: number, item: number) => {
-    const active = appState.questionnaireDraft[screen][group];
-    appState.questionnaireDraft[screen][group] = active.includes(item)
-      ? active.filter((x: number) => x !== item)
-      : [...active, item];
+    const active = appState.questionnaireDraft?.[screen]?.[group] as number[];
+    if (appState.questionnaireDraft && appState.questionnaireDraft[screen]) {
+      appState.questionnaireDraft[screen][group] = active.includes(item)
+        ? active.filter((x: number) => x !== item)
+        : [...active, item];
+    }
     rerender((x) => x + 1);
   };
   const proceed = async () => {
     if (screen === "q6") {
       try {
         const answers = Object.fromEntries(
-          Object.entries(qs).map(([key, value]) => [
-            key,
-            value.groups.map((g, gi) =>
-              g.items.filter((_, i) => appState.questionnaireDraft[key][gi].includes(i)),
-            ),
-          ]),
+          Object.values(appState.questions || {}).map((value) => {
+            const q = value as QuestionData;
+            return [
+              q.key,
+              q.groups.map((g, gi: number) =>
+                g.items.filter((_, i: number) => appState.questionnaireDraft?.[q.key]?.[gi]?.includes(i)),
+              ),
+            ];
+          }),
         );
         await api("/api/questionnaire", {
           method: "PUT",
@@ -248,15 +148,15 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
       <Progress step={d.step} />
       <Text style={s.bigTitleLeft}>{d.title}</Text>
       <Text style={s.muted}>{d.sub}</Text>
-      {d.groups.map((g, gi) => (
+      {d.groups.map((g, gi: number) => (
         <View key={g.label + gi} style={{ marginTop: 22 }}>
           <Text style={s.label}>{g.label}</Text>
           <Card>
             <View style={s.wrap}>
-              {g.items.map((x, i) => (
+              {g.items.map((x, i: number) => (
                 <Chip
                   key={x}
-                  active={appState.questionnaireDraft[screen][gi].includes(i)}
+                  active={appState.questionnaireDraft?.[screen]?.[gi]?.includes(i) ?? false}
                   onPress={() => toggle(gi, i)}
                 >
                   {x}
