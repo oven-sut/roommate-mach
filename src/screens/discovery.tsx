@@ -38,12 +38,36 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
   const [people, setPeople] = useState<any[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [fetchingMore, setFetchingMore] = useState(false);
+
   useEffect(() => {
-    api("/api/discover")
-      .then(setPeople)
-      .catch((e) => Alert.alert("Discover", e.message))
-      .finally(() => setLoading(false));
+    loadPage(true);
   }, []);
+
+  const loadPage = async (isInitial = false) => {
+    if (!hasMore && !isInitial) return;
+    if (isInitial) setLoading(true);
+    else setFetchingMore(true);
+
+    try {
+      const data = await api(`/api/discover`);
+      
+      setPeople(prev => {
+        const newItems = data.filter((d: any) => !prev.some(p => p.id === d.id));
+        if (!isInitial && newItems.length === 0) setHasMore(false);
+        if (isInitial && data.length === 0) setHasMore(false);
+        return isInitial ? data : [...prev, ...newItems];
+      });
+      if (isInitial) setIndex(0);
+    } catch (e: any) {
+      Alert.alert("Discover", e.message);
+    } finally {
+      setLoading(false);
+      setFetchingMore(false);
+    }
+  };
+
   const person = people[index];
   const swipe = async (decision: "LIKE" | "PASS") => {
     if (!person) return;
@@ -52,8 +76,13 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
         method: "POST",
         body: JSON.stringify({ decision }),
       });
-      setIndex((i) => i + 1);
+      const nextIndex = index + 1;
+      setIndex(nextIndex);
       if (result.matched) go("match");
+
+      if (hasMore && !fetchingMore && nextIndex >= people.length - 5) {
+        loadPage(false);
+      }
     } catch (e) {
       Alert.alert(
         "Unable to save",
@@ -73,7 +102,9 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
         </Pressable>
       </View>
       {loading ? (
-        <ActivityIndicator color={C.orange} />
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator color={C.orange} size="large" />
+        </View>
       ) : person ? (
         <>
           <Pressable
@@ -121,6 +152,11 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
             </Pressable>
           </View>
         </>
+      ) : fetchingMore ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator color={C.orange} size="large" />
+          <Text style={[s.muted, { marginTop: 16 }]}>Finding more matches...</Text>
+        </View>
       ) : (
         <Card>
           <Text style={s.bigTitle}>You’re all caught up</Text>
