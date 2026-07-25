@@ -2,13 +2,13 @@ import React from "react";
 import {
   Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   Text,
   TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 

@@ -8,6 +8,7 @@ import {
 } from "@expo-google-fonts/noto-sans-thai";
 import { useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Auth, Basics, Verify } from "./src/screens/auth";
 import { Config, Dashboard, Users } from "./src/screens/admin";
 import { Feed, Filters, Match, Matches, Requests } from "./src/screens/discovery";
@@ -113,10 +114,10 @@ export default function App() {
       </View>
     );
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="dark" />
       <AppContent />
-    </>
+    </SafeAreaProvider>
   );
 }
 

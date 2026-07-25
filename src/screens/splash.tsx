@@ -3,12 +3,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import {
   Animated,
   PanResponder,
-  SafeAreaView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Logo } from "../components/ui";
 import { s } from "../theme/styles";
 

@@ -1,19 +1,25 @@
-import Constants from "expo-constants";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 export async function getPushNotificationToken(): Promise<string | null> {
-  if (!Device.isDevice || Platform.OS === "web") return null;
+  if (
+    !Device.isDevice ||
+    Platform.OS === "web" ||
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+  ) {
+    return null;
+  }
+
+  const Notifications = await import("expo-notifications");
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {

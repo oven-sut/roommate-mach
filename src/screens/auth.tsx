@@ -10,13 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRef } from "react";
 import { Button, Card, Chip, Field, Header, ScreenShell } from "../components/ui";
 import { api, appState } from "../services/api";
@@ -183,14 +183,14 @@ export function Auth({
 
   const signInWithGoogle = async () => {
     const platformClientId = Platform.select({
-      ios: googleIosClientId,
-      android: googleAndroidClientId,
+      ios: googleIosClientId ?? googleWebClientId,
+      android: googleAndroidClientId ?? googleWebClientId,
       default: googleWebClientId,
     });
 
     if (!platformClientId) {
       setError(
-        `Google sign-in is not configured for ${Platform.OS}. Add the matching Google client ID to .env.`,
+        "Google sign-in is not configured. Add a Google client ID to .env.",
       );
       return;
     }
@@ -539,10 +539,6 @@ export function Auth({
                     {googleBusy ? "Signing in..." : "Google"}
                   </Text>
                 </Pressable>
-                <Pressable style={auth.socialButton}>
-                  <Text style={auth.shieldIcon}>♢</Text>
-                  <Text style={auth.socialText}>SUT SSO</Text>
-                </Pressable>
               </View>
             </>
           ) : null}
@@ -740,7 +736,6 @@ const auth = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
   },
-  shieldIcon: { color: "#766F66", fontSize: 21 },
   socialText: {
     color: "#75695F",
     fontFamily: serif,

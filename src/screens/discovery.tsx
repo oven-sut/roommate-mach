@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Card, Chip, Field, Header, ScreenShell } from "../components/ui";
 import { api, appState } from "../services/api";
 import { C } from "../theme/colors";

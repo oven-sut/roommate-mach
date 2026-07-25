@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Logo, ScreenShell } from "../components/ui";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
