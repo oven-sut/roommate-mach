@@ -1,16 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Animated,
   PanResponder,
-  SafeAreaView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Logo } from "../components/ui";
-import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 
 const KNOB_SIZE = 70;

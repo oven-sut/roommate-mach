@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from "react-native";
-import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
-import { api, appState, saveToken } from "../services/api";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Button, Card, Chip, Field, Header, Logo, ScreenShell } from "../components/ui";
+import { api, saveToken } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";

@@ -4,7 +4,6 @@ export type Screen =
   | "welcome1"
   | "welcome2"
   | "welcome3"
-  | "authChoice"
   | "login"
   | "signup"
   | "forgot"

@@ -6,12 +6,10 @@ import {
   NotoSansThai_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/noto-sans-thai";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View, Platform } from "react-native";
-import * as Device from "expo-device";
-import * as ExpoNotifications from "expo-notifications";
-import Constants from "expo-constants";
-import { Auth, AuthChoice, Basics, Verify } from "./src/screens/auth";
+import { useState } from "react";
+import { ActivityIndicator, Platform, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Auth, Basics, Verify } from "./src/screens/auth";
 import { Config, Dashboard, Users } from "./src/screens/admin";
 import { Feed, Filters, Match, Matches, Requests } from "./src/screens/discovery";
 import { Chat, Messages, Settings } from "./src/screens/messaging";
@@ -20,67 +18,26 @@ import { MyProfile, Notifications, Profile, Report } from "./src/screens/profile
 import { Intro, Question, Summary } from "./src/screens/questionnaire";
 import { SplashScreen } from "./src/screens/splash";
 import { api, appState, getAccessToken, saveToken } from "./src/services/api";
+import { getPushNotificationToken } from "./src/services/notifications";
 import { C } from "./src/theme/colors";
 import { s } from "./src/theme/styles";
+import type { AuthenticatedUser } from "./src/types/models";
 import type { Screen } from "./src/types/navigation";
-
-ExpoNotifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
-async function registerForPushNotificationsAsync() {
-  let token;
-  if (Platform.OS === "android") {
-    await ExpoNotifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: ExpoNotifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
-    });
-  }
-  if (Device.isDevice) {
-    const { status: existingStatus } = await ExpoNotifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== "granted") {
-      const { status } = await ExpoNotifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== "granted") {
-      console.log("Failed to get push token for push notification!");
-      return;
-    }
-    const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? "";
-    try {
-      token = (await ExpoNotifications.getExpoPushTokenAsync({ projectId })).data;
-    } catch (e) {
-      console.log("Failed to generate token", e);
-    }
-  } else {
-    console.log("Must use physical device for Push Notifications");
-  }
-  return token;
-}
 
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("splash");
   const continueFromSplash = async () => {
     if (getAccessToken()) {
       try {
-        const me = await api("/api/me");
+        const me = await api<AuthenticatedUser>("/api/me");
         appState.currentUserId = me.id;
 
-        registerForPushNotificationsAsync().then((token) => {
+        getPushNotificationToken().then((token) => {
           if (token) {
             api("/api/push/register", {
               method: "POST",
               body: JSON.stringify({ token, device: Platform.OS }),
-            }).catch(console.error);
+            }).catch(() => undefined);
           }
         });
 
@@ -100,14 +57,13 @@ function AppContent() {
     }
   };
   const go = (x: Screen) => setScreen(x);
-  const onAuth = (token: string, user: any) => {
+  const onAuth = (token: string, user: AuthenticatedUser) => {
     saveToken(token);
     appState.currentUserId = user.id;
     setScreen(user.role === "ADMIN" ? "dashboard" : "verify");
   };
   if (screen === "splash")
     return <SplashScreen onComplete={continueFromSplash} />;
-  if (screen === "authChoice") return <AuthChoice go={go} />;
   if (screen.startsWith("welcome")) return <Welcome screen={screen} go={go} />;
   if (screen === "authChoice") return <AuthChoice go={go} />;
   if (screen === "login" || screen === "signup" || screen === "forgot")
@@ -158,10 +114,10 @@ export default function App() {
       </View>
     );
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="dark" />
       <AppContent />
-    </>
+    </SafeAreaProvider>
   );
 }
 

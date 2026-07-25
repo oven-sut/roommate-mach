@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from "react-native";
-import { Button, Card, Chip, Field, Header, Logo, Progress, ScreenShell } from "../components/ui";
-import { api, appState, saveToken } from "../services/api";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Text, View } from "react-native";
+import { Button, Card, Chip, Header, Progress, ScreenShell } from "../components/ui";
+import { api, appState } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
@@ -31,33 +30,55 @@ type AnswerData = { questionId: string; selections: string[][] };
 
 export function Intro({ go }: { go: (x: Screen) => void }) {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const loadQuestionnaire = async () => {
+    try {
+      setLoading(true);
+      setLoadError("");
+      const [me, qsData] = await Promise.all([
+        api<{ answers?: AnswerData[] }>("/api/me"),
+        api<QuestionData[]>("/api/questionnaire"),
+      ]);
+      if (!Array.isArray(qsData) || qsData.length === 0) {
+        throw new Error("No questionnaire is available yet");
+      }
+      appState.questions = Object.fromEntries(
+        qsData.map((question) => [question.key, question]),
+      );
+      const saved: Record<string, string[][]> = {};
+      me.answers?.forEach((answer) => {
+        const question = qsData.find((item) => item.id === answer.questionId);
+        if (question) saved[question.key] = answer.selections;
+      });
+      appState.questionnaireDraft = Object.fromEntries(
+        qsData.map((question) => {
+          const savedGroups = saved[question.key];
+          const mappedActive = question.groups.map((group, groupIndex) => {
+            const savedItems = savedGroups?.[groupIndex];
+            if (!savedItems?.length) return [...group.active];
+            return savedItems
+              .map((item) => group.items.indexOf(item))
+              .filter((index) => index !== -1);
+          });
+          return [question.key, mappedActive];
+        }),
+      );
+    } catch (reason) {
+      appState.questions = null;
+      appState.questionnaireDraft = null;
+      setLoadError(
+        reason instanceof Error
+          ? reason.message
+          : "Unable to load questionnaire",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    Promise.all([api("/api/me"), api("/api/questionnaire")])
-      .then(([me, qsData]: [any, QuestionData[]]) => {
-        appState.questions = Object.fromEntries(qsData.map((q) => [q.key, q]));
-        const saved: Record<string, string[][]> = {};
-        if (me.answers) {
-          me.answers.forEach((ans: AnswerData) => {
-            const q = qsData.find((x) => x.id === ans.questionId);
-            if (q) saved[q.key] = ans.selections;
-          });
-        }
-        appState.questionnaireDraft = Object.fromEntries(
-          qsData.map((value) => {
-            const key = value.key;
-            const savedGroups = saved[key];
-            const mappedActive = value.groups.map((g, gi: number) => {
-              const savedItems = savedGroups?.[gi];
-              if (!savedItems || savedItems.length === 0) return [...g.active];
-              return savedItems.map((item: string) => g.items.indexOf(item)).filter((i: number) => i !== -1);
-            });
-            return [key, mappedActive];
-          })
-        );
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    loadQuestionnaire();
   }, []);
 
   if (loading) {
@@ -70,11 +91,23 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
     );
   }
 
+  if (loadError) {
+    return (
+      <ScreenShell>
+        <View style={s.introCenter}>
+          <Text style={s.bigTitle}>Unable to load questionnaire</Text>
+          <Text style={s.centerMuted}>{loadError}</Text>
+        </View>
+        <Button onPress={loadQuestionnaire}>Try Again</Button>
+      </ScreenShell>
+    );
+  }
+
   return (
     <ScreenShell>
       <Progress step={0} total={4} />
       <View style={s.introCenter}>
-        <View style={s.heart}>♡</View>
+        <Text style={s.heart}>♡</Text>
         <Text style={s.bigTitle}>Let's find how you live</Text>
         <Text style={s.centerMuted}>
           4 quick categories power your match score. Be honest — it’s how we
@@ -100,6 +133,20 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
     }));
   }
   const [, rerender] = useState(0);
+  if (!d) {
+    return (
+      <ScreenShell>
+        <Header title="" back={() => go("intro")} />
+        <View style={s.introCenter}>
+          <Text style={s.bigTitle}>Question unavailable</Text>
+          <Text style={s.centerMuted}>
+            The questionnaire data is incomplete or could not be loaded.
+          </Text>
+        </View>
+        <Button onPress={() => go("intro")}>Back to questionnaire</Button>
+      </ScreenShell>
+    );
+  }
   const toggle = (group: number, item: number) => {
     const active = appState.questionnaireDraft?.[screen]?.[group] as number[];
     if (appState.questionnaireDraft && appState.questionnaireDraft[screen]) {
