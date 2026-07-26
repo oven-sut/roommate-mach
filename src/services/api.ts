@@ -3,7 +3,9 @@ import type { MatchProfile, ProfileDraft } from "../types/models";
 
 export const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === "android" ? "http://10.0.2.2:8888" : "http://localhost:8888")
+  (Platform.OS === "android"
+    ? "http://192.168.1.55:8888"
+    : "http://localhost:8888")
 ).replace(/\/$/, "");
 let accessToken =
   Platform.OS === "web" && typeof localStorage !== "undefined"

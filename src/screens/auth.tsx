@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { makeRedirectUri } from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as ImagePicker from "expo-image-picker";
 import * as WebBrowser from "expo-web-browser";
@@ -19,15 +20,82 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRef } from "react";
 import { Button, Card, Chip, Field, Header, ScreenShell } from "../components/ui";
+import { useI18n } from "../i18n";
 import { api, appState } from "../services/api";
-import { C } from "../theme/colors";
 import { s } from "../theme/styles";
 import type { AuthenticatedUser, ProfileDraft } from "../types/models";
 import type { Screen } from "../types/navigation";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const serif = Platform.select({ ios: "Georgia", default: "serif" });
+const serif = "NotoSansThai_400Regular";
+const googleRedirectUri = makeRedirectUri({
+  native: "com.ovensut.roommatemach:/oauthredirect",
+});
+
+type PasswordStrength = {
+  score: number;
+  label: string;
+  color: string;
+  hint: string;
+};
+
+function getPasswordStrength(
+  value: string,
+  t: (key: string) => string,
+): PasswordStrength {
+  const password = value.trim();
+  if (!password) {
+    return {
+      score: 0,
+      label: t("weak"),
+      color: "#C93A32",
+      hint: t("pwdEmpty"),
+    };
+  }
+
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+  const simplePattern =
+    /(.)\1{2,}|1234|2345|3456|4567|5678|6789|password|qwerty|admin|sut/i;
+  if (simplePattern.test(password)) score = Math.max(0, score - 1);
+
+  if (score >= 5) {
+    return {
+      score,
+      label: t("strong"),
+      color: "#2F9142",
+      hint: t("pwdStrong"),
+    };
+  }
+  if (score >= 4) {
+    return {
+      score,
+      label: t("good"),
+      color: "#4AAF55",
+      hint: t("pwdGood"),
+    };
+  }
+  if (score >= 2) {
+    return {
+      score,
+      label: t("fair"),
+      color: "#D98916",
+      hint: t("pwdFair"),
+    };
+  }
+  return {
+    score,
+    label: t("weak"),
+    color: "#C93A32",
+    hint: t("pwdWeak"),
+  };
+}
 
 function AuthField({
   label,
@@ -54,7 +122,7 @@ function AuthField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#9D9187"
+          placeholderTextColor="#74675E"
           secureTextEntry={secure && hidden}
           autoCapitalize="none"
           style={auth.fieldInput}
@@ -109,6 +177,7 @@ export function Auth({
   go: (x: Screen) => void;
   onAuth: (token: string, user: AuthenticatedUser) => void;
 }) {
+  const { t } = useI18n();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [sutId, setSutId] = useState("");
@@ -123,15 +192,26 @@ export function Auth({
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState("");
   const entrance = useRef(new Animated.Value(0)).current;
+  const passwordStrength = useMemo(
+    () => getPasswordStrength(password, t),
+    [password, t],
+  );
   const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   const googleAndroidClientId =
     process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  // EAS does not upload the gitignored local .env file. The provider hook
+  // requires a non-empty client ID during render, so keep the screen alive
+  // and let signInWithGoogle show the configuration message instead.
+  const googleClientIdFallback = "google-sign-in-not-configured";
   const [googleRequest, googleResponse, promptGoogleAsync] =
     Google.useIdTokenAuthRequest({
-      webClientId: googleWebClientId,
-      androidClientId: googleAndroidClientId ?? googleWebClientId,
-      iosClientId: googleIosClientId ?? googleWebClientId,
+      webClientId: googleWebClientId ?? googleClientIdFallback,
+      androidClientId:
+        googleAndroidClientId ?? googleWebClientId ?? googleClientIdFallback,
+      iosClientId:
+        googleIosClientId ?? googleWebClientId ?? googleClientIdFallback,
+      redirectUri: googleRedirectUri,
       selectAccount: true,
     });
 
@@ -228,6 +308,8 @@ export function Auth({
       setBusy(true);
       setError("");
       if (!sutId.trim()) throw new Error("Please enter your SUT ID");
+      if (mode === "signup" && passwordStrength.score < 2)
+        throw new Error("Please use a stronger password");
       if (mode === "signup" && password !== confirm)
         throw new Error("Passwords do not match");
       if (mode === "signup" && !accepted)
@@ -275,11 +357,12 @@ export function Auth({
   };
 
   const footer = (prompt: string, action: string, screen: Screen) => (
-    <Pressable onPress={() => go(screen)} style={auth.footerLink}>
-      <Text style={auth.footerMuted}>
-        {prompt} <Text style={auth.footerAccent}>{action}</Text>
-      </Text>
-    </Pressable>
+    <View style={auth.footerLink}>
+      <Text style={auth.footerMuted}>{prompt} </Text>
+      <Pressable onPress={() => go(screen)} hitSlop={8}>
+        <Text style={auth.footerAccent}>{action}</Text>
+      </Pressable>
+    </View>
   );
 
   const entranceStyle = {
@@ -328,7 +411,7 @@ export function Auth({
               >
                 <Text style={auth.backIcon}>‹</Text>
               </Pressable>
-              <Text style={auth.forgotHeaderTitle}>Reset password</Text>
+              <Text style={auth.forgotHeaderTitle}>รีเซ็ตรหัสผ่าน</Text>
             </View>
 
             <View style={auth.resetHero}>
@@ -338,7 +421,7 @@ export function Auth({
                   <View style={auth.lockKeyhole} />
                 </View>
               </Animated.View>
-              <Text style={auth.resetTitle}>Reset your password</Text>
+              <Text style={auth.resetTitle}>รีเซ็ตรหัสผ่านของคุณ</Text>
               <Text style={auth.resetDescription}>
                 Enter your SUT email and we’ll send you a{"\n"}
                 secure reset link. It expires in 15 minutes.
@@ -346,8 +429,8 @@ export function Auth({
             </View>
 
             <AuthField
-              label="SUT Email or ID"
-              placeholder="Enter your SUT email or OTP"
+              label="อีเมล SUT หรือรหัสนักศึกษา"
+              placeholder="กรอกอีเมล SUT หรือ OTP"
               value={sutId}
               onChangeText={setSutId}
               action={
@@ -360,27 +443,27 @@ export function Auth({
                     {countdown > 0
                       ? `Send OTP\n(1.3 s)     in 0:${String(countdown).padStart(2, "0")}`
                       : busy
-                        ? "Sending..."
-                        : "Send OTP"}
+                        ? "กำลังส่ง..."
+                        : "ส่ง OTP"}
                   </Text>
                 </Pressable>
               }
             />
 
             <AuthField
-              label="Enter OTP"
-              placeholder="Enter OTP"
+              label="กรอก OTP"
+              placeholder="กรอก OTP"
               value={otp}
               onChangeText={setOtp}
               action={
                 <Pressable style={auth.inlineButton}>
-                  <Text style={auth.inlineButtonText}>Submit</Text>
+                  <Text style={auth.inlineButtonText}>ส่ง</Text>
                 </Pressable>
               }
             />
 
             {error ? <Text style={auth.error}>{error}</Text> : null}
-            <AuthButton onPress={() => go("login")}>Continue</AuthButton>
+            <AuthButton onPress={() => go("login")}>ดำเนินการต่อ</AuthButton>
 
             <View style={auth.resendCard}>
               <Text style={auth.mailIcon}>✉</Text>
@@ -390,7 +473,7 @@ export function Auth({
               </Text>
             </View>
 
-            {footer("Remembered it?", "Back to Log In", "login")}
+            {footer(t("rememberedIt"), t("backToLogin"), "login")}
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -419,27 +502,26 @@ export function Auth({
             ) : null}
             <View>
               <Text style={auth.title}>
-                {login ? "Welcome back" : "Create account"}
+                {login ? t("welcomeBack") : t("createAccount")}
               </Text>
               <Text style={auth.subtitle}>
                 {login
-                  ? "Log in to keep matching"
-                  : "Only SUT students can join"}
+                  ? t("loginSub")
+                  : t("signupSub")}
               </Text>
             </View>
           </View>
-
           {!login ? (
             <>
               <AuthField
-                label="First name"
-                placeholder="Enter your first name"
+                label={t("firstName")}
+                placeholder={t("enterFirstName")}
                 value={firstName}
                 onChangeText={setFirstName}
               />
               <AuthField
-                label="Last name"
-                placeholder="Enter your last name"
+                label={t("lastName")}
+                placeholder={t("enterLastName")}
                 value={lastName}
                 onChangeText={setLastName}
               />
@@ -447,14 +529,14 @@ export function Auth({
           ) : null}
 
           <AuthField
-            label="SUT ID"
+            label={t("sutId")}
             placeholder="B67xxxxx"
             value={sutId}
             onChangeText={setSutId}
           />
           <AuthField
-            label="Password"
-            placeholder="Enter your password"
+            label={t("password")}
+            placeholder={t("enterPassword")}
             value={password}
             onChangeText={setPassword}
             secure
@@ -463,14 +545,28 @@ export function Auth({
           {!login ? (
             <>
               <View style={auth.passwordStrength}>
-                <View style={[auth.strengthBar, { backgroundColor: "#E42D2D" }]} />
-                <View style={[auth.strengthBar, { backgroundColor: "#FFA800" }]} />
-                <View style={[auth.strengthBar, { backgroundColor: "#4AAF55" }]} />
-                <Text style={auth.perfect}>Perfect</Text>
+                {[1, 2, 3, 4].map((level) => (
+                  <View
+                    key={level}
+                    style={[
+                      auth.strengthBar,
+                      {
+                        backgroundColor:
+                          passwordStrength.score >= level
+                            ? passwordStrength.color
+                            : "#E5D9CD",
+                      },
+                    ]}
+                  />
+                ))}
+                <Text style={[auth.strengthLabel, { color: passwordStrength.color }]}>
+                  {passwordStrength.label}
+                </Text>
               </View>
+              <Text style={auth.strengthHint}>{passwordStrength.hint}</Text>
               <AuthField
-                label="Confirm password"
-                placeholder="Confirm your password"
+                label={t("confirmPassword")}
+                placeholder={t("confirmYourPassword")}
                 value={confirm}
                 onChangeText={setConfirm}
                 secure
@@ -487,10 +583,10 @@ export function Auth({
                 <View style={[auth.checkbox, remember && auth.checkboxChecked]}>
                   {remember ? <Text style={auth.checkmark}>✓</Text> : null}
                 </View>
-                <Text style={auth.optionText}>Remember me</Text>
+                <Text style={auth.optionText}>{t("rememberMe")}</Text>
               </Pressable>
               <Pressable onPress={() => go("forgot")}>
-                <Text style={auth.forgotLink}>Forgot password?</Text>
+                <Text style={auth.forgotLink}>{t("forgotPassword")}</Text>
               </Pressable>
             </View>
           ) : (
@@ -502,29 +598,35 @@ export function Auth({
                 {accepted ? <Text style={auth.checkmark}>✓</Text> : null}
               </View>
               <Text style={auth.termsText}>
-                I agree to the <Text style={auth.termsLink}>Terms</Text> and{" "}
-                <Text style={auth.termsLink}>Privacy Policy</Text>, and confirm
-                {"\n"}I’m a current SUT student.
+                {t("termsAgreePrefix")}{" "}
+                <Text style={auth.termsLink} onPress={() => go("terms")}>
+                  {t("terms")}
+                </Text>{" "}
+                {t("and")}{" "}
+                <Text style={auth.termsLink} onPress={() => go("privacy")}>
+                  {t("privacyPolicy")}
+                </Text>
+                , {t("sutConfirm")}
               </Text>
             </Pressable>
           )}
 
           {error ? <Text style={auth.error}>{error}</Text> : null}
           <AuthButton onPress={submitAuth} disabled={busy}>
-            {busy ? "Please wait..." : "Continue"}
+            {busy ? t("pleaseWait") : t("continue")}
           </AuthButton>
 
           {login ? (
             <>
               <View style={auth.divider}>
                 <View style={auth.dividerLine} />
-                <Text style={auth.dividerText}>or continue with</Text>
+                <Text style={auth.dividerText}>{t("orContinueWith")}</Text>
                 <View style={auth.dividerLine} />
               </View>
               <View style={auth.socialRow}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Continue with Google"
+                  accessibilityLabel={t("continueGoogle")}
                   disabled={!googleRequest || googleBusy}
                   onPress={signInWithGoogle}
                   style={({ pressed }) => [
@@ -536,7 +638,7 @@ export function Auth({
                 >
                   <Text style={auth.googleIcon}>G</Text>
                   <Text style={auth.socialText}>
-                    {googleBusy ? "Signing in..." : "Google"}
+                    {googleBusy ? t("pleaseWait") : "Google"}
                   </Text>
                 </Pressable>
               </View>
@@ -544,8 +646,8 @@ export function Auth({
           ) : null}
 
           {footer(
-            login ? "New here?" : "Already have an account?",
-            login ? "Sign Up" : "Log in",
+            login ? t("newHere") : t("alreadyAccount"),
+            login ? t("signUp") : t("logInAction"),
             login ? "signup" : "login",
           )}
           </Animated.View>
@@ -589,14 +691,14 @@ const auth = StyleSheet.create({
     fontWeight: "700",
   },
   subtitle: {
-    color: "#8E8176",
+    color: "#63564D",
     fontFamily: serif,
     fontSize: 15,
     marginTop: 2,
   },
   fieldGroup: { marginBottom: 10 },
   fieldLabel: {
-    color: "#91857B",
+    color: "#6C5F56",
     fontFamily: serif,
     fontWeight: "700",
     fontSize: 13,
@@ -615,7 +717,7 @@ const auth = StyleSheet.create({
   },
   fieldInput: {
     flex: 1,
-    color: "#4C4035",
+    color: "#2E241D",
     fontFamily: serif,
     fontSize: 12,
     paddingVertical: 0,
@@ -624,18 +726,25 @@ const auth = StyleSheet.create({
   passwordStrength: {
     height: 12,
     marginTop: -4,
-    marginBottom: 13,
+    marginBottom: 5,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   strengthBar: { height: 4, flex: 1, borderRadius: 3 },
-  perfect: {
-    width: 49,
+  strengthLabel: {
+    width: 54,
     color: "#378B3B",
     fontFamily: serif,
     fontSize: 11,
     textAlign: "right",
+  },
+  strengthHint: {
+    color: "#6C5F56",
+    fontFamily: serif,
+    fontSize: 10.5,
+    lineHeight: 15,
+    marginBottom: 12,
   },
   termsRow: {
     flexDirection: "row",
@@ -662,7 +771,7 @@ const auth = StyleSheet.create({
     fontSize: 11,
     lineHeight: 19,
   },
-  termsLink: { color: "#C72F2F" },
+  termsLink: { color: "#C72F2F", textDecorationLine: "underline" },
   primaryButton: {
     height: 51,
     borderRadius: 8,
@@ -689,9 +798,16 @@ const auth = StyleSheet.create({
     marginTop: "auto",
     paddingTop: 50,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
-  footerMuted: { color: "#AA9A8E", fontFamily: serif, fontSize: 11 },
-  footerAccent: { color: "#C62828", fontWeight: "700" },
+  footerMuted: { color: "#77685E", fontFamily: serif, fontSize: 11 },
+  footerAccent: {
+    color: "#C62828",
+    fontFamily: "NotoSansThai_700Bold",
+    fontSize: 11,
+    textDecorationLine: "underline",
+  },
   loginOptions: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -701,7 +817,7 @@ const auth = StyleSheet.create({
     paddingHorizontal: 4,
   },
   checkRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  optionText: { color: "#A39488", fontFamily: serif, fontSize: 11 },
+  optionText: { color: "#685A50", fontFamily: serif, fontSize: 11 },
   forgotLink: {
     color: "#D00000",
     fontFamily: serif,
@@ -716,7 +832,7 @@ const auth = StyleSheet.create({
     marginBottom: 39,
   },
   dividerLine: { height: 1, flex: 1, backgroundColor: "#BFB9B4" },
-  dividerText: { color: "#A6988C", fontFamily: serif, fontSize: 11 },
+  dividerText: { color: "#74675E", fontFamily: serif, fontSize: 11 },
   socialRow: { flexDirection: "row", gap: 14 },
   socialButton: {
     flex: 1,
@@ -737,7 +853,7 @@ const auth = StyleSheet.create({
     fontWeight: "700",
   },
   socialText: {
-    color: "#75695F",
+    color: "#4F443C",
     fontFamily: serif,
     fontSize: 15,
     fontWeight: "700",
@@ -807,7 +923,7 @@ const auth = StyleSheet.create({
     fontWeight: "700",
   },
   resetDescription: {
-    color: "#8D8075",
+    color: "#61554C",
     fontFamily: serif,
     fontSize: 11,
     lineHeight: 19,
@@ -846,81 +962,11 @@ const auth = StyleSheet.create({
   mailIcon: { color: "#F08B7B", fontSize: 21 },
   resendText: {
     flex: 1,
-    color: "#C95D5A",
+    color: "#8E4B49",
     fontFamily: serif,
     fontSize: 11,
   },
 });
-
-export function Verify({ go }: { go: (x: Screen) => void }) {
-  const [document, setDocument] = useState<string | null>(null);
-  const choose = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.65,
-      base64: true,
-    });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      setDocument(
-        asset.base64
-          ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
-          : asset.uri,
-      );
-    }
-  };
-  const submit = async () => {
-    if (!document)
-      return Alert.alert("Student ID", "Please choose a photo first.");
-    try {
-      await api("/api/verification", {
-        method: "POST",
-        body: JSON.stringify({ documentUrl: document }),
-      });
-      go("basics");
-    } catch (e) {
-      Alert.alert(
-        "Unable to submit",
-        e instanceof Error ? e.message : "Please try again",
-      );
-    }
-  };
-  return (
-    <ScreenShell>
-      <Header title="Verify your student ID" back={() => go("signup")} />
-      <Text style={s.centerMuted}>Required before you can match</Text>
-      <View style={s.upload}>
-        <Text style={{ fontSize: 30 }}>▣</Text>
-        <Text style={s.title}>
-          {document ? "SUT ID selected" : "Upload your SUT ID card"}
-        </Text>
-        <Text style={s.muted}>JPG or PNG · both sides · max 10 MB</Text>
-        <View style={{ width: 160, marginTop: 15 }}>
-          <Button outline onPress={choose}>
-            Choose Photo
-          </Button>
-        </View>
-      </View>
-      <Card>
-        <Text style={s.title}>Verification status</Text>
-        <Chip active>{document ? "Ready to submit" : "Pending upload"}</Chip>
-        <View style={s.verifySteps}>
-          <Text style={{ color: document ? C.green : C.muted }}>
-            ● Uploaded
-          </Text>
-          <Text style={{ color: C.amber }}>● Admin review</Text>
-          <Text style={s.muted}>● Verified</Text>
-        </View>
-      </Card>
-      <Text style={s.note}>
-        ♧ Your ID is used only for verification and is deleted after approval.
-      </Text>
-      <Button tone="wine" onPress={submit}>
-        Submit for Review
-      </Button>
-    </ScreenShell>
-  );
-}
 
 export function Basics({
   screen,
@@ -979,13 +1025,13 @@ export function Basics({
   return (
     <ScreenShell>
       <Header
-        title={housing ? "Housing & Education" : "About you"}
+        title={housing ? "หอพักและการศึกษา" : "เกี่ยวกับคุณ"}
         back={() => go(housing ? "basics" : "verify")}
       />
       <Text style={s.muted}>
         {housing
-          ? "More details to help us match you"
-          : "This appears on your match card"}
+          ? "ข้อมูลเพิ่มเติมเพื่อช่วยให้ระบบจับคู่ได้แม่นขึ้น"
+          : "ข้อมูลนี้จะแสดงบนการ์ดจับคู่ของคุณ"}
       </Text>
       {!housing ? (
         <>
@@ -1024,15 +1070,15 @@ export function Basics({
           <View style={s.two}>
             <View style={{ flex: 2 }}>
               <Field
-                label="FULL NAME"
-                placeholder="Napat Srisawat"
+                label="ชื่อ-นามสกุล"
+                placeholder="นภัส ศรีสวัสดิ์"
                 value={appState.profileDraft.displayName}
                 onChangeText={(v) => set("displayName", v)}
               />
             </View>
             <View style={{ flex: 1 }}>
               <Field
-                label="AGE"
+                label="อายุ"
                 placeholder="19"
                 value={appState.profileDraft.age}
                 onChangeText={(v) => set("age", v)}
@@ -1042,30 +1088,30 @@ export function Basics({
           <View style={s.two}>
             <View style={{ flex: 1 }}>
               <Field
-                label="MAJOR"
-                placeholder="Computer Eng."
+                label="สาขา"
+                placeholder="วิศวกรรมคอมพิวเตอร์"
                 value={appState.profileDraft.major}
                 onChangeText={(v) => set("major", v)}
               />
             </View>
             <View style={{ flex: 1 }}>
               <Field
-                label="GENDER"
-                placeholder="Male"
+                label="เพศ"
+                placeholder="ชาย"
                 value={appState.profileDraft.gender}
                 onChangeText={(v) => set("gender", v)}
               />
             </View>
           </View>
           <Field
-            label="SHORT BIO"
+            label="แนะนำตัวสั้น ๆ"
             placeholder="Coffee-powered CS student. Quiet on weekdays, board games on weekends ✌"
             value={appState.profileDraft.bio}
             onChangeText={(v) => set("bio", v)}
           />
-          <Text style={s.label}>ROOM TYPE</Text>
+          <Text style={s.label}>ประเภทห้อง</Text>
           <View style={s.segment}>
-            {["Single", "Double", "Either"].map((x) => (
+            {["ห้องเดี่ยว", "ห้องคู่", "แบบไหนก็ได้"].map((x) => (
               <Chip
                 key={x}
                 active={appState.profileDraft.roomType === x}
@@ -1075,9 +1121,9 @@ export function Basics({
               </Chip>
             ))}
           </View>
-          <Text style={s.label}>ROOMMATE GENDER PREFERENCE</Text>
+          <Text style={s.label}>เพศของรูมเมทที่ต้องการ</Text>
           <View style={s.wrap}>
-            {["Same gender", "Any", "Non-binary friendly"].map((x) => (
+            {["เพศเดียวกัน", "ได้ทุกเพศ", "ยินดีรับ Non-binary"].map((x) => (
               <Chip
                 key={x}
                 active={appState.profileDraft.roommateGender === x}
@@ -1090,19 +1136,19 @@ export function Basics({
         </>
       ) : (
         <>
-          <Text style={s.label}>YEAR</Text>
+          <Text style={s.label}>ชั้นปี</Text>
           <View style={s.segment}>
             {[1, 2, 3, 4].map((x) => (
               <Chip
                 key={x}
                 active={appState.profileDraft.year === x}
                 onPress={() => set("year", x)}
-              >{`Year ${x === 4 ? "4+" : x}`}</Chip>
+              >{`ปี ${x === 4 ? "4+" : x}`}</Chip>
             ))}
           </View>
-          <Text style={s.label}>PREFERRED ZONE (LOCATION)</Text>
+          <Text style={s.label}>โซนที่ต้องการ</Text>
           <View style={s.wrap}>
-            {["Gate 1", "Gate 4", "In-campus", "Suranaree Road"].map((x) => (
+            {["ประตู 1", "ประตู 4", "ในมหาวิทยาลัย", "ถนนสุรนารี"].map((x) => (
               <Chip
                 key={x}
                 active={appState.profileDraft.zone === x}
@@ -1122,7 +1168,7 @@ export function Basics({
         </>
       )}
       <Button onPress={proceed}>
-        {housing ? "Save & Continue" : "Continue"}
+        {housing ? "บันทึกและไปต่อ" : "ดำเนินการต่อ"}
       </Button>
     </ScreenShell>
   );

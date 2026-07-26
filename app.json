@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Roommate Mach",
+    "name": "Roommate Match",
     "slug": "roommate-mach",
-    "scheme": "roomiematch",
+    "scheme": ["roomiematch", "com.ovensut.roommatemach"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,14 +11,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.ovensut.roommatemach",
       "infoPlist": {
-        "NSLocalNetworkUsageDescription": "Roommate Mach uses your local network to connect to the Expo development server."
+        "NSLocalNetworkUsageDescription": "Roommate Match uses your local network to connect to the Expo development server."
       }
     },
     "android": {
       "package": "com.ovensut.roommatemach",
       "adaptiveIcon": {
         "backgroundColor": "#FCF8F6",
-        "foregroundImage": "./assets/icon.png"
+        "backgroundImage": "./assets/android-icon-background.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
     "web": {
@@ -30,8 +32,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Roommate Mach needs access to your photos so you can upload your student ID and profile pictures.",
-          "cameraPermission": "Roommate Mach needs access to your camera so you can take student ID and profile pictures.",
+          "photosPermission": "Roommate Match needs access to your photos so you can upload your student ID and profile pictures.",
+          "cameraPermission": "Roommate Match needs access to your camera so you can take student ID and profile pictures.",
           "microphonePermission": false
         }
       ],
@@ -42,6 +44,11 @@
           "color": "#8F1938"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1f7abbc0-f36a-4d74-8810-577234043c00"
+      }
+    }
   }
 }

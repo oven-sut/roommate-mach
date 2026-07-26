@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Card, Chip, Field, Header, ScreenShell } from "../components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Field,
+  Header,
+  MotionPressable,
+  ScreenShell,
+} from "../components/ui";
+import { useI18n } from "../i18n";
 import { api, appState } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
@@ -14,6 +23,7 @@ export function BottomNav({
   screen: Screen;
   go: (x: Screen) => void;
 }) {
+  const { t } = useI18n();
   return (
     <View style={s.nav}>
       {[
@@ -22,14 +32,25 @@ export function BottomNav({
         ["▱", "Messages", "messages"],
         ["♙", "Profile", "myprofile"],
       ].map(([ic, l, x]) => (
-        <Pressable key={l} onPress={() => go(x as Screen)} style={s.navItem}>
+        <MotionPressable
+          key={l}
+          onPress={() => go(x as Screen)}
+          style={s.navItem}
+          pressedScale={0.9}
+        >
           <Text style={[s.navIcon, screen === x && { color: C.orange }]}>
             {ic}
           </Text>
           <Text style={[s.navText, screen === x && { color: C.orange }]}>
-            {l}
+            {x === "feed"
+              ? t("discover")
+              : x === "matches"
+                ? t("matches")
+                : x === "messages"
+                  ? t("messages")
+                  : t("profile")}
           </Text>
-        </Pressable>
+        </MotionPressable>
       ))}
     </View>
   );
@@ -92,13 +113,13 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
   };
   return (
     <ScreenShell>
-      <Header title="⌂  Discover" right="☷" onRight={() => go("filters")} />
+      <Header title="ค้นหารูมเมท" right="☷" onRight={() => go("filters")} />
       <View style={s.quickLinks}>
         <Pressable onPress={() => go("requests")}>
-          <Text style={s.link}>♥ Likes you</Text>
+          <Text style={s.link}>♥ คนที่ถูกใจคุณ</Text>
         </Pressable>
         <Pressable onPress={() => go("notifications")}>
-          <Text style={s.link}>♧ Notifications</Text>
+          <Text style={s.link}>♧ การแจ้งเตือน</Text>
         </Pressable>
       </View>
       {loading ? (
@@ -107,19 +128,20 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
         </View>
       ) : person ? (
         <>
-          <Pressable
+          <MotionPressable
             onPress={() => {
               appState.activeProfile = person;
               go("profile");
             }}
+            pressedScale={0.985}
           >
             <View style={s.profileCard}>
               <View style={s.verified}>
                 <Text style={{ color: "#fff" }}>
                   ♧{" "}
                   {person.verification?.status === "VERIFIED"
-                    ? "Verified"
-                    : "Student"}
+                    ? "ยืนยันแล้ว"
+                    : "นักศึกษา"}
                 </Text>
               </View>
               <View style={s.score}>
@@ -136,32 +158,40 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                   {person.profile?.roomType ?? "Any"} room
                 </Text>
                 <View style={s.wrap}>
-                  <Chip>Compatible</Chip>
-                  <Chip>{person.profile?.zone ?? "Any zone"}</Chip>
+                  <Chip>เข้ากันได้</Chip>
+                  <Chip>{person.profile?.zone ?? "ทุกโซน"}</Chip>
                 </View>
               </View>
             </View>
-          </Pressable>
+          </MotionPressable>
           <Text style={s.tap}>tap card to expand ↑</Text>
           <View style={s.actions}>
-            <Pressable onPress={() => swipe("PASS")} style={s.reject}>
+            <MotionPressable
+              onPress={() => swipe("PASS")}
+              style={s.reject}
+              pressedScale={0.88}
+            >
               <Text style={{ fontSize: 30, color: C.muted }}>×</Text>
-            </Pressable>
-            <Pressable onPress={() => swipe("LIKE")} style={s.like}>
-              <Text style={{ fontSize: 28, color: "#fff" }}>♥</Text>
-            </Pressable>
+            </MotionPressable>
+            <MotionPressable
+              onPress={() => swipe("LIKE")}
+              style={s.like}
+              pressedScale={0.88}
+            >
+              <Text style={{ fontSize: 28, color: C.ink }}>♥</Text>
+            </MotionPressable>
           </View>
         </>
       ) : fetchingMore ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator color={C.orange} size="large" />
-          <Text style={[s.muted, { marginTop: 16 }]}>Finding more matches...</Text>
+          <Text style={[s.muted, { marginTop: 16 }]}>กำลังหารูมเมทเพิ่มเติม...</Text>
         </View>
       ) : (
         <Card>
           <Text style={s.bigTitle}>You’re all caught up</Text>
           <Text style={s.centerMuted}>
-            New compatible profiles will appear here.
+            โปรไฟล์ที่เข้ากันได้จะปรากฏที่นี่เมื่อมีคนใหม่
           </Text>
         </Card>
       )}
@@ -176,16 +206,16 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
       <View style={s.sheet}>
         <View style={s.handle} />
         <View style={s.rowBetween}>
-          <Text style={s.title}>Filters</Text>
-          <Text style={s.link}>Reset all</Text>
+          <Text style={s.title}>ตัวกรอง</Text>
+          <Text style={s.link}>รีเซ็ตทั้งหมด</Text>
         </View>
-        <Text style={s.label}>SHOW ME</Text>
+        <Text style={s.label}>แสดงผล</Text>
         <View style={s.segment}>
-          <Chip>Women</Chip>
-          <Chip active>Men</Chip>
-          <Chip>Everyone</Chip>
+          <Chip>ผู้หญิง</Chip>
+          <Chip active>ผู้ชาย</Chip>
+          <Chip>ทุกคน</Chip>
         </View>
-        <Field label="MAJOR" placeholder="Any faculty" />
+        <Field label="สาขา" placeholder="ทุกสำนักวิชา" />
         <Text style={s.label}>BUDGET (฿ / MONTH)</Text>
         <Card>
           <Text style={[s.link, { textAlign: "right" }]}>2,500 – 4,500</Text>
@@ -193,14 +223,14 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
             <View style={s.sliderOn} />
           </View>
         </Card>
-        <Text style={s.label}>MUST MATCH ON</Text>
+        <Text style={s.label}>ต้องเข้ากันเรื่อง</Text>
         <View style={s.wrap}>
-          <Chip active>Sleep schedule</Chip>
-          <Chip active>Cleanliness</Chip>
-          <Chip>Guests</Chip>
-          <Chip>AC temp</Chip>
+          <Chip active>เวลานอน</Chip>
+          <Chip active>ความสะอาด</Chip>
+          <Chip>แขก</Chip>
+          <Chip>อุณหภูมิแอร์</Chip>
         </View>
-        <Text style={s.label}>MINIMUM MATCH SCORE</Text>
+        <Text style={s.label}>คะแนนเข้ากันขั้นต่ำ</Text>
         <Card>
           <View style={s.slider}>
             <View style={[s.sliderOn, { width: "70%" }]} />
@@ -211,7 +241,7 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
             <Text style={s.muted}>95%</Text>
           </View>
         </Card>
-        <Button onPress={() => go("feed")}>Apply Filters · 23 people</Button>
+        <Button onPress={() => go("feed")}>ใช้ตัวกรอง · 23 คน</Button>
       </View>
     </ScreenShell>
   );
@@ -242,12 +272,14 @@ export function PersonRow({
           onPress={onPress}
           style={[
             s.smallAction,
-            action === "Chat" && { backgroundColor: C.orange },
+            (action === "Chat" || action === "แชท") && {
+              backgroundColor: C.orange,
+            },
           ]}
         >
           <Text
             style={{
-              color: action === "Chat" ? "#fff" : C.wine,
+              color: action === "Chat" || action === "แชท" ? C.ink : C.wine,
               fontFamily: "NotoSansThai_700Bold",
             }}
           >
@@ -268,29 +300,29 @@ export function Matches({ go }: { go: (x: Screen) => void }) {
   return (
     <ScreenShell>
       <Header
-        title="Your Matches"
-        right={`${matches.length} total`}
+        title="แมตช์ของคุณ"
+        right={`${matches.length} ทั้งหมด`}
         onRight={() => go("requests")}
       />
-      <Text style={s.label}>NEW THIS WEEK</Text>
+      <Text style={s.label}>ใหม่สัปดาห์นี้</Text>
       {matches.map((m) => {
         const other = m.other;
         return (
           <PersonRow
             key={m.id}
             p={[
-              other?.displayName ?? "Roomie",
+              other?.displayName ?? "รูมเมท",
               `${m.score}%`,
-              other?.profile?.major ?? "SUT student",
+              other?.profile?.major ?? "นักศึกษา SUT",
             ]}
-            action="Chat"
+            action="แชท"
             onPress={() => go("messages")}
           />
         );
       })}
       {!matches.length && (
         <Card>
-          <Text style={s.centerMuted}>No matches yet. Keep discovering!</Text>
+          <Text style={s.centerMuted}>ยังไม่มีแมตช์ ลองค้นหาต่อได้เลย</Text>
         </Card>
       )}
       <BottomNav screen="matches" go={go} />
@@ -300,8 +332,8 @@ export function Matches({ go }: { go: (x: Screen) => void }) {
 export function Match({ go }: { go: (x: Screen) => void }) {
   return (
     <SafeAreaView style={s.matchPage}>
-      <Text style={s.matchEyebrow}>RECIPROCAL LIKE</Text>
-      <Text style={s.matchTitle}>It's a{`\n`}Match!</Text>
+      <Text style={s.matchEyebrow}>ถูกใจกันทั้งคู่</Text>
+      <Text style={s.matchTitle}>จับคู่{`\n`}สำเร็จ!</Text>
       <View style={s.matchAvatars}>
         <View style={s.matchAvatar}>
           <Text style={s.avatarLetter}>N</Text>
@@ -318,10 +350,10 @@ export function Match({ go }: { go: (x: Screen) => void }) {
         quiet hours.
       </Text>
       <Button tone="amber" onPress={() => go("chat")}>
-        Start Chat
+        เริ่มแชท
       </Button>
       <Button outline tone="amber" onPress={() => go("feed")}>
-        Keep Discovering
+        ค้นหาต่อ
       </Button>
     </SafeAreaView>
   );
@@ -343,19 +375,19 @@ export function Requests({ go }: { go: (x: Screen) => void }) {
   };
   return (
     <ScreenShell>
-      <Header title="Likes You" right={`${likes.length} new`} />
+      <Header title="คนที่ถูกใจคุณ" right={`${likes.length} ใหม่`} />
       <Text style={s.muted}>
-        These students already liked you. Like back to match instantly.
+        นักศึกษาเหล่านี้ถูกใจคุณแล้ว กดถูกใจกลับเพื่อจับคู่ทันที
       </Text>
       {likes.map((x) => (
         <PersonRow
           key={x.id}
           p={[
             x.from.displayName,
-            "Liked you",
-            x.from.profile?.major ?? "SUT student",
+            "ถูกใจคุณ",
+            x.from.profile?.major ?? "นักศึกษา SUT",
           ]}
-          action="Like"
+          action="ถูกใจ"
           onPress={() => likeBack(x.fromId)}
         />
       ))}

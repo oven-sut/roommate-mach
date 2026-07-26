@@ -1,8 +1,16 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Logo, ScreenShell } from "../components/ui";
+import { Logo, MotionPressable, ScreenShell } from "../components/ui";
+import { useI18n } from "../i18n";
 import { s } from "../theme/styles";
+import type { Language } from "../i18n";
 import type { Screen } from "../types/navigation";
 
 const next: Partial<Record<Screen, Screen>> = {
@@ -24,31 +32,62 @@ const next: Partial<Record<Screen, Screen>> = {
   summary: "feed",
 };
 
-const onboarding = [
+const onboarding: {
+  screen: Screen;
+  title: Record<Language, string>;
+  sub: Record<Language, string>;
+  art: string;
+}[] = [
   {
-    screen: "welcome1" as Screen,
-    title: "Build your lifestyle profile",
-    sub: "Answer a fun 4-part questionnaire — sleep, cleanliness, guests, and study habits.",
+    screen: "welcome1",
+    title: {
+      en: "Build your lifestyle profile",
+      th: "สร้างโปรไฟล์ไลฟ์สไตล์",
+    },
+    sub: {
+      en: "Answer a fun questionnaire about sleep, cleanliness, guests, and study habits.",
+      th: "ตอบแบบสอบถามเรื่องการนอน ความสะอาด แขก และนิสัยการเรียน",
+    },
     art: "Ploy, 19\nFood Technology\nNight Owl   Spotless",
   },
   {
-    screen: "welcome2" as Screen,
-    title: "Get high-compatibility matches",
-    sub: "Our score compares 20+ lifestyle signals so you only meet people who fit how you live.",
+    screen: "welcome2",
+    title: {
+      en: "Get high-compatibility matches",
+      th: "จับคู่กับคนที่เข้ากันได้",
+    },
+    sub: {
+      en: "Our score compares 20+ lifestyle signals so you meet people who fit how you live.",
+      th: "ระบบเทียบพฤติกรรมกว่า 20 จุด เพื่อแนะนำรูมเมทที่เหมาะกับคุณ",
+    },
     art: "88%",
   },
   {
-    screen: "welcome3" as Screen,
-    title: "Connect & chat safely",
-    sub: "Every account is verified with an SUT student ID before anyone can chat.",
-    art: "Hi! Saw we’re 92% 👋\n\nDorm 17? Let’s talk!",
+    screen: "welcome3",
+    title: {
+      en: "Connect & chat safely",
+      th: "คุยกันได้อย่างปลอดภัย",
+    },
+    sub: {
+      en: "Every account is verified with an SUT student ID before anyone can chat.",
+      th: "ทุกบัญชีต้องยืนยันด้วยบัตรนักศึกษา SUT ก่อนเริ่มแชท",
+    },
+    art: "Hi! Saw we're 92%\n\nDorm 17? Let's talk!",
   },
 ];
 
-export function Welcome({ screen, go }: { screen: Screen; go: (x: Screen) => void }) {
+export function Welcome({
+  screen,
+  go,
+}: {
+  screen: Screen;
+  go: (x: Screen) => void;
+}) {
   const { height } = useWindowDimensions();
+  const { language, t } = useI18n();
   const artHeight = Math.max(260, Math.min(410, height * 0.46));
   const d = onboarding.find((x) => x.screen === screen)!;
+
   return (
     <ScreenShell bottom={false}>
       <View style={[s.welcomeArt, { height: artHeight }]}>
@@ -56,22 +95,35 @@ export function Welcome({ screen, go }: { screen: Screen; go: (x: Screen) => voi
           {d.art}
         </Text>
       </View>
-      <Text style={s.bigTitle}>{d.title}</Text>
-      <Text style={s.centerMuted}>{d.sub}</Text>
+      <Text style={s.bigTitle}>{d.title[language]}</Text>
+      <Text style={s.centerMuted}>{d.sub[language]}</Text>
       <View style={s.dots}>
         <View style={[s.dot, screen === "welcome1" && s.dotOn]} />
         <View style={[s.dot, screen === "welcome2" && s.dotOn]} />
         <View style={[s.dot, screen === "welcome3" && s.dotOn]} />
       </View>
-      <View style={s.rowBetween}>
-        <Pressable onPress={() => go("authChoice")}>
-          <Text style={s.muted}>Skip</Text>
-        </Pressable>
-        <View style={{ width: 110 }}>
-          <Button onPress={() => go(next[screen]!)}>
-            {screen === "welcome3" ? "Get Started" : "Next"}
-          </Button>
+      <View style={choice.welcomeActions}>
+        <View style={choice.actionSide}>
+          <Pressable
+            onPress={() => go("authChoice")}
+            style={choice.skipButton}
+          >
+            <Text style={s.muted}>{t("skip")}</Text>
+          </Pressable>
         </View>
+        <View style={choice.actionCenter}>
+          <MotionPressable
+            accessibilityRole="button"
+            onPress={() => go(next[screen]!)}
+            pressedScale={0.96}
+            style={choice.welcomeNextButton}
+          >
+            <Text style={choice.welcomeNextText}>
+              {screen === "welcome3" ? t("getStarted") : t("next")}
+            </Text>
+          </MotionPressable>
+        </View>
+        <View style={choice.actionSide} />
       </View>
     </ScreenShell>
   );
@@ -79,6 +131,7 @@ export function Welcome({ screen, go }: { screen: Screen; go: (x: Screen) => voi
 
 export function AuthChoice({ go }: { go: (x: Screen) => void }) {
   const { width, height } = useWindowDimensions();
+  const { t } = useI18n();
   const compact = width < 370 || height < 720;
 
   return (
@@ -102,7 +155,7 @@ export function AuthChoice({ go }: { go: (x: Screen) => void }) {
                 pressed && choice.buttonPressed,
               ]}
             >
-              <Text style={choice.buttonText}>Login</Text>
+              <Text style={choice.buttonText}>{t("login")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -113,7 +166,7 @@ export function AuthChoice({ go }: { go: (x: Screen) => void }) {
                 pressed && choice.buttonPressed,
               ]}
             >
-              <Text style={choice.buttonText}>Register</Text>
+              <Text style={choice.buttonText}>{t("register")}</Text>
             </Pressable>
           </View>
         </View>
@@ -130,9 +183,7 @@ export function AuthChoice({ go }: { go: (x: Screen) => void }) {
 }
 
 const choice = StyleSheet.create({
-  page: {
-    flex: 1,
-  },
+  page: { flex: 1 },
   safe: {
     flex: 1,
     alignItems: "center",
@@ -158,7 +209,9 @@ const choice = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(223, 166, 155, 0.76)",
+    backgroundColor: "rgba(255, 244, 232, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.42)",
   },
   buttonCompact: { height: 54 },
   buttonPressed: {
@@ -166,7 +219,7 @@ const choice = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   buttonText: {
-    color: "#FFF9E8",
+    color: "#70152E",
     fontFamily: "NotoSansThai_700Bold",
     fontSize: 16,
   },
@@ -180,5 +233,41 @@ const choice = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.8,
   },
+  welcomeActions: {
+    minHeight: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionSide: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  actionCenter: {
+    width: 154,
+    alignItems: "center",
+  },
+  skipButton: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingRight: 12,
+  },
+  welcomeNextButton: {
+    width: 154,
+    height: 52,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F65A2E",
+    shadowColor: "#4A252B",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+  },
+  welcomeNextText: {
+    color: "#3A2522",
+    fontFamily: "NotoSansThai_800ExtraBold",
+    fontSize: 14,
+  },
 });
-

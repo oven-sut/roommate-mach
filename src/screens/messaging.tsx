@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Card, Header, ScreenShell } from "../components/ui";
+import { LanguageToggle, useI18n } from "../i18n";
 import { api, appState } from "../services/api";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
@@ -9,6 +10,7 @@ import type { Screen } from "../types/navigation";
 
 import { BottomNav } from "./discovery";
 export function Messages({ go }: { go: (x: Screen) => void }) {
+  const { t } = useI18n();
   const [conversations, setConversations] = useState<any[]>([]);
   const [query, setQuery] = useState("");
   useEffect(() => {
@@ -18,7 +20,7 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
   }, []);
   return (
     <ScreenShell>
-      <Header title="Messages" right={`${conversations.length} chats`} />
+      <Header title={t("messages")} right={`${conversations.length} chats`} />
       <TextInput
         style={s.input}
         placeholder="Search conversations..."
@@ -104,13 +106,13 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
       />
       <Text style={s.online}>● Matched conversation</Text>
       <View style={s.chatBody}>
-        <Text style={s.matchDate}>Messages are stored securely</Text>
+        <Text style={s.matchDate}>ข้อความถูกจัดเก็บอย่างปลอดภัย</Text>
         {messages.map((m) => {
           const mine = m.senderId === appState.currentUserId;
           return (
             <View key={m.id} style={mine ? s.bubbleOut : s.bubbleIn}>
-              <Text style={{ color: mine ? "#fff" : C.ink }}>{m.text}</Text>
-              <Text style={{ fontSize: 9, color: mine ? "#FFE4D8" : C.muted }}>
+              <Text style={{ color: C.ink }}>{m.text}</Text>
+              <Text style={{ fontSize: 9, color: mine ? "#4F3F42" : C.muted }}>
                 {new Date(m.createdAt).toLocaleTimeString()}
               </Text>
             </View>
@@ -132,7 +134,7 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
           onSubmitEditing={send}
         />
         <Pressable style={s.send} onPress={send}>
-          <Text style={{ color: "#fff" }}>➤</Text>
+          <Text style={{ color: C.ink }}>➤</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -140,6 +142,7 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
 }
 
 export function Settings({ go }: { go: (x: Screen) => void }) {
+  const { t } = useI18n();
   const [toggles, setToggles] = useState([true, true, false, false]);
   const [email, setEmail] = useState("");
   useEffect(() => {
@@ -184,28 +187,46 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
     }
   };
   const rows = [
-    ["ACCOUNT", "Email", email],
+    [t("account"), t("email"), email],
     ["", "Change password", "›"],
-    ["NOTIFICATIONS", "New matches", "toggle"],
-    ["", "Messages", "toggle"],
-    ["", "Likes you", "toggle"],
-    ["PRIVACY", "Hide me from Discover", "toggle"],
+    [t("notifications"), t("newMatches"), "toggle"],
+    ["", t("messages"), "toggle"],
+    ["", t("likesYou"), "toggle"],
+    [t("privacy"), t("hideDiscover"), "toggle"],
     ["", "Blocked users", "1 ›"],
     ["", "Download my data", "›"],
     ["SUPPORT", "Help centre & FAQ", "›"],
     ["", "Report a problem", "›"],
   ];
+  const tr = (value: any) => {
+    if (value === "Change password") return t("changePassword");
+    if (value === "Blocked users") return t("blockedUsers");
+    if (value === "Download my data") return t("downloadData");
+    if (value === "SUPPORT") return t("support");
+    if (value === "Help centre & FAQ") return t("helpFaq");
+    if (value === "Report a problem") return t("reportProblem");
+    return value;
+  };
   let ti = 0;
   return (
     <ScreenShell>
-      <Header title="Settings" back={() => go("myprofile")} />
+      <Header title={t("settings")} back={() => go("myprofile")} />
+      <Card>
+        <View style={s.rowBetween}>
+          <View>
+            <Text style={s.title}>{t("languageSetting")}</Text>
+            <Text style={s.muted}>{t("currentLanguage")}</Text>
+          </View>
+          <LanguageToggle />
+        </View>
+      </Card>
       {rows.map((r, i) => {
         const idx = r[2] === "toggle" ? ti++ : -1;
         return (
           <View key={i}>
-            {r[0] ? <Text style={s.sectionLabel}>{r[0]}</Text> : null}
+            {r[0] ? <Text style={s.sectionLabel}>{tr(r[0])}</Text> : null}
             <View style={s.settingRow}>
-              <Text>{r[1]}</Text>
+              <Text style={s.settingText}>{tr(r[1])}</Text>
               {idx >= 0 ? (
                 <Switch
                   value={toggles[idx]}

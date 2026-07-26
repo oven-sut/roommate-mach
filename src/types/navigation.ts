@@ -7,6 +7,8 @@ export type Screen =
   | "login"
   | "signup"
   | "forgot"
+  | "terms"
+  | "privacy"
   | "verify"
   | "basics"
   | "housing"

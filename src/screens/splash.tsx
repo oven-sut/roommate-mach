@@ -132,7 +132,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           </Animated.View>
 
           <Animated.Text style={[s.splashTag, { opacity: textOp }]}>
-            Find your people. Share your space.
+            เจอรูมเมทที่ใช่ แชร์พื้นที่ที่สบายใจ
           </Animated.Text>
         </View>
 
@@ -143,7 +143,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
             { opacity: textOp },
           ]}
         >
-          <Text style={local.hint}>SLIDE TO CONTINUE</Text>
+          <Text style={local.hint}>เลื่อนเพื่อเริ่มใช้งาน</Text>
           <View
             style={[local.track, compact && local.trackCompact]}
             onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
@@ -151,8 +151,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
             <Animated.View
               accessible
               accessibilityRole="adjustable"
-              accessibilityLabel="Slide to continue"
-              accessibilityHint="Drag the arrow to the right to enter the app"
+              accessibilityLabel="เลื่อนเพื่อเริ่มใช้งาน"
+              accessibilityHint="ลากปุ่มลูกศรไปทางขวาเพื่อเข้าแอพ"
               style={[
                 local.knob,
                 compact && local.knobCompact,
@@ -170,7 +170,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           adjustsFontSizeToFit
           style={[local.university, { opacity: textOp }]}
         >
-          SURANAREE UNIVERSITY OF TECHNOLOGY
+          มหาวิทยาลัยเทคโนโลยีสุรนารี
         </Animated.Text>
       </SafeAreaView>
     </LinearGradient>

@@ -47,11 +47,16 @@ export const s = StyleSheet.create({
     color: "#fff",
     marginTop: 24,
   },
-  splashTag: { color: "#F5C9CA", marginTop: 12 },
+  splashTag: {
+    color: "#F5C9CA",
+    marginTop: 12,
+    fontFamily: "NotoSansThai_400Regular",
+  },
   university: {
     position: "absolute",
     bottom: 34,
     color: "#E8AAA8",
+    fontFamily: "NotoSansThai_600SemiBold",
     fontSize: 9,
     letterSpacing: 2,
   },
@@ -76,7 +81,12 @@ export const s = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#fff",
   },
-  back: { fontSize: 28, color: C.wine, lineHeight: 30 },
+  back: {
+    fontFamily: "NotoSansThai_700Bold",
+    fontSize: 28,
+    color: C.wine,
+    lineHeight: 30,
+  },
   pill: {
     borderWidth: 1,
     borderColor: C.orange,
@@ -127,7 +137,7 @@ export const s = StyleSheet.create({
     fontFamily: "NotoSansThai_400Regular",
     fontSize: 11,
     lineHeight: 18,
-    color: "#826B6D",
+    color: "#5F4D50",
   },
   tinyOrange: {
     color: C.orange,
@@ -147,6 +157,13 @@ export const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 4,
+    alignSelf: "stretch",
+    width: "100%",
+    shadowColor: "#4A252B",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   buttonText: {
     fontFamily: "NotoSansThai_800ExtraBold",
@@ -205,7 +222,7 @@ export const s = StyleSheet.create({
   chipActive: { borderColor: C.orange, backgroundColor: "#FFF8F4" },
   chipText: {
     fontSize: 10,
-    color: "#715E60",
+    color: "#4F3F42",
     fontFamily: "NotoSansThai_600SemiBold",
   },
   chipTextActive: { color: C.orange },
@@ -223,6 +240,7 @@ export const s = StyleSheet.create({
     borderRadius: 14,
     lineHeight: 25,
     color: C.ink,
+    fontFamily: "NotoSansThai_600SemiBold",
     transform: [{ rotate: "-3deg" }],
   },
   scoreArt: {
@@ -342,7 +360,11 @@ export const s = StyleSheet.create({
     backgroundColor: C.orange,
   },
   progressTop: { alignItems: "flex-end" },
-  progressCount: { color: C.muted, fontSize: 11 },
+  progressCount: {
+    color: C.muted,
+    fontFamily: "NotoSansThai_600SemiBold",
+    fontSize: 11,
+  },
   track: {
     height: 5,
     borderRadius: 3,
@@ -362,7 +384,8 @@ export const s = StyleSheet.create({
     height: 72,
     borderRadius: 22,
     backgroundColor: C.orange,
-    color: "#fff",
+    color: C.ink,
+    fontFamily: "NotoSansThai_700Bold",
     fontSize: 40,
     textAlign: "center",
     textAlignVertical: "center",
@@ -394,7 +417,11 @@ export const s = StyleSheet.create({
   },
   navItem: { alignItems: "center", width: 70 },
   navIcon: { fontSize: 21, color: C.muted },
-  navText: { fontSize: 9, color: C.muted },
+  navText: {
+    fontFamily: "NotoSansThai_600SemiBold",
+    fontSize: 9,
+    color: C.muted,
+  },
   profileCard: {
     height: 515,
     borderRadius: 22,
@@ -444,7 +471,11 @@ export const s = StyleSheet.create({
     color: "#fff",
     fontFamily: "NotoSansThai_800ExtraBold",
   },
-  tap: { textAlign: "center", color: C.muted },
+  tap: {
+    textAlign: "center",
+    color: C.muted,
+    fontFamily: "NotoSansThai_400Regular",
+  },
   actions: { flexDirection: "row", justifyContent: "center", gap: 18 },
   reject: {
     width: 58,
@@ -545,6 +576,7 @@ export const s = StyleSheet.create({
   matchCopy: {
     color: "#F5D4DA",
     textAlign: "center",
+    fontFamily: "NotoSansThai_400Regular",
     lineHeight: 21,
     marginVertical: 12,
   },
@@ -555,9 +587,20 @@ export const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  online: { textAlign: "center", color: C.green, fontSize: 11, marginTop: -12 },
+  online: {
+    textAlign: "center",
+    color: C.green,
+    fontFamily: "NotoSansThai_600SemiBold",
+    fontSize: 11,
+    marginTop: -12,
+  },
   chatBody: { flex: 1, backgroundColor: "#F8F2EE", padding: 18, gap: 12 },
-  matchDate: { textAlign: "center", color: C.muted, fontSize: 10 },
+  matchDate: {
+    textAlign: "center",
+    color: C.muted,
+    fontFamily: "NotoSansThai_400Regular",
+    fontSize: 10,
+  },
   bubbleIn: {
     alignSelf: "flex-start",
     maxWidth: "75%",
@@ -578,6 +621,7 @@ export const s = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     color: C.orange,
+    fontFamily: "NotoSansThai_600SemiBold",
   },
   composer: {
     height: 74,
@@ -600,6 +644,11 @@ export const s = StyleSheet.create({
     fontSize: 10,
     fontFamily: "NotoSansThai_700Bold",
     marginTop: 10,
+  },
+  settingText: {
+    color: C.ink,
+    fontFamily: "NotoSansThai_400Regular",
+    fontSize: 13,
   },
   settingRow: {
     height: 55,

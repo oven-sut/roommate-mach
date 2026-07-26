@@ -95,10 +95,10 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
     return (
       <ScreenShell>
         <View style={s.introCenter}>
-          <Text style={s.bigTitle}>Unable to load questionnaire</Text>
+          <Text style={s.bigTitle}>โหลดแบบสอบถามไม่ได้</Text>
           <Text style={s.centerMuted}>{loadError}</Text>
         </View>
-        <Button onPress={loadQuestionnaire}>Try Again</Button>
+        <Button onPress={loadQuestionnaire}>ลองอีกครั้ง</Button>
       </ScreenShell>
     );
   }
@@ -108,7 +108,7 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
       <Progress step={0} total={4} />
       <View style={s.introCenter}>
         <Text style={s.heart}>♡</Text>
-        <Text style={s.bigTitle}>Let's find how you live</Text>
+        <Text style={s.bigTitle}>มาดูไลฟ์สไตล์ของคุณกัน</Text>
         <Text style={s.centerMuted}>
           4 quick categories power your match score. Be honest — it’s how we
           find your fit.
@@ -120,7 +120,7 @@ export function Intro({ go }: { go: (x: Screen) => void }) {
           <Chip>☀ Temp & study</Chip>
         </View>
       </View>
-      <Button onPress={() => go("q1")}>Start Questionnaire</Button>
+      <Button onPress={() => go("q1")}>เริ่มทำแบบสอบถาม</Button>
     </ScreenShell>
   );
 }
@@ -138,12 +138,12 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
       <ScreenShell>
         <Header title="" back={() => go("intro")} />
         <View style={s.introCenter}>
-          <Text style={s.bigTitle}>Question unavailable</Text>
+          <Text style={s.bigTitle}>ไม่พบคำถาม</Text>
           <Text style={s.centerMuted}>
             The questionnaire data is incomplete or could not be loaded.
           </Text>
         </View>
-        <Button onPress={() => go("intro")}>Back to questionnaire</Button>
+        <Button onPress={() => go("intro")}>กลับไปหน้าแบบสอบถาม</Button>
       </ScreenShell>
     );
   }
@@ -228,10 +228,10 @@ export function Question({ screen, go }: { screen: Screen; go: (x: Screen) => vo
         onPress={proceed}
       >
         {screen === "q6"
-          ? "Finish Questionnaire"
+          ? "จบแบบสอบถาม"
           : screen === "q4"
             ? "Finish — See My Summary"
-            : "Continue"}
+            : "ดำเนินการต่อ"}
       </Button>
     </ScreenShell>
   );
@@ -279,7 +279,7 @@ export function Summary({ go }: { go: (x: Screen) => void }) {
         </Text>
       </Card>
       <Card>
-        <Text style={s.title}>Your lifestyle signature</Text>
+        <Text style={s.title}>สไตล์การใช้ชีวิตของคุณ</Text>
         <View style={s.wrap}>
           <Chip active>Night Owl 23:00–00:30</Chip>
           <Chip active>Spotless 4/5</Chip>
@@ -292,7 +292,7 @@ export function Summary({ go }: { go: (x: Screen) => void }) {
           compute your match %.
         </Text>
       </Card>
-      <Button onPress={complete}>Complete Profile</Button>
+      <Button onPress={complete}>สร้างโปรไฟล์ให้เสร็จ</Button>
     </ScreenShell>
   );
 }

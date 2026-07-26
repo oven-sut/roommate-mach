@@ -12,7 +12,7 @@ export function AdminLogin({ go }: { go: (x: Screen) => void }) {
       <View style={s.adminHero}>
         <Logo dark />
         <Text style={s.bigTitle}>Admin Portal</Text>
-        <Text style={s.centerMuted}>SUT Roommate Matcher</Text>
+        <Text style={s.centerMuted}>Roommate Match</Text>
       </View>
       <Field label="ADMIN EMAIL" placeholder="admin@sut.ac.th" />
       <Field label="PASSWORD" placeholder="••••••••" />

@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
+  Animated,
   Image,
   Pressable,
   ScrollView,
@@ -11,6 +12,45 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C } from "../theme/colors";
 import { s } from "../theme/styles";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export function MotionPressable({
+  pressedScale = 0.97,
+  style,
+  onPressIn,
+  onPressOut,
+  ...props
+}: React.ComponentProps<typeof Pressable> & { pressedScale?: number }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const animateScale = (toValue: number) => {
+    Animated.spring(scale, {
+      toValue,
+      stiffness: 260,
+      damping: 22,
+      mass: 0.7,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <AnimatedPressable
+      {...props}
+      onPressIn={(event) => {
+        animateScale(pressedScale);
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        animateScale(1);
+        onPressOut?.(event);
+      }}
+      style={(state) => [
+        typeof style === "function" ? style(state) : style,
+        { transform: [{ scale }] },
+      ]}
+    />
+  );
+}
 
 export function Button({
   children,
@@ -25,21 +65,22 @@ export function Button({
 }) {
   const color =
     tone === "wine" ? C.wine : tone === "amber" ? C.amber : C.orange;
+  const textColor = outline ? color : tone === "wine" ? "#FFF9F0" : C.ink;
   return (
-    <Pressable
+    <MotionPressable
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         s.button,
         {
           backgroundColor: outline ? "transparent" : color,
           borderColor: color,
           borderWidth: outline ? 1 : 0,
-          opacity: pressed ? 0.78 : 1,
+          opacity: 1,
         },
       ]}
     >
-      <Text style={[s.buttonText, outline && { color }]}>{children}</Text>
-    </Pressable>
+      <Text style={[s.buttonText, { color: textColor }]}>{children}</Text>
+    </MotionPressable>
   );
 }
 export function Header({
@@ -56,17 +97,21 @@ export function Header({
   return (
     <View style={s.header}>
       {back ? (
-        <Pressable onPress={back} style={s.iconBtn}>
+        <MotionPressable onPress={back} style={s.iconBtn} pressedScale={0.9}>
           <Text style={s.back}>‹</Text>
-        </Pressable>
+        </MotionPressable>
       ) : (
         <View style={{ width: 38 }} />
       )}
       <Text style={s.headerTitle}>{title}</Text>
       {right ? (
-        <Pressable onPress={onRight} style={s.pill}>
+        <MotionPressable
+          onPress={onRight}
+          style={s.pill}
+          pressedScale={0.94}
+        >
           <Text style={s.pillText}>{right}</Text>
-        </Pressable>
+        </MotionPressable>
       ) : (
         <View style={{ width: 38 }} />
       )}
@@ -97,7 +142,7 @@ export function Field({
         secureTextEntry={secureTextEntry}
         autoCapitalize={label.includes("EMAIL") ? "none" : "sentences"}
         placeholder={placeholder}
-        placeholderTextColor="#B9A8AA"
+        placeholderTextColor="#7F6C70"
         style={[s.input, small && { height: 46 }]}
       />
     </View>
@@ -113,9 +158,13 @@ export function Chip({
   onPress?: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={[s.chip, active && s.chipActive]}>
+    <MotionPressable
+      onPress={onPress}
+      pressedScale={0.95}
+      style={[s.chip, active && s.chipActive]}
+    >
       <Text style={[s.chipText, active && s.chipTextActive]}>{children}</Text>
-    </Pressable>
+    </MotionPressable>
   );
 }
 export function Card({
@@ -157,6 +206,11 @@ export function ScreenShell({
       <ScrollView
         contentContainerStyle={[s.page, bottom && { paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
+        decelerationRate="normal"
+        directionalLockEnabled
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
       >
         {children}
       </ScrollView>
@@ -177,7 +231,7 @@ export function Logo({ dark = false }: { dark?: boolean }) {
           width >= 600 && { width: 132, height: 132 },
         ]}
         resizeMode="contain"
-        accessibilityLabel="SUT Roommate Matcher logo"
+        accessibilityLabel="Roommate Match logo"
       />
       <Text
         style={[
@@ -187,7 +241,7 @@ export function Logo({ dark = false }: { dark?: boolean }) {
           dark && { color: C.ink },
         ]}
       >
-        SUT Roommate{`\n`}Matcher
+        Roommate Match
       </Text>
     </View>
   );

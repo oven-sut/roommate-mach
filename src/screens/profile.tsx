@@ -90,7 +90,7 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
       </View>
       <Button onPress={() => go("messages")}>♧ Open Messages</Button>
       <Pressable onPress={() => go("report")}>
-        <Text style={s.bottomLink}>Report or block</Text>
+        <Text style={s.bottomLink}>รายงานหรือบล็อก</Text>
       </Pressable>
     </ScreenShell>
   );
@@ -106,7 +106,7 @@ export function Notifications({ go }: { go: (x: Screen) => void }) {
   return (
     <ScreenShell>
       <Header
-        title="Notifications"
+        title="การแจ้งเตือน"
         back={() => go("feed")}
         right={`${items.filter((x) => !x.readAt).length} new`}
       />
@@ -155,14 +155,14 @@ export function Notifications({ go }: { go: (x: Screen) => void }) {
                   <Text style={s.title}>{x.title}</Text>
                   <Text style={s.muted}>{x.body}</Text>
                 </View>
-                {!x.readAt ? <Text style={s.tinyOrange}>New</Text> : null}
+                {!x.readAt ? <Text style={s.tinyOrange}>ใหม่</Text> : null}
               </View>
             </Card>
           </Pressable>
         ))
       ) : (
         <Card>
-          <Text style={s.centerMuted}>No notifications yet</Text>
+          <Text style={s.centerMuted}>ยังไม่มีการแจ้งเตือน</Text>
         </Card>
       )}
     </ScreenShell>
@@ -205,7 +205,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
       <View style={[s.cover, { height: 180, backgroundColor: "#4A252B" }]} />
       <View style={s.sheet}>
         <View style={s.handle} />
-        <Text style={[s.bigTitle, { marginTop: 5 }]}>Report or Block</Text>
+        <Text style={[s.bigTitle, { marginTop: 5 }]}>รายงานหรือบล็อก</Text>
         <Text style={s.centerMuted}>We won't tell them you did this.</Text>
         {[
           ["Unmatch", "Remove them from your matches"],
@@ -300,7 +300,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
         <View style={profileStyle.loading}>
           <Text style={profileStyle.cardTitle}>Couldn’t load your profile</Text>
           <Pressable onPress={loadProfile} style={profileStyle.retryButton}>
-            <Text style={profileStyle.retryText}>Try again</Text>
+            <Text style={profileStyle.retryText}>ลองอีกครั้ง</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -355,7 +355,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={profileStyle.header}>
-            <Text style={profileStyle.pageTitle}>My Profile</Text>
+            <Text style={profileStyle.pageTitle}>โปรไฟล์ของฉัน</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open profile settings"
@@ -398,7 +398,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
                 {details?.age ? `, ${details.age}` : ""}
               </Text>
               <Text numberOfLines={1} style={profileStyle.meta}>
-                {details?.major || "Add your major"}
+                {details?.major || "เพิ่มสาขาของคุณ"}
                 {details?.year ? ` · Year ${details.year}` : ""}
               </Text>
               <View
@@ -421,7 +421,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
 
           <View style={profileStyle.card}>
             <View style={profileStyle.rowBetween}>
-              <Text style={profileStyle.cardTitle}>Profile strength</Text>
+              <Text style={profileStyle.cardTitle}>ความสมบูรณ์ของโปรไฟล์</Text>
               <Text style={profileStyle.strengthPercent}>
                 {profileStrength}%
               </Text>
@@ -443,13 +443,13 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
 
           {[
             {
-              title: "Photos",
+              title: "รูปภาพ",
               description: `${photos.length} of 3 uploaded`,
               screen: "basics" as Screen,
             },
             {
-              title: "Basics & bio",
-              description: "Name, major, room type, preference",
+              title: "ข้อมูลพื้นฐานและแนะนำตัว",
+              description: "ชื่อ สาขา ประเภทห้อง และความต้องการ",
               screen: "basics" as Screen,
             },
           ].map((item) => (
@@ -473,7 +473,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
           <View style={[profileStyle.card, profileStyle.questionnaireCard]}>
             <View style={profileStyle.questionnaireCopy}>
               <Text style={profileStyle.questionnaireTitle}>
-                Lifestyle questionnaire
+                แบบสอบถามไลฟ์สไตล์
               </Text>
               <Text style={profileStyle.description}>
                 {profile.answers?.length
@@ -489,18 +489,18 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
               ]}
             >
               <Text style={profileStyle.retakeText}>
-                {profile.answers?.length ? "Retake" : "Start"}
+                {profile.answers?.length ? "ทำใหม่" : "เริ่ม"}
               </Text>
             </Pressable>
           </View>
 
           <View style={[profileStyle.card, profileStyle.statusCard]}>
             <View style={profileStyle.statusCopy}>
-              <Text style={profileStyle.cardTitle}>Account status</Text>
+              <Text style={profileStyle.cardTitle}>สถานะบัญชี</Text>
               <Text style={profileStyle.description}>
                 {profile.discoverable
-                  ? "Active · visible in Discover"
-                  : "Hidden · not visible in Discover"}
+                  ? "เปิดใช้งาน · แสดงในหน้าค้นหา"
+                  : "ซ่อนอยู่ · ไม่แสดงในหน้าค้นหา"}
               </Text>
             </View>
             <Switch
@@ -548,7 +548,7 @@ const profileStyle = StyleSheet.create({
     paddingVertical: 12,
   },
   retryText: {
-    color: "#FFFFFF",
+    color: C.ink,
     fontFamily: "NotoSansThai_700Bold",
   },
   header: {
@@ -620,7 +620,7 @@ const profileStyle = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  editBadgeText: { color: "#FFFFFF", fontSize: 16 },
+  editBadgeText: { color: C.ink, fontSize: 16 },
   identityCopy: { flex: 1, alignItems: "flex-start" },
   name: {
     color: C.ink,
