@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Card, Header, ScreenShell } from "../components/ui";
+import { Card, Header, ScreenShell } from "../components/ui";
 import { LanguageToggle, useI18n } from "../i18n";
 import { api, appState } from "../services/api";
 import { C } from "../theme/colors";
@@ -9,15 +9,24 @@ import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
 
 import { BottomNav } from "./discovery";
+
+const serifFont = Platform.select({
+  ios: "Georgia",
+  android: "serif",
+  default: "serif",
+});
+
 export function Messages({ go }: { go: (x: Screen) => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<any[]>([]);
   const [query, setQuery] = useState("");
+
   useEffect(() => {
     api("/api/conversations")
       .then(setConversations)
       .catch((e) => Alert.alert("Messages", e.message));
   }, []);
+
   return (
     <ScreenShell>
       <Header title={t("messages")} right={`${conversations.length} chats`} />
@@ -74,6 +83,7 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
     </ScreenShell>
   );
 }
+
 export function Chat({ go }: { go: (x: Screen) => void }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
@@ -83,11 +93,13 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
           .then(setMessages)
           .catch((e) => Alert.alert("Chat", e.message))
       : Promise.resolve();
+
   useEffect(() => {
     void load();
     const timer = setInterval(load, 4000);
     return () => clearInterval(timer);
   }, []);
+
   const send = async () => {
     if (!appState.activeConversationId || !text.trim()) return;
     const message = await api(
@@ -97,6 +109,7 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
     setMessages((items) => [...items, message]);
     setText("");
   };
+
   return (
     <SafeAreaView style={s.safe}>
       <Header
@@ -142,14 +155,15 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
 }
 
 export function Settings({ go }: { go: (x: Screen) => void }) {
-  const { t } = useI18n();
+  const { language } = useI18n();
   const [toggles, setToggles] = useState([true, true, false, false]);
   const [email, setEmail] = useState("");
+
   useEffect(() => {
     api("/api/me")
       .then((me) => {
         const p = me.notificationPrefs ?? {};
-        setEmail(me.email);
+        setEmail(me.email || "");
         setToggles([
           p.matches !== false,
           p.messages !== false,
@@ -159,6 +173,7 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
       })
       .catch((e) => Alert.alert("Settings", e.message));
   }, []);
+
   const updateToggle = async (idx: number, value: boolean) => {
     const next = toggles.map((x, j) => (j === idx ? value : x));
     setToggles(next);
@@ -186,64 +201,231 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
       );
     }
   };
-  const rows = [
-    [t("account"), t("email"), email],
-    ["", "Change password", "›"],
-    [t("notifications"), t("newMatches"), "toggle"],
-    ["", t("messages"), "toggle"],
-    ["", t("likesYou"), "toggle"],
-    [t("privacy"), t("hideDiscover"), "toggle"],
-    ["", "Blocked users", "1 ›"],
-    ["", "Download my data", "›"],
-    ["SUPPORT", "Help centre & FAQ", "›"],
-    ["", "Report a problem", "›"],
-  ];
-  const tr = (value: any) => {
-    if (value === "Change password") return t("changePassword");
-    if (value === "Blocked users") return t("blockedUsers");
-    if (value === "Download my data") return t("downloadData");
-    if (value === "SUPPORT") return t("support");
-    if (value === "Help centre & FAQ") return t("helpFaq");
-    if (value === "Report a problem") return t("reportProblem");
-    return value;
+
+  const handleLogout = () => {
+    Alert.alert(
+      language === "th" ? "ออกจากระบบ" : "Log Out",
+      language === "th" ? "คุณต้องการออกจากระบบใช่หรือไม่?" : "Are you sure you want to log out?",
+      [
+        { text: language === "th" ? "ยกเลิก" : "Cancel", style: "cancel" },
+        {
+          text: language === "th" ? "ออกจากระบบ" : "Log Out",
+          style: "destructive",
+          onPress: () => go("login"),
+        },
+      ],
+    );
   };
-  let ti = 0;
+
   return (
-    <ScreenShell>
-      <Header title={t("settings")} back={() => go("myprofile")} />
-      <Card>
-        <View style={s.rowBetween}>
-          <View>
-            <Text style={s.title}>{t("languageSetting")}</Text>
-            <Text style={s.muted}>{t("currentLanguage")}</Text>
-          </View>
-          <LanguageToggle />
+    <SafeAreaView style={settingStyles.safeArea}>
+      <ScrollView contentContainerStyle={settingStyles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={settingStyles.headerRow}>
+          <Pressable style={settingStyles.backButton} onPress={() => go("myprofile")}>
+            <Text style={settingStyles.backChevron}>←</Text>
+          </Pressable>
+          <Text style={settingStyles.headerTitle}>
+            {language === "th" ? "การตั้งค่า" : "Settings"}
+          </Text>
+          <View style={{ width: 38 }} />
         </View>
-      </Card>
-      {rows.map((r, i) => {
-        const idx = r[2] === "toggle" ? ti++ : -1;
-        return (
-          <View key={i}>
-            {r[0] ? <Text style={s.sectionLabel}>{tr(r[0])}</Text> : null}
-            <View style={s.settingRow}>
-              <Text style={s.settingText}>{tr(r[1])}</Text>
-              {idx >= 0 ? (
-                <Switch
-                  value={toggles[idx]}
-                  trackColor={{ true: C.orange, false: "#E9DEDA" }}
-                  onValueChange={(v) => updateToggle(idx, v)}
-                />
-              ) : (
-                <Text style={s.muted}>{r[2]}</Text>
-              )}
+
+        {/* Language Selector */}
+        <View style={settingStyles.sectionCard}>
+          <View style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}>
+            <View>
+              <Text style={settingStyles.rowTitle}>
+                🌐 {language === "th" ? "สลับภาษาแอป" : "App Language"}
+              </Text>
+              <Text style={settingStyles.rowSub}>
+                {language === "th" ? "ภาษาไทย (TH) / English (EN)" : "Thai (TH) / English (EN)"}
+              </Text>
             </View>
+            <LanguageToggle />
           </View>
-        );
-      })}
-      <Button outline tone="wine" onPress={() => go("login")}>
-        ↪ Log Out
-      </Button>
-    </ScreenShell>
+        </View>
+
+        {/* Account Info */}
+        <View style={settingStyles.sectionCard}>
+          <Text style={settingStyles.sectionTitle}>
+            👤 {language === "th" ? "ข้อมูลบัญชีผู้ใช้" : "Account Information"}
+          </Text>
+
+          <View style={settingStyles.rowBetween}>
+            <Text style={settingStyles.rowTitle}>{language === "th" ? "อีเมลประจำตัว" : "Registered Email"}</Text>
+            <Text style={settingStyles.rowSub}>{email || "student@sut.ac.th"}</Text>
+          </View>
+
+          <Pressable style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]} onPress={() => Alert.alert("Password", "Feature enabled in next update")}>
+            <Text style={settingStyles.rowTitle}>{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</Text>
+            <Text style={settingStyles.rowSub}>›</Text>
+          </Pressable>
+        </View>
+
+        {/* Notification Preferences */}
+        <View style={settingStyles.sectionCard}>
+          <Text style={settingStyles.sectionTitle}>
+            🔔 {language === "th" ? "การตั้งค่าการแจ้งเตือน" : "Notification Preferences"}
+          </Text>
+
+          <View style={settingStyles.rowBetween}>
+            <Text style={settingStyles.rowTitle}>{language === "th" ? "คู่แมตช์ใหม่" : "New Matches"}</Text>
+            <Switch
+              value={toggles[0]}
+              trackColor={{ true: "#C64338", false: "#EADCD3" }}
+              onValueChange={(v) => updateToggle(0, v)}
+            />
+          </View>
+
+          <View style={settingStyles.rowBetween}>
+            <Text style={settingStyles.rowTitle}>{language === "th" ? "ข้อความแชทใหม่" : "New Messages"}</Text>
+            <Switch
+              value={toggles[1]}
+              trackColor={{ true: "#C64338", false: "#EADCD3" }}
+              onValueChange={(v) => updateToggle(1, v)}
+            />
+          </View>
+
+          <View style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}>
+            <Text style={settingStyles.rowTitle}>{language === "th" ? "คนที่ถูกใจโปรไฟล์คุณ" : "Likes You"}</Text>
+            <Switch
+              value={toggles[2]}
+              trackColor={{ true: "#C64338", false: "#EADCD3" }}
+              onValueChange={(v) => updateToggle(2, v)}
+            />
+          </View>
+        </View>
+
+        {/* Privacy */}
+        <View style={settingStyles.sectionCard}>
+          <Text style={settingStyles.sectionTitle}>
+            👁️ {language === "th" ? "ความเป็นส่วนตัว" : "Privacy & Visibility"}
+          </Text>
+
+          <View style={settingStyles.rowBetween}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={settingStyles.rowTitle}>
+                {language === "th" ? "ซ่อนโปรไฟล์จากการค้นหา" : "Hide Profile from Discovery"}
+              </Text>
+              <Text style={settingStyles.rowSub}>
+                {language === "th" ? "จะไม่แสดงโปรไฟล์ให้รูมเมทคนอื่นเห็น" : "Your card won't appear to others"}
+              </Text>
+            </View>
+            <Switch
+              value={toggles[3]}
+              trackColor={{ true: "#C64338", false: "#EADCD3" }}
+              onValueChange={(v) => updateToggle(3, v)}
+            />
+          </View>
+
+          <Pressable style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]} onPress={() => go("requests")}>
+            <Text style={settingStyles.rowTitle}>{language === "th" ? "ผู้ใช้ที่บล็อก" : "Blocked Users"}</Text>
+            <Text style={settingStyles.rowSub}>›</Text>
+          </Pressable>
+        </View>
+
+        {/* Logout Button */}
+        <Pressable style={settingStyles.logoutBtn} onPress={handleLogout}>
+          <Text style={settingStyles.logoutBtnText}>
+            🚪 {language === "th" ? "ออกจากระบบ" : "Log Out"}
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+const settingStyles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FEFCFA",
+  },
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FAF6F0",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+  },
+  backChevron: {
+    fontSize: 18,
+    color: "#463826",
+    fontWeight: "bold",
+  },
+  headerTitle: {
+    fontFamily: serifFont,
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#463826",
+  },
+  sectionCard: {
+    backgroundColor: "#FAF6F0",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+  },
+  sectionTitle: {
+    fontFamily: serifFont,
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#463826",
+    marginBottom: 12,
+  },
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE8E1",
+  },
+  rowTitle: {
+    fontFamily: serifFont,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#463826",
+  },
+  rowSub: {
+    fontFamily: serifFont,
+    fontSize: 12,
+    color: "#8D7C75",
+    marginTop: 2,
+  },
+  logoutBtn: {
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: "#C64338",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    shadowColor: "#C64338",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  logoutBtnText: {
+    fontFamily: serifFont,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+});

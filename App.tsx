@@ -30,7 +30,7 @@ import { MyProfile, Notifications, Profile, Report } from "./src/screens/profile
 import { Intro, Question, Summary } from "./src/screens/questionnaire";
 import { SplashScreen } from "./src/screens/splash";
 import { Verify } from "./src/screens/verification";
-import { api, appState, getAccessToken, saveToken } from "./src/services/api";
+import { api, appState, getAccessToken, populateProfileDraft, saveToken } from "./src/services/api";
 import { getPushNotificationToken } from "./src/services/notifications";
 import { C } from "./src/theme/colors";
 import { s } from "./src/theme/styles";
@@ -82,6 +82,7 @@ function AppContent() {
       try {
         const me = await api<AuthenticatedUser>("/api/me");
         appState.currentUserId = me.id;
+        populateProfileDraft(me);
 
         getPushNotificationToken().then((token) => {
           if (token) {
@@ -111,6 +112,10 @@ function AppContent() {
   const onAuth = (token: string, user: AuthenticatedUser) => {
     saveToken(token);
     appState.currentUserId = user.id;
+    populateProfileDraft(user);
+    api("/api/me")
+      .then((me) => populateProfileDraft(me))
+      .catch(() => undefined);
     setScreen(user.role === "ADMIN" ? "dashboard" : "verify");
   };
   if (screen === "splash") {

@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Button,
-  Card,
-  Chip,
-  Field,
-  Header,
-  MotionPressable,
-  ScreenShell,
-} from "../components/ui";
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useI18n } from "../i18n";
 import { api, appState } from "../services/api";
-import { C } from "../theme/colors";
-import { s } from "../theme/styles";
 import type { Screen } from "../types/navigation";
+
+const serifFont = Platform.select({
+  ios: "Georgia",
+  android: "serif",
+  default: "serif",
+});
 
 export function BottomNav({
   screen,
@@ -23,39 +28,47 @@ export function BottomNav({
   screen: Screen;
   go: (x: Screen) => void;
 }) {
-  const { t } = useI18n();
+  const { language } = useI18n();
+
+  const navItems = [
+    { id: "feed", icon: "🔍", label: { th: "ค้นหา", en: "Discover" } },
+    { id: "matches", icon: "💖", label: { th: "คู่แมตช์", en: "Matches" } },
+    { id: "messages", icon: "💬", label: { th: "ข้อความ", en: "Messages" } },
+    { id: "myprofile", icon: "👤", label: { th: "โปรไฟล์", en: "Profile" } },
+  ];
+
   return (
-    <View style={s.nav}>
-      {[
-        ["⌂", "Home", "feed"],
-        ["♡", "Matches", "matches"],
-        ["▱", "Messages", "messages"],
-        ["♙", "Profile", "myprofile"],
-      ].map(([ic, l, x]) => (
-        <MotionPressable
-          key={l}
-          onPress={() => go(x as Screen)}
-          style={s.navItem}
-          pressedScale={0.9}
-        >
-          <Text style={[s.navIcon, screen === x && { color: C.orange }]}>
-            {ic}
-          </Text>
-          <Text style={[s.navText, screen === x && { color: C.orange }]}>
-            {x === "feed"
-              ? t("discover")
-              : x === "matches"
-                ? t("matches")
-                : x === "messages"
-                  ? t("messages")
-                  : t("profile")}
-          </Text>
-        </MotionPressable>
-      ))}
+    <View style={feedStyles.navContainer}>
+      {navItems.map((item) => {
+        const isActive = screen === item.id;
+        return (
+          <Pressable
+            key={item.id}
+            accessibilityRole="button"
+            accessibilityLabel={item.label[language === "th" ? "th" : "en"]}
+            style={feedStyles.navItem}
+            onPress={() => go(item.id as Screen)}
+          >
+            <Text style={[feedStyles.navIcon, isActive && { fontSize: 24 }]}>
+              {item.icon}
+            </Text>
+            <Text
+              style={[
+                feedStyles.navText,
+                isActive && feedStyles.navTextActive,
+              ]}
+            >
+              {item.label[language === "th" ? "th" : "en"]}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
+
 export function Feed({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
   const [people, setPeople] = useState<any[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,9 +86,10 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
     try {
       const data = await api(`/api/discover`);
-      
-      setPeople(prev => {
-        const newItems = data.filter((d: any) => !prev.some(p => p.id === d.id));
+      setPeople((prev) => {
+        const newItems = data.filter(
+          (d: any) => !prev.some((p) => p.id === d.id),
+        );
         if (!isInitial && newItems.length === 0) setHasMore(false);
         if (isInitial && data.length === 0) setHasMore(false);
         return isInitial ? data : [...prev, ...newItems];
@@ -90,6 +104,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
   };
 
   const person = people[index];
+
   const swipe = async (decision: "LIKE" | "PASS") => {
     if (!person) return;
     try {
@@ -111,139 +126,283 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
       );
     }
   };
+
   return (
-    <ScreenShell>
-      <Header title="ค้นหารูมเมท" right="☷" onRight={() => go("filters")} />
-      <View style={s.quickLinks}>
-        <Pressable onPress={() => go("requests")}>
-          <Text style={s.link}>♥ คนที่ถูกใจคุณ</Text>
-        </Pressable>
-        <Pressable onPress={() => go("notifications")}>
-          <Text style={s.link}>♧ การแจ้งเตือน</Text>
-        </Pressable>
-      </View>
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator color={C.orange} size="large" />
-        </View>
-      ) : person ? (
-        <>
-          <MotionPressable
-            onPress={() => {
-              appState.activeProfile = person;
-              go("profile");
-            }}
-            pressedScale={0.985}
-          >
-            <View style={s.profileCard}>
-              <View style={s.verified}>
-                <Text style={{ color: "#fff" }}>
-                  ♧{" "}
-                  {person.verification?.status === "VERIFIED"
-                    ? "ยืนยันแล้ว"
-                    : "นักศึกษา"}
-                </Text>
-              </View>
-              <View style={s.score}>
-                <Text style={s.scoreText}>{person.score}%</Text>
-              </View>
-              <Text style={s.ghost}>{person.displayName?.[0] ?? "R"}</Text>
-              <View style={s.profileCopy}>
-                <Text style={s.profileName}>
-                  {person.displayName}, {person.profile?.age ?? "–"}
-                </Text>
-                <Text style={{ color: "#fff" }}>
-                  {person.profile?.major ?? "SUT Student"} · Year{" "}
-                  {person.profile?.year ?? "–"} · wants{" "}
-                  {person.profile?.roomType ?? "Any"} room
-                </Text>
-                <View style={s.wrap}>
-                  <Chip>เข้ากันได้</Chip>
-                  <Chip>{person.profile?.zone ?? "ทุกโซน"}</Chip>
-                </View>
-              </View>
-            </View>
-          </MotionPressable>
-          <Text style={s.tap}>tap card to expand ↑</Text>
-          <View style={s.actions}>
-            <MotionPressable
-              onPress={() => swipe("PASS")}
-              style={s.reject}
-              pressedScale={0.88}
-            >
-              <Text style={{ fontSize: 30, color: C.muted }}>×</Text>
-            </MotionPressable>
-            <MotionPressable
-              onPress={() => swipe("LIKE")}
-              style={s.like}
-              pressedScale={0.88}
-            >
-              <Text style={{ fontSize: 28, color: C.ink }}>♥</Text>
-            </MotionPressable>
-          </View>
-        </>
-      ) : fetchingMore ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator color={C.orange} size="large" />
-          <Text style={[s.muted, { marginTop: 16 }]}>กำลังหารูมเมทเพิ่มเติม...</Text>
-        </View>
-      ) : (
-        <Card>
-          <Text style={s.bigTitle}>You’re all caught up</Text>
-          <Text style={s.centerMuted}>
-            โปรไฟล์ที่เข้ากันได้จะปรากฏที่นี่เมื่อมีคนใหม่
+    <SafeAreaView style={feedStyles.safeArea}>
+      <View style={feedStyles.container}>
+        {/* Header Bar */}
+        <View style={feedStyles.topBar}>
+          <Text style={feedStyles.appTitle}>
+            {language === "th" ? "ค้นหารูมเมท" : "Discover Roommates"}
           </Text>
-        </Card>
-      )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Filter profiles"
+            style={feedStyles.filterBtn}
+            onPress={() => go("filters")}
+          >
+            <Text style={{ fontSize: 15 }}>🎛️</Text>
+            <Text style={feedStyles.filterBtnText}>
+              {language === "th" ? "ตัวกรอง" : "Filters"}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Quick Links Pill Bar */}
+        <View style={feedStyles.quickRow}>
+          <Pressable
+            style={feedStyles.quickPill}
+            onPress={() => go("requests")}
+          >
+            <Text style={{ fontSize: 14 }}>💖</Text>
+            <Text style={feedStyles.quickPillText}>
+              {language === "th" ? "คนที่ถูกใจคุณ" : "Liked You"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={feedStyles.quickPill}
+            onPress={() => go("notifications")}
+          >
+            <Text style={{ fontSize: 14 }}>🔔</Text>
+            <Text style={feedStyles.quickPillText}>
+              {language === "th" ? "การแจ้งเตือน" : "Notifications"}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Swiping Profile Card Container */}
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <ActivityIndicator size="large" color="#C64338" />
+            <Text style={{ marginTop: 12, fontFamily: serifFont, color: "#8D7C75" }}>
+              {language === "th" ? "กำลังค้นหารูมเมทที่เหมาะกับคุณ…" : "Searching for compatible roommates…"}
+            </Text>
+          </View>
+        ) : person ? (
+          <>
+            <Pressable
+              style={feedStyles.cardContainer}
+              onPress={() => {
+                appState.activeProfile = person;
+                go("profile");
+              }}
+            >
+              {person.profile?.photos?.[0] ? (
+                <Image
+                  source={{ uri: person.profile.photos[0] }}
+                  style={feedStyles.cardImage}
+                />
+              ) : (
+                <View style={feedStyles.cardAvatarFallback}>
+                  <Text style={feedStyles.cardAvatarLetter}>
+                    {person.displayName?.[0]?.toUpperCase() ?? "R"}
+                  </Text>
+                </View>
+              )}
+
+              {/* Verified Badge */}
+              <View style={feedStyles.verifiedBadge}>
+                <Text style={feedStyles.verifiedText}>
+                  {person.verification?.status === "VERIFIED"
+                    ? language === "th" ? "✅ ยืนยันตัวตนแล้ว" : "✅ Verified Student"
+                    : language === "th" ? "🎓 นักศึกษา SUT" : "🎓 SUT Student"}
+                </Text>
+              </View>
+
+              {/* Match Score Badge */}
+              <View style={feedStyles.scoreBadge}>
+                <Text style={feedStyles.scoreText}>🔥 {person.score ?? 85}% Match</Text>
+              </View>
+
+              {/* Bottom Card Profile Overlay */}
+              <View style={feedStyles.cardOverlay}>
+                <Text style={feedStyles.cardName}>
+                  {person.displayName}, {person.profile?.age ?? "19"}
+                </Text>
+                <Text style={feedStyles.cardDetails}>
+                  {person.profile?.major ?? "SUT Student"}
+                  {person.profile?.year ? ` · ${language === "th" ? `ปี ${person.profile.year}` : `Year ${person.profile.year}`}` : ""}
+                  {person.profile?.roomType ? ` · ${person.profile.roomType}` : ""}
+                </Text>
+
+                <View style={feedStyles.chipsRow}>
+                  <View style={feedStyles.cardChip}>
+                    <Text style={feedStyles.cardChipText}>
+                      ✨ {language === "th" ? "เข้ากันได้ดี" : "High Match"}
+                    </Text>
+                  </View>
+                  {person.profile?.zone ? (
+                    <View style={feedStyles.cardChip}>
+                      <Text style={feedStyles.cardChipText}>📍 {person.profile.zone}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <Text style={feedStyles.tapHint}>
+                  {language === "th" ? "👆 แตะที่การ์ดเพื่อดูโปรไฟล์ฉบับเต็ม" : "👆 Tap card to view full profile"}
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* Action Buttons Row */}
+            <View style={feedStyles.actionsRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pass profile"
+                style={feedStyles.btnPass}
+                onPress={() => swipe("PASS")}
+              >
+                <Text style={feedStyles.btnPassIcon}>✕</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Superlike profile"
+                style={feedStyles.btnSuper}
+                onPress={() => swipe("LIKE")}
+              >
+                <Text style={feedStyles.btnSuperIcon}>⭐</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Like profile"
+                style={feedStyles.btnLike}
+                onPress={() => swipe("LIKE")}
+              >
+                <Text style={feedStyles.btnLikeIcon}>❤️</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : fetchingMore ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <ActivityIndicator size="large" color="#C64338" />
+            <Text style={{ marginTop: 12, fontFamily: serifFont, color: "#8D7C75" }}>
+              {language === "th" ? "กำลังโหลดโปรไฟล์เพิ่มเติม…" : "Loading more profiles…"}
+            </Text>
+          </View>
+        ) : (
+          <View style={feedStyles.emptyBox}>
+            <Text style={{ fontSize: 44, marginBottom: 12 }}>✨ 🔍</Text>
+            <Text style={feedStyles.emptyTitle}>
+              {language === "th" ? "ดูโปรไฟล์ทั้งหมดครบแล้ว!" : "You're all caught up!"}
+            </Text>
+            <Text style={feedStyles.emptySub}>
+              {language === "th"
+                ? "ระบบจะแจ้งเตือนเมื่อมีเพื่อนร่วมห้องใหม่ ๆ ที่เข้ากับคุณสมัครลงทะเบียน"
+                : "New compatible roommates will appear here as soon as they sign up."}
+            </Text>
+            <Pressable
+              style={feedStyles.refreshBtn}
+              onPress={() => loadPage(true)}
+            >
+              <Text style={feedStyles.refreshBtnText}>
+                {language === "th" ? "🔄 โหลดโปรไฟล์อีกครั้ง" : "🔄 Refresh Feed"}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
       <BottomNav screen="feed" go={go} />
-    </ScreenShell>
+    </SafeAreaView>
   );
 }
+
 export function Filters({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
   return (
-    <ScreenShell>
-      <View style={s.filterBackdrop} />
-      <View style={s.sheet}>
-        <View style={s.handle} />
-        <View style={s.rowBetween}>
-          <Text style={s.title}>ตัวกรอง</Text>
-          <Text style={s.link}>รีเซ็ตทั้งหมด</Text>
+    <SafeAreaView style={feedStyles.safeArea}>
+      <View style={feedStyles.container}>
+        <View style={feedStyles.topBar}>
+          <Text style={feedStyles.appTitle}>
+            {language === "th" ? "ตัวกรองค้นหา" : "Search Filters"}
+          </Text>
+          <Pressable onPress={() => go("feed")}>
+            <Text style={{ fontSize: 20, color: "#7F232D", fontWeight: "bold" }}>✕</Text>
+          </Pressable>
         </View>
-        <Text style={s.label}>แสดงผล</Text>
-        <View style={s.segment}>
-          <Chip>ผู้หญิง</Chip>
-          <Chip active>ผู้ชาย</Chip>
-          <Chip>ทุกคน</Chip>
-        </View>
-        <Field label="สาขา" placeholder="ทุกสำนักวิชา" />
-        <Text style={s.label}>BUDGET (฿ / MONTH)</Text>
-        <Card>
-          <Text style={[s.link, { textAlign: "right" }]}>2,500 – 4,500</Text>
-          <View style={s.slider}>
-            <View style={s.sliderOn} />
+
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          <View style={filterStyles.sectionCard}>
+            <Text style={filterStyles.sectionTitle}>
+              🚻 {language === "th" ? "เพศของรูมเมท" : "Roommate Gender"}
+            </Text>
+            <View style={filterStyles.pillsRow}>
+              {[
+                { label: { th: "ผู้หญิง", en: "Female" }, active: false },
+                { label: { th: "ผู้ชาย", en: "Male" }, active: true },
+                { label: { th: "ทุกคน", en: "Everyone" }, active: false },
+              ].map((item, idx) => (
+                <Pressable
+                  key={idx}
+                  style={[
+                    filterStyles.pill,
+                    item.active && filterStyles.pillActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      filterStyles.pillText,
+                      item.active && filterStyles.pillTextActive,
+                    ]}
+                  >
+                    {item.label[language === "th" ? "th" : "en"]}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </Card>
-        <Text style={s.label}>ต้องเข้ากันเรื่อง</Text>
-        <View style={s.wrap}>
-          <Chip active>เวลานอน</Chip>
-          <Chip active>ความสะอาด</Chip>
-          <Chip>แขก</Chip>
-          <Chip>อุณหภูมิแอร์</Chip>
-        </View>
-        <Text style={s.label}>คะแนนเข้ากันขั้นต่ำ</Text>
-        <Card>
-          <View style={s.slider}>
-            <View style={[s.sliderOn, { width: "70%" }]} />
+
+          <View style={filterStyles.sectionCard}>
+            <Text style={filterStyles.sectionTitle}>
+              📍 {language === "th" ? "โซนหอพักที่ต้องการ" : "Preferred Zone"}
+            </Text>
+            <View style={filterStyles.pillsRow}>
+              {[
+                { label: { th: "ประตู 1", en: "Gate 1" }, active: true },
+                { label: { th: "ประตู 4", en: "Gate 4" }, active: false },
+                { label: { th: "ในมหาวิทยาลัย", en: "On Campus" }, active: false },
+                { label: { th: "ทุกโซน", en: "Any Zone" }, active: false },
+              ].map((item, idx) => (
+                <Pressable
+                  key={idx}
+                  style={[
+                    filterStyles.pill,
+                    item.active && filterStyles.pillActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      filterStyles.pillText,
+                      item.active && filterStyles.pillTextActive,
+                    ]}
+                  >
+                    {item.label[language === "th" ? "th" : "en"]}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-          <View style={s.rowBetween}>
-            <Text style={s.muted}>50%</Text>
-            <Text style={s.tinyOrange}>70%+</Text>
-            <Text style={s.muted}>95%</Text>
+
+          <View style={filterStyles.sectionCard}>
+            <Text style={filterStyles.sectionTitle}>
+              🔥 {language === "th" ? "คะแนนความเข้ากันได้ขั้นต่ำ" : "Minimum Match Score"}
+            </Text>
+            <View style={filterStyles.scoreRow}>
+              <Text style={filterStyles.scoreValueText}>70%+ Match</Text>
+            </View>
           </View>
-        </Card>
-        <Button onPress={() => go("feed")}>ใช้ตัวกรอง · 23 คน</Button>
+
+          <Pressable style={feedStyles.refreshBtn} onPress={() => go("feed")}>
+            <Text style={feedStyles.refreshBtnText}>
+              {language === "th" ? "บันทึกตัวกรอง ➔" : "Apply Filters ➔"}
+            </Text>
+          </Pressable>
+        </ScrollView>
       </View>
-    </ScreenShell>
+    </SafeAreaView>
   );
 }
 
@@ -257,114 +416,146 @@ export function PersonRow({
   onPress?: () => void;
 }) {
   return (
-    <Card>
-      <View style={s.personRow}>
-        <View style={s.avatar}>
-          <Text style={s.avatarLetter}>{p[0][0]}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>
-            {p[0]} · {p[1]}
-          </Text>
-          <Text style={s.muted}>{p[2]}</Text>
-        </View>
-        <Pressable
-          onPress={onPress}
-          style={[
-            s.smallAction,
-            (action === "Chat" || action === "แชท") && {
-              backgroundColor: C.orange,
-            },
-          ]}
-        >
-          <Text
-            style={{
-              color: action === "Chat" || action === "แชท" ? C.ink : C.wine,
-              fontFamily: "NotoSansThai_700Bold",
-            }}
-          >
-            {action}
-          </Text>
-        </Pressable>
+    <View style={personRowStyles.rowCard}>
+      <View style={personRowStyles.avatarBox}>
+        <Text style={personRowStyles.avatarLetter}>{p[0]?.[0]?.toUpperCase() ?? "R"}</Text>
       </View>
-    </Card>
+      <View style={{ flex: 1 }}>
+        <Text style={personRowStyles.nameText}>
+          {p[0]} · {p[1]}
+        </Text>
+        <Text style={personRowStyles.subText}>{p[2]}</Text>
+      </View>
+      <Pressable style={personRowStyles.actionBtn} onPress={onPress}>
+        <Text style={personRowStyles.actionBtnText}>{action}</Text>
+      </Pressable>
+    </View>
   );
 }
+
 export function Matches({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
   const [matches, setMatches] = useState<any[]>([]);
+
   useEffect(() => {
     api("/api/matches")
       .then(setMatches)
       .catch((e) => Alert.alert("Matches", e.message));
   }, []);
+
   return (
-    <ScreenShell>
-      <Header
-        title="แมตช์ของคุณ"
-        right={`${matches.length} ทั้งหมด`}
-        onRight={() => go("requests")}
-      />
-      <Text style={s.label}>ใหม่สัปดาห์นี้</Text>
-      {matches.map((m) => {
-        const other = m.other;
-        return (
-          <PersonRow
-            key={m.id}
-            p={[
-              other?.displayName ?? "รูมเมท",
-              `${m.score}%`,
-              other?.profile?.major ?? "นักศึกษา SUT",
-            ]}
-            action="แชท"
-            onPress={() => go("messages")}
-          />
-        );
-      })}
-      {!matches.length && (
-        <Card>
-          <Text style={s.centerMuted}>ยังไม่มีแมตช์ ลองค้นหาต่อได้เลย</Text>
-        </Card>
-      )}
-      <BottomNav screen="matches" go={go} />
-    </ScreenShell>
-  );
-}
-export function Match({ go }: { go: (x: Screen) => void }) {
-  return (
-    <SafeAreaView style={s.matchPage}>
-      <Text style={s.matchEyebrow}>ถูกใจกันทั้งคู่</Text>
-      <Text style={s.matchTitle}>จับคู่{`\n`}สำเร็จ!</Text>
-      <View style={s.matchAvatars}>
-        <View style={s.matchAvatar}>
-          <Text style={s.avatarLetter}>N</Text>
+    <SafeAreaView style={feedStyles.safeArea}>
+      <View style={feedStyles.container}>
+        <View style={feedStyles.topBar}>
+          <Text style={feedStyles.appTitle}>
+            {language === "th" ? "คู่แมตช์ของคุณ" : "Your Matches"}
+          </Text>
+          <Pressable onPress={() => go("requests")}>
+            <Text style={feedStyles.filterBtnText}>
+              💖 {matches.length} {language === "th" ? "แมตช์" : "Matches"}
+            </Text>
+          </Pressable>
         </View>
-        <View style={s.matchScore}>
-          <Text>88%</Text>
-        </View>
-        <View style={[s.matchAvatar, { backgroundColor: C.orange }]}>
-          <Text style={s.avatarLetter}>ม</Text>
-        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          {matches.map((m) => {
+            const other = m.other;
+            return (
+              <PersonRow
+                key={m.id}
+                p={[
+                  other?.displayName ?? "รูมเมท",
+                  `${m.score ?? 90}% Match`,
+                  other?.profile?.major ?? "นักศึกษา SUT",
+                ]}
+                action={language === "th" ? "แชท 💬" : "Chat 💬"}
+                onPress={() => go("messages")}
+              />
+            );
+          })}
+
+          {!matches.length && (
+            <View style={feedStyles.emptyBox}>
+              <Text style={{ fontSize: 44, marginBottom: 12 }}>💖 ✨</Text>
+              <Text style={feedStyles.emptyTitle}>
+                {language === "th" ? "ยังไม่มีคู่แมตช์ในขณะนี้" : "No matches yet"}
+              </Text>
+              <Text style={feedStyles.emptySub}>
+                {language === "th"
+                  ? "กดถูกใจโปรไฟล์ที่สนใจ เมื่ออีกฝ่ายถูกใจตอบ ระบบจะจับคู่ทันที!"
+                  : "Like profiles in the discover feed. When they like you back, matches will appear here!"}
+              </Text>
+              <Pressable style={feedStyles.refreshBtn} onPress={() => go("feed")}>
+                <Text style={feedStyles.refreshBtnText}>
+                  {language === "th" ? "ไปค้นหารูมเมท ➔" : "Go to Discover ➔"}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </ScrollView>
       </View>
-      <Text style={s.matchCopy}>
-        You and Mind liked each other — 88% compatible on sleep, cleanliness &
-        quiet hours.
-      </Text>
-      <Button tone="amber" onPress={() => go("chat")}>
-        เริ่มแชท
-      </Button>
-      <Button outline tone="amber" onPress={() => go("feed")}>
-        ค้นหาต่อ
-      </Button>
+      <BottomNav screen="matches" go={go} />
     </SafeAreaView>
   );
 }
+
+export function Match({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
+
+  return (
+    <SafeAreaView style={matchStyles.page}>
+      <View style={matchStyles.container}>
+        <Text style={matchStyles.eyebrow}>
+          {language === "th" ? "🎉 ถูกใจกันทั้งคู่!" : "🎉 It's a Match!"}
+        </Text>
+        <Text style={matchStyles.title}>
+          {language === "th" ? "จับคู่สำเร็จ!" : "Match Successful!"}
+        </Text>
+
+        <View style={matchStyles.avatarsRow}>
+          <View style={matchStyles.avatarCircle}>
+            <Text style={matchStyles.avatarText}>YOU</Text>
+          </View>
+          <View style={matchStyles.scoreChip}>
+            <Text style={matchStyles.scoreChipText}>92% Match</Text>
+          </View>
+          <View style={[matchStyles.avatarCircle, { backgroundColor: "#FFF0BB", borderColor: "#FFD477" }]}>
+            <Text style={[matchStyles.avatarText, { color: "#7F232D" }]}>SUT</Text>
+          </View>
+        </View>
+
+        <Text style={matchStyles.copyText}>
+          {language === "th"
+            ? "คุณและคู่แมตช์มีความเข้ากันได้สูงถึง 92% ทั้งเรื่องเวลานอน ความสะอาด และระดับความสงบ!"
+            : "You both liked each other — 92% compatible on sleep, cleanliness & quiet hours!"}
+        </Text>
+
+        <Pressable style={feedStyles.refreshBtn} onPress={() => go("messages")}>
+          <Text style={feedStyles.refreshBtnText}>
+            {language === "th" ? "เริ่มแชทเลย 💬" : "Start Chatting 💬"}
+          </Text>
+        </Pressable>
+
+        <Pressable style={matchStyles.secondaryBtn} onPress={() => go("feed")}>
+          <Text style={matchStyles.secondaryBtnText}>
+            {language === "th" ? "ค้นหาต่อ ➔" : "Keep Swiping ➔"}
+          </Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 export function Requests({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
   const [likes, setLikes] = useState<any[]>([]);
+
   useEffect(() => {
     api("/api/likes")
       .then(setLikes)
       .catch((e) => Alert.alert("Likes", e.message));
   }, []);
+
   const likeBack = async (id: string) => {
     const result = await api(`/api/swipes/${id}`, {
       method: "POST",
@@ -373,30 +564,540 @@ export function Requests({ go }: { go: (x: Screen) => void }) {
     setLikes((items) => items.filter((item) => item.fromId !== id));
     if (result.matched) go("match");
   };
+
   return (
-    <ScreenShell>
-      <Header title="คนที่ถูกใจคุณ" right={`${likes.length} ใหม่`} />
-      <Text style={s.muted}>
-        นักศึกษาเหล่านี้ถูกใจคุณแล้ว กดถูกใจกลับเพื่อจับคู่ทันที
-      </Text>
-      {likes.map((x) => (
-        <PersonRow
-          key={x.id}
-          p={[
-            x.from.displayName,
-            "ถูกใจคุณ",
-            x.from.profile?.major ?? "นักศึกษา SUT",
-          ]}
-          action="ถูกใจ"
-          onPress={() => likeBack(x.fromId)}
-        />
-      ))}
-      <Card tint="#FFF7DF">
-        <Text style={s.note}>
-          Liking back creates a match and opens chat immediately — no waiting.
-        </Text>
-      </Card>
+    <SafeAreaView style={feedStyles.safeArea}>
+      <View style={feedStyles.container}>
+        <View style={feedStyles.topBar}>
+          <Text style={feedStyles.appTitle}>
+            {language === "th" ? "คนที่ถูกใจคุณ" : "People Who Liked You"}
+          </Text>
+          <Pressable onPress={() => go("feed")}>
+            <Text style={{ fontSize: 20, color: "#7F232D", fontWeight: "bold" }}>✕</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          {likes.map((x) => (
+            <PersonRow
+              key={x.id}
+              p={[
+                x.from.displayName,
+                language === "th" ? "ถูกใจโปรไฟล์คุณ" : "Liked your profile",
+                x.from.profile?.major ?? "SUT Student",
+              ]}
+              action={language === "th" ? "ถูกใจกลับ ❤️" : "Like Back ❤️"}
+              onPress={() => likeBack(x.fromId)}
+            />
+          ))}
+
+          {!likes.length && (
+            <View style={feedStyles.emptyBox}>
+              <Text style={{ fontSize: 44, marginBottom: 12 }}>💖 ✨</Text>
+              <Text style={feedStyles.emptyTitle}>
+                {language === "th" ? "ยังไม่มีคนที่ถูกใจคุณในขณะนี้" : "No likes yet"}
+              </Text>
+              <Text style={feedStyles.emptySub}>
+                {language === "th"
+                  ? "เมื่อมีเพื่อนนักศึกษาถูกใจโปรไฟล์ของคุณ จะปรากฏขึ้นที่นี่เพื่อกดถูกใจกลับ"
+                  : "When students like your profile, they will appear here!"}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
       <BottomNav screen="matches" go={go} />
-    </ScreenShell>
+    </SafeAreaView>
   );
 }
+
+const feedStyles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FEFCFA",
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  appTitle: {
+    fontFamily: serifFont,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#463826",
+  },
+  filterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAF6F0",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+    gap: 4,
+  },
+  filterBtnText: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#463826",
+  },
+  quickRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+  },
+  quickPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAF6F0",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+    gap: 6,
+  },
+  quickPillText: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#463826",
+  },
+  cardContainer: {
+    flex: 1,
+    borderRadius: 24,
+    backgroundColor: "#FAF6F0",
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+    overflow: "hidden",
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+  },
+  cardAvatarFallback: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#F0CDBF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardAvatarLetter: {
+    fontFamily: serifFont,
+    fontSize: 72,
+    fontWeight: "bold",
+    color: "#7F232D",
+  },
+  verifiedBadge: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  verifiedText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  scoreBadge: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    backgroundColor: "#FFF0BB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#FFD477",
+  },
+  scoreText: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#7F232D",
+  },
+  cardOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    backgroundColor: "rgba(30, 20, 15, 0.78)",
+  },
+  cardName: {
+    fontFamily: serifFont,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  cardDetails: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    color: "#EADCD3",
+    marginBottom: 10,
+  },
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 8,
+  },
+  cardChip: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  cardChipText: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  tapHint: {
+    fontFamily: serifFont,
+    fontSize: 11,
+    color: "#D6C6B8",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+    paddingVertical: 16,
+  },
+  btnPass: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#EADCD3",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  btnPassIcon: {
+    fontSize: 24,
+    color: "#74675E",
+    fontWeight: "bold",
+  },
+  btnSuper: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#FFF0BB",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFD477",
+  },
+  btnSuperIcon: {
+    fontSize: 22,
+  },
+  btnLike: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#C64338",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#C64338",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  btnLikeIcon: {
+    fontSize: 26,
+  },
+  emptyBox: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#FAF6F0",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontFamily: serifFont,
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#463826",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptySub: {
+    fontFamily: serifFont,
+    fontSize: 14,
+    color: "#74675E",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  refreshBtn: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#C64338",
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refreshBtnText: {
+    fontFamily: serifFont,
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  navContainer: {
+    flexDirection: "row",
+    height: 64,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#EADCD3",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingHorizontal: 8,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+  },
+  navIcon: {
+    fontSize: 22,
+    marginBottom: 2,
+  },
+  navText: {
+    fontFamily: serifFont,
+    fontSize: 11,
+    color: "#8D7C75",
+    fontWeight: "500",
+  },
+  navTextActive: {
+    color: "#C64338",
+    fontWeight: "bold",
+  },
+});
+
+const filterStyles = StyleSheet.create({
+  sectionCard: {
+    backgroundColor: "#FAF6F0",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+  },
+  sectionTitle: {
+    fontFamily: serifFont,
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#463826",
+    marginBottom: 12,
+  },
+  pillsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+  },
+  pillActive: {
+    backgroundColor: "#FFF0BB",
+    borderColor: "#FFD477",
+  },
+  pillText: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#463826",
+  },
+  pillTextActive: {
+    color: "#7F232D",
+    fontWeight: "bold",
+  },
+  scoreRow: {
+    alignItems: "center",
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+  },
+  scoreValueText: {
+    fontFamily: serifFont,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#C64338",
+  },
+});
+
+const personRowStyles = StyleSheet.create({
+  rowCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAF6F0",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#EADCD3",
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F0CDBF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  avatarLetter: {
+    fontFamily: serifFont,
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#7F232D",
+  },
+  nameText: {
+    fontFamily: serifFont,
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#463826",
+  },
+  subText: {
+    fontFamily: serifFont,
+    fontSize: 12,
+    color: "#8D7C75",
+  },
+  actionBtn: {
+    backgroundColor: "#C64338",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  actionBtnText: {
+    fontFamily: serifFont,
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+});
+
+const matchStyles = StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: "#FEFCFA",
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  eyebrow: {
+    fontFamily: serifFont,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#C64338",
+    marginBottom: 8,
+  },
+  title: {
+    fontFamily: serifFont,
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#463826",
+    marginBottom: 24,
+  },
+  avatarsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F0CDBF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#EADCD3",
+  },
+  avatarText: {
+    fontFamily: serifFont,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#7F232D",
+  },
+  scoreChip: {
+    backgroundColor: "#C64338",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginHorizontal: -12,
+    zIndex: 10,
+  },
+  scoreChipText: {
+    fontFamily: serifFont,
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  copyText: {
+    fontFamily: serifFont,
+    fontSize: 15,
+    color: "#74675E",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  secondaryBtn: {
+    marginTop: 14,
+    paddingVertical: 12,
+  },
+  secondaryBtnText: {
+    fontFamily: serifFont,
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#7F232D",
+  },
+});

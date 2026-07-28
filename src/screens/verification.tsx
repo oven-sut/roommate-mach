@@ -285,27 +285,58 @@ export function Verify({ go }: { go: (screen: Screen) => void }) {
     [],
   );
 
-  const choosePhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.65,
-      base64: true,
-    });
-
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
+  const processAsset = (asset: ImagePicker.ImagePickerAsset) => {
     if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
       Alert.alert("Student ID", "Please choose an image smaller than 10 MB.");
       return;
     }
-
     setDocument(
       asset.base64
         ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
         : asset.uri,
     );
     setPhase("selected");
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "กล้องถูกปฏิเสธ",
+        "กรุณาเปิดสิทธิ์กล้องในการตั้งค่าของอุปกรณ์แล้วลองอีกครั้ง",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.75,
+      base64: true,
+    });
+    if (result.canceled) return;
+    processAsset(result.assets[0]);
+  };
+
+  const choosePhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.65,
+      base64: true,
+    });
+    if (result.canceled) return;
+    processAsset(result.assets[0]);
+  };
+
+  const pickSource = () => {
+    Alert.alert(
+      "อัปโหลดบัตรนักศึกษา",
+      "เลือกวิธีที่ต้องการ",
+      [
+        { text: "📷 ถ่ายรูป", onPress: () => void takePhoto() },
+        { text: "🖼 เลือกจากคลังรูป", onPress: () => void choosePhoto() },
+        { text: "ยกเลิก", style: "cancel" },
+      ],
+      { cancelable: true },
+    );
   };
 
   const submit = async () => {
@@ -347,7 +378,7 @@ export function Verify({ go }: { go: (screen: Screen) => void }) {
   const handlePrimaryPress = () => {
     if (busy) return;
     if (phase === "idle") {
-      void choosePhoto();
+      pickSource();
     } else if (phase === "selected") {
       void submit();
     } else if (phase === "verified") {
@@ -443,17 +474,28 @@ export function Verify({ go }: { go: (screen: Screen) => void }) {
           {isIdle ? (
             <>
               <Text style={styles.heroHelper}>
-                JPG or PNG - both side - max 10 MB
+                JPG or PNG - ทั้งสองด้าน - ไม่เกิน 10 MB
               </Text>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => void choosePhoto()}
+                onPress={() => void takePhoto()}
                 style={({ pressed }) => [
                   styles.chooseButton,
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.chooseButtonText}>{t("choosePhoto")}</Text>
+                <Text style={styles.chooseButtonText}>📷  ถ่ายรูปด้วยกล้อง</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void choosePhoto()}
+                style={({ pressed }) => [
+                  styles.chooseButton,
+                  styles.chooseButtonOutline,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={[styles.chooseButtonText, styles.chooseButtonTextOutline]}>🖼  เลือกจากคลังรูป</Text>
               </Pressable>
             </>
           ) : null}
@@ -708,19 +750,28 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   chooseButton: {
-    width: 135,
-    height: 30,
-    marginTop: 13,
+    width: 200,
+    height: 36,
+    marginTop: 10,
     borderRadius: 10,
     backgroundColor: palette.peachButton,
     alignItems: "center",
     justifyContent: "center",
   },
+  chooseButtonOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: palette.red,
+    marginTop: 8,
+  },
   chooseButtonText: {
     color: palette.red,
     fontFamily: serif,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
+  },
+  chooseButtonTextOutline: {
+    color: palette.red,
   },
   statusCard: {
     width: "100%",
