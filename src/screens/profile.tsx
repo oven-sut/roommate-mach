@@ -26,7 +26,6 @@ import {
   MessageCircle,
   Pencil,
   Settings,
-  Shield,
   ShieldCheck,
   Sparkles,
   Target,
@@ -426,15 +425,6 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
                 en: profile.answers?.length ? "Completed · affects all match scores" : "Not completed · improve your matches",
               },
               screen: "intro" as Screen,
-            },
-            {
-              Icon: Shield,
-              title: { th: "ยืนยันตัวตนบัตรนักศึกษา", en: "Student ID Verification" },
-              sub: {
-                th: verified ? "ยืนยันเรียบร้อยแล้ว" : "อัปโหลดบัตรเพื่อรับเครื่องหมายยืนยัน",
-                en: verified ? "Fully verified student" : "Upload student ID for verified badge",
-              },
-              screen: "verify" as Screen,
             },
           ].map((item, idx) => {
             const Icon = item.Icon;

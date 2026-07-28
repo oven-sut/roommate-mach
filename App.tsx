@@ -98,7 +98,7 @@ function AppContent() {
             ? "dashboard"
             : me.profile?.completed
               ? "feed"
-              : "verify",
+              : "basics",
         );
       } catch {
         saveToken(null);
@@ -116,7 +116,7 @@ function AppContent() {
     api("/api/me")
       .then((me) => populateProfileDraft(me))
       .catch(() => undefined);
-    setScreen(user.role === "ADMIN" ? "dashboard" : "verify");
+    setScreen(user.role === "ADMIN" ? "dashboard" : "basics");
   };
   if (screen === "splash") {
     return <SplashScreen onComplete={continueFromSplash} />;
