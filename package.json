@@ -26,6 +26,7 @@
   },
   "scripts": {
     "start": "expo start",
+    "eas": "eas-cli",
     "android": "expo run:android",
     "ios": "expo start --lan --go --clear",
     "ios:tunnel": "expo start --tunnel --go --clear",
@@ -35,6 +36,7 @@
   "private": true,
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "eas-cli": "^21.3.0",
     "typescript": "~5.9.2"
   }
 }
