@@ -32,7 +32,7 @@ import {
   UserX,
 } from "lucide-react-native";
 import { useI18n } from "../i18n";
-import { api, appState } from "../services/api";
+import { api, appState, formatImageUri } from "../services/api";
 import type { Screen } from "../types/navigation";
 
 import { BottomNav } from "./discovery";
@@ -87,8 +87,8 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
         <View style={profileStyle.identityCard}>
           <View style={profileStyle.avatarWrap}>
             <View style={profileStyle.profileAvatar}>
-              {p?.profile?.photos?.[0] ? (
-                <Image source={{ uri: p.profile.photos[0] }} style={profileStyle.avatarImage} />
+              {formatImageUri(p?.profile?.photos?.[0]) ? (
+                <Image source={{ uri: formatImageUri(p?.profile?.photos?.[0]) }} style={profileStyle.avatarImage} />
               ) : (
                 <Text style={profileStyle.avatarInitial}>{p?.displayName?.[0]?.toUpperCase() ?? "R"}</Text>
               )}
@@ -331,8 +331,8 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
           >
             <View style={profileStyle.avatarWrap}>
               <View style={profileStyle.profileAvatar}>
-                {photos[0] ? (
-                  <Image source={{ uri: photos[0] }} style={profileStyle.avatarImage} />
+                {formatImageUri(photos[0]) ? (
+                  <Image source={{ uri: formatImageUri(photos[0]) }} style={profileStyle.avatarImage} />
                 ) : (
                   <Text style={profileStyle.avatarInitial}>{initial}</Text>
                 )}

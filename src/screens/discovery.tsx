@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react-native";
 import { useI18n } from "../i18n";
-import { api, appState } from "../services/api";
+import { api, appState, formatImageUri } from "../services/api";
 import type { Screen } from "../types/navigation";
 
 const serifFont = Platform.select({
@@ -209,9 +209,9 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 go("profile");
               }}
             >
-              {person.profile?.photos?.[0] ? (
+              {formatImageUri(person.profile?.photos?.[0]) ? (
                 <Image
-                  source={{ uri: person.profile.photos[0] }}
+                  source={{ uri: formatImageUri(person.profile?.photos?.[0]) }}
                   style={feedStyles.cardImage}
                 />
               ) : (

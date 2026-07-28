@@ -8,6 +8,20 @@ export const API_URL = (
     : "http://localhost:8888")
 ).replace(/\/$/, "");
 
+export function formatImageUri(uri?: string): string {
+  if (!uri || typeof uri !== "string") return "";
+  const trimmed = uri.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("data:") || trimmed.startsWith("file://")) return trimmed;
+
+  if (trimmed.includes("localhost:9000") || trimmed.includes("127.0.0.1:9000")) {
+    const apiHostMatch = API_URL.match(/https?:\/\/([^:]+)/);
+    const host = apiHostMatch ? apiHostMatch[1] : "localhost";
+    return trimmed.replace(/localhost|127\.0\.0\.1/, host);
+  }
+  return trimmed;
+}
+
 let accessToken =
   Platform.OS === "web" && typeof localStorage !== "undefined"
     ? localStorage.getItem("roomie_token")

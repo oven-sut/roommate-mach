@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { useI18n } from "../i18n";
-import { api, appState, populateProfileDraft } from "../services/api";
+import { api, appState, formatImageUri, populateProfileDraft } from "../services/api";
 import type { AuthenticatedUser, ProfileDraft } from "../types/models";
 import type { Screen } from "../types/navigation";
 
@@ -1011,17 +1011,20 @@ export function Basics({
   const changePhoto = async (index: number) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.65,
+      quality: 0.6,
       base64: true,
+      allowsEditing: true,
+      aspect: [1, 1],
     });
-    if (!result.canceled) {
+    if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
       const value = asset.base64
         ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
         : asset.uri;
-      const newPhotos = [...appState.profileDraft.photos];
+      const current = appState.profileDraft.photos || [];
+      const newPhotos = [...current];
       newPhotos[index] = value;
-      set("photos", newPhotos);
+      set("photos", newPhotos.filter(Boolean));
     }
   };
 
@@ -1547,8 +1550,8 @@ export function Basics({
           {/* Photo slots */}
           <View style={basicsStyles.photoRow}>
             <Pressable style={basicsStyles.photoBoxMain} onPress={() => changePhoto(0)}>
-              {appState.profileDraft.photos[0] ? (
-                <Image source={{ uri: appState.profileDraft.photos[0] }} style={basicsStyles.photoImage} />
+              {formatImageUri(appState.profileDraft.photos[0]) ? (
+                <Image source={{ uri: formatImageUri(appState.profileDraft.photos[0]) }} style={basicsStyles.photoImage} />
               ) : (
                 <Text style={basicsStyles.avatarLetter}>
                   {(appState.profileDraft.displayName && appState.profileDraft.displayName[0]?.toUpperCase()) || "N"}
@@ -1560,16 +1563,16 @@ export function Basics({
             </Pressable>
 
             <Pressable style={basicsStyles.photoBoxDashed} onPress={() => changePhoto(1)}>
-              {appState.profileDraft.photos[1] ? (
-                <Image source={{ uri: appState.profileDraft.photos[1] }} style={basicsStyles.photoImage} />
+              {formatImageUri(appState.profileDraft.photos[1]) ? (
+                <Image source={{ uri: formatImageUri(appState.profileDraft.photos[1]) }} style={basicsStyles.photoImage} />
               ) : (
                 <Text style={basicsStyles.plusIcon}>+</Text>
               )}
             </Pressable>
 
             <Pressable style={basicsStyles.photoBoxDashed} onPress={() => changePhoto(2)}>
-              {appState.profileDraft.photos[2] ? (
-                <Image source={{ uri: appState.profileDraft.photos[2] }} style={basicsStyles.photoImage} />
+              {formatImageUri(appState.profileDraft.photos[2]) ? (
+                <Image source={{ uri: formatImageUri(appState.profileDraft.photos[2]) }} style={basicsStyles.photoImage} />
               ) : (
                 <Text style={basicsStyles.plusIcon}>+</Text>
               )}
