@@ -305,13 +305,44 @@ export function Auth({
     return () => clearInterval(timer);
   }, [countdown]);
 
+  const [emailTaken, setEmailTaken] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
   const email = sutId.includes("@") ? sutId : `${sutId}@g.sut.ac.th`;
+
+  useEffect(() => {
+    if (mode !== "signup" || !sutId.trim()) {
+      setEmailTaken(false);
+      return;
+    }
+    const targetEmail = sutId.includes("@") ? sutId.trim() : `${sutId.trim()}@g.sut.ac.th`;
+    const timer = setTimeout(async () => {
+      try {
+        setCheckingEmail(true);
+        const res = await api<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(targetEmail)}`);
+        setEmailTaken(res.exists);
+        if (res.exists) {
+          setError("อีเมลนี้ถูกใช้งานแล้วในระบบ");
+        } else if (error === "อีเมลนี้ถูกใช้งานแล้วในระบบ") {
+          setError("");
+        }
+      } catch {
+        // ignore
+      } finally {
+        setCheckingEmail(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [sutId, mode]);
 
   const submitAuth = async () => {
     try {
       setBusy(true);
       setError("");
       if (!sutId.trim()) throw new Error("Please enter your SUT ID");
+      if (mode === "signup" && emailTaken)
+        throw new Error("This email is already registered");
       if (mode === "signup" && passwordStrength.score < 2)
         throw new Error("Please use a stronger password");
       if (mode === "signup" && password !== confirm)
