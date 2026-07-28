@@ -21,6 +21,7 @@ export interface ProfileDraft {
   budgetMin: number;
   budgetMax: number;
   photos: string[];
+  completed?: boolean;
 }
 
 export interface MatchProfile {

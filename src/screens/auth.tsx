@@ -19,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft } from "lucide-react-native";
 import { useI18n } from "../i18n";
 import { api, appState, populateProfileDraft } from "../services/api";
 import type { AuthenticatedUser, ProfileDraft } from "../types/models";
@@ -1047,10 +1048,13 @@ export function Basics({
         body: JSON.stringify({
           ...appState.profileDraft,
           age: Number(appState.profileDraft.age) || null,
-          completed: false,
         }),
       });
-      go("intro");
+      if (appState.profileDraft.completed) {
+        go("myprofile");
+      } else {
+        go("intro");
+      }
     } catch (e) {
       Alert.alert("Profile", e instanceof Error ? e.message : "Unable to save");
     }
@@ -1520,9 +1524,22 @@ export function Basics({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={basicsStyles.title}>
-            {language === "th" ? "เกี่ยวกับคุณ" : "About you"}
-          </Text>
+          {/* Top Navigation / Header */}
+          <View style={housingStyles.headerRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={housingStyles.backButton}
+              onPress={() => go(appState.profileDraft.completed ? "myprofile" : "authChoice")}
+            >
+              <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
+            </Pressable>
+            <Text style={housingStyles.headerTitle}>
+              {language === "th" ? "เกี่ยวกับคุณ" : "About you"}
+            </Text>
+            <View style={{ width: 38 }} />
+          </View>
+
           <Text style={basicsStyles.subtitle}>
             {language === "th" ? "ข้อมูลนี้จะแสดงบนการ์ดจับคู่ของคุณ" : "This appears on your match card"}
           </Text>

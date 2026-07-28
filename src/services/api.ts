@@ -73,7 +73,8 @@ export function populateProfileDraft(me: any) {
     zone: p.zone ?? (appState.profileDraft.zone || "Gate 1"),
     budgetMin: p.budgetMin ?? (appState.profileDraft.budgetMin ?? 2500),
     budgetMax: p.budgetMax ?? (appState.profileDraft.budgetMax ?? 4500),
-    photos: Array.isArray(p.photos) && p.photos.length > 0 ? p.photos : (appState.profileDraft.photos || []),
+    photos: p.photos ?? (appState.profileDraft.photos || []),
+    completed: Boolean(p.completed),
   };
 }
 
