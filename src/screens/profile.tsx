@@ -13,6 +13,25 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Ban,
+  Bell,
+  ChevronRight,
+  Eye,
+  FileText,
+  Flame,
+  Image as ImageIcon,
+  MessageCircle,
+  Pencil,
+  Settings,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  UserX,
+} from "lucide-react-native";
 import { useI18n } from "../i18n";
 import { api, appState } from "../services/api";
 import type { Screen } from "../types/navigation";
@@ -57,7 +76,7 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
         {/* Header */}
         <View style={profileStyle.header}>
           <Pressable style={profileStyle.settingsButton} onPress={() => go("matches")}>
-            <Text style={profileStyle.chevron}>←</Text>
+            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
           </Pressable>
           <Text style={profileStyle.pageTitle}>
             {language === "th" ? "โปรไฟล์รูมเมท" : "Roommate Profile"}
@@ -90,16 +109,19 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
                 p?.verification?.status !== "VERIFIED" && profileStyle.pendingPill,
               ]}
             >
-              <Text
-                style={[
-                  profileStyle.verificationText,
-                  p?.verification?.status !== "VERIFIED" && profileStyle.pendingText,
-                ]}
-              >
-                {p?.verification?.status === "VERIFIED"
-                  ? language === "th" ? "✅ ยืนยันตัวตนแล้ว" : "✅ SUT Verified"
-                  : language === "th" ? "🎓 นักศึกษา SUT" : "🎓 SUT Student"}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <ShieldCheck size={12} color={p?.verification?.status === "VERIFIED" ? "#137333" : "#B06000"} />
+                <Text
+                  style={[
+                    profileStyle.verificationText,
+                    p?.verification?.status !== "VERIFIED" && profileStyle.pendingText,
+                  ]}
+                >
+                  {p?.verification?.status === "VERIFIED"
+                    ? language === "th" ? "ยืนยันตัวตนแล้ว" : "SUT Verified"
+                    : language === "th" ? "นักศึกษา SUT" : "SUT Student"}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -107,9 +129,12 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
         {/* Match Score & Compatibility */}
         <View style={profileStyle.sectionCard}>
           <View style={profileStyle.rowBetween}>
-            <Text style={profileStyle.cardTitle}>
-              🔥 {language === "th" ? "คะแนนความเข้ากันได้ (% Match)" : "% Compatibility Score"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Flame size={16} color="#C64338" fill="#C64338" />
+              <Text style={profileStyle.cardTitle}>
+                {language === "th" ? "คะแนนความเข้ากันได้ (% Match)" : "% Compatibility Score"}
+              </Text>
+            </View>
             <Text style={profileStyle.strengthPercent}>{p?.score ?? 92}%</Text>
           </View>
           <View style={profileStyle.strengthTrack}>
@@ -123,7 +148,7 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
         {/* Preferences Summary */}
         <View style={profileStyle.sectionCard}>
           <Text style={profileStyle.cardTitle}>
-            📍 {language === "th" ? "โซนหอพัก & ประเภทห้อง" : "Housing Preferences"}
+            {language === "th" ? "โซนหอพัก & ประเภทห้อง" : "Housing Preferences"}
           </Text>
           <Text style={[profileStyle.description, { marginTop: 4 }]}>
             {language === "th" ? "โซน:" : "Zone:"} {p?.profile?.zone ?? (language === "th" ? "ทุกโซน" : "Any zone")} · {language === "th" ? "ห้อง:" : "Room:"} {p?.profile?.roomType ?? "Any"}
@@ -135,15 +160,21 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
           style={[profileStyle.retryButton, { marginTop: 12, alignItems: "center" }]}
           onPress={() => go("messages")}
         >
-          <Text style={profileStyle.retryText}>
-            {language === "th" ? "เริ่มแชท 💬" : "Start Chat 💬"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <MessageCircle size={18} color="#FFFFFF" />
+            <Text style={profileStyle.retryText}>
+              {language === "th" ? "เริ่มแชท" : "Start Chat"}
+            </Text>
+          </View>
         </Pressable>
 
         <Pressable style={{ marginTop: 16, alignItems: "center" }} onPress={() => go("report")}>
-          <Text style={{ fontFamily: serifFont, fontSize: 13, color: "#C64338", fontWeight: "bold" }}>
-            {language === "th" ? "🚩 รายงานหรือบล็อกผู้ใช้นี้" : "🚩 Report or Block User"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <AlertTriangle size={14} color="#C64338" />
+            <Text style={{ fontFamily: serifFont, fontSize: 13, color: "#C64338", fontWeight: "bold" }}>
+              {language === "th" ? "รายงานหรือบล็อกผู้ใช้นี้" : "Report or Block User"}
+            </Text>
+          </View>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -290,7 +321,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
               onPress={() => go("settings")}
               style={profileStyle.settingsButton}
             >
-              <Text style={profileStyle.settingsIcon}>⚙️</Text>
+              <Settings size={18} color="#463826" />
             </Pressable>
           </View>
 
@@ -308,7 +339,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
                 )}
               </View>
               <View style={profileStyle.editBadge}>
-                <Text style={profileStyle.editBadgeText}>✏️</Text>
+                <Pencil size={11} color="#FFFFFF" strokeWidth={2.5} />
               </View>
             </View>
 
@@ -327,16 +358,19 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
                   !verified && profileStyle.pendingPill,
                 ]}
               >
-                <Text
-                  style={[
-                    profileStyle.verificationText,
-                    !verified && profileStyle.pendingText,
-                  ]}
-                >
-                  {verified
-                    ? language === "th" ? "✅ ยืนยันตัวตนแล้ว" : "✅ SUT Verified"
-                    : language === "th" ? "⏳ อยู่ระหว่างยืนยันตัวตน" : "⏳ Verification pending"}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <ShieldCheck size={12} color={verified ? "#137333" : "#B06000"} />
+                  <Text
+                    style={[
+                      profileStyle.verificationText,
+                      !verified && profileStyle.pendingText,
+                    ]}
+                  >
+                    {verified
+                      ? language === "th" ? "ยืนยันตัวตนแล้ว" : "SUT Verified"
+                      : language === "th" ? "อยู่ระหว่างยืนยันตัวตน" : "Verification pending"}
+                  </Text>
+                </View>
               </View>
             </View>
           </Pressable>
@@ -373,19 +407,19 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
           {/* Shortcut Cards */}
           {[
             {
-              icon: "🖼️",
+              Icon: ImageIcon,
               title: { th: "จัดการรูปภาพโปรไฟล์", en: "Manage Profile Photos" },
               sub: { th: `อัปโหลดแล้ว ${photos.length} จาก 3 รูป`, en: `${photos.length} of 3 photos uploaded` },
               screen: "basics" as Screen,
             },
             {
-              icon: "📝",
+              Icon: FileText,
               title: { th: "แก้ไขข้อมูลส่วนตัว & หอพัก", en: "Edit Personal & Housing Info" },
               sub: { th: "ชื่อ สาขา ประเภทห้อง และงบประมาณ", en: "Name, major, room type & budget" },
               screen: "basics" as Screen,
             },
             {
-              icon: "🎯",
+              Icon: Target,
               title: { th: "ทำแบบสอบถามไลฟ์สไตล์", en: "Lifestyle Questionnaire" },
               sub: {
                 th: profile.answers?.length ? "ตอบแล้ว · มีผลต่อคะแนน % Match" : "ยังไม่ได้ทำ · เพิ่มความแม่นยำในการจับคู่",
@@ -394,7 +428,7 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
               screen: "intro" as Screen,
             },
             {
-              icon: "🛡️",
+              Icon: Shield,
               title: { th: "ยืนยันตัวตนบัตรนักศึกษา", en: "Student ID Verification" },
               sub: {
                 th: verified ? "ยืนยันเรียบร้อยแล้ว" : "อัปโหลดบัตรเพื่อรับเครื่องหมายยืนยัน",
@@ -402,35 +436,41 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
               },
               screen: "verify" as Screen,
             },
-          ].map((item, idx) => (
-            <Pressable
-              key={idx}
-              onPress={() => go(item.screen)}
-              style={profileStyle.shortcutRow}
-            >
-              <View style={profileStyle.shortcutIconBox}>
-                <Text style={{ fontSize: 20 }}>{item.icon}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={profileStyle.shortcutTitle}>
-                  {item.title[language === "th" ? "th" : "en"]}
-                </Text>
-                <Text style={profileStyle.shortcutSub}>
-                  {item.sub[language === "th" ? "th" : "en"]}
-                </Text>
-              </View>
-              <Text style={profileStyle.chevron}>›</Text>
-            </Pressable>
-          ))}
+          ].map((item, idx) => {
+            const Icon = item.Icon;
+            return (
+              <Pressable
+                key={idx}
+                onPress={() => go(item.screen)}
+                style={profileStyle.shortcutRow}
+              >
+                <View style={profileStyle.shortcutIconBox}>
+                  <Icon size={20} color="#C64338" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={profileStyle.shortcutTitle}>
+                    {item.title[language === "th" ? "th" : "en"]}
+                  </Text>
+                  <Text style={profileStyle.shortcutSub}>
+                    {item.sub[language === "th" ? "th" : "en"]}
+                  </Text>
+                </View>
+                <ChevronRight size={18} color="#8D7C75" />
+              </Pressable>
+            );
+          })}
 
           {/* Visibility Switch Card */}
           <View style={profileStyle.sectionCard}>
             <View style={profileStyle.rowBetween}>
               <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={profileStyle.cardTitle}>
-                  👁️ {language === "th" ? "เปิดเผยโปรไฟล์ในการจับคู่" : "Profile Discoverability"}
-                </Text>
-                <Text style={[profileStyle.description, { marginTop: 4 }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <Eye size={16} color="#463826" />
+                  <Text style={profileStyle.cardTitle}>
+                    {language === "th" ? "เปิดเผยโปรไฟล์ในการจับคู่" : "Profile Discoverability"}
+                  </Text>
+                </View>
+                <Text style={[profileStyle.description, { marginTop: 2 }]}>
                   {profile.discoverable
                     ? language === "th" ? "โปรไฟล์แสดงในการค้นหา" : "Shown in discovery feed"
                     : language === "th" ? "ซ่อนโปรไฟล์ชั่วคราว" : "Hidden from discovery feed"}
@@ -465,7 +505,7 @@ export function Notifications({ go }: { go: (x: Screen) => void }) {
       <ScrollView contentContainerStyle={profileStyle.page} showsVerticalScrollIndicator={false}>
         <View style={profileStyle.header}>
           <Pressable style={profileStyle.settingsButton} onPress={() => go("feed")}>
-            <Text style={profileStyle.chevron}>←</Text>
+            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
           </Pressable>
           <Text style={profileStyle.pageTitle}>
             {language === "th" ? "การแจ้งเตือน" : "Notifications"}
@@ -488,9 +528,13 @@ export function Notifications({ go }: { go: (x: Screen) => void }) {
               }}
             >
               <View style={profileStyle.shortcutIconBox}>
-                <Text style={{ fontSize: 20 }}>
-                  {x.type === "match" ? "🎉" : x.type === "like" ? "💖" : "🔔"}
-                </Text>
+                {x.type === "match" ? (
+                  <Sparkles size={20} color="#C64338" />
+                ) : x.type === "like" ? (
+                  <Sparkles size={20} color="#C64338" fill="#C64338" />
+                ) : (
+                  <Bell size={20} color="#C64338" />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={profileStyle.shortcutTitle}>{x.title}</Text>
@@ -557,7 +601,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
       <ScrollView contentContainerStyle={profileStyle.page} showsVerticalScrollIndicator={false}>
         <View style={profileStyle.header}>
           <Pressable style={profileStyle.settingsButton} onPress={() => go("profile")}>
-            <Text style={profileStyle.chevron}>←</Text>
+            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
           </Pressable>
           <Text style={profileStyle.pageTitle}>
             {language === "th" ? "รายงานผู้ใช้" : "Report User"}
@@ -567,37 +611,46 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
         {[
           {
+            Icon: UserX,
             title: { th: "ยกเลิกการจับคู่ (Unmatch)", en: "Unmatch User" },
             sub: { th: "ลบผู้อยู่อาศัยนี้ออกจากรายการแมตช์ของคุณ", en: "Remove from your matches list" },
             kind: "unmatch" as const,
           },
           {
+            Icon: Ban,
             title: { th: "บล็อกผู้ใช้ (Block User)", en: "Block User" },
             sub: { th: "ซ่อนและไม่อนุญาตให้เห็นโปรไฟล์อีก", en: "Prevent future interactions" },
             kind: "block" as const,
           },
           {
+            Icon: AlertTriangle,
             title: { th: "รายงานพฤติกรรมไม่เหมาะสม (Report)", en: "Report Inappropriate Behavior" },
             sub: { th: "ส่งรายงานให้ทีมงานผู้ดูแลระบบตรวจสอบ", en: "Send report to admin team" },
             kind: "report" as const,
           },
-        ].map((item, idx) => (
-          <Pressable
-            key={idx}
-            style={profileStyle.shortcutRow}
-            onPress={() => act(item.kind)}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[profileStyle.shortcutTitle, { color: "#C64338" }]}>
-                {item.title[language === "th" ? "th" : "en"]}
-              </Text>
-              <Text style={profileStyle.shortcutSub}>
-                {item.sub[language === "th" ? "th" : "en"]}
-              </Text>
-            </View>
-            <Text style={profileStyle.chevron}>›</Text>
-          </Pressable>
-        ))}
+        ].map((item, idx) => {
+          const Icon = item.Icon;
+          return (
+            <Pressable
+              key={idx}
+              style={profileStyle.shortcutRow}
+              onPress={() => act(item.kind)}
+            >
+              <View style={profileStyle.shortcutIconBox}>
+                <Icon size={18} color="#C64338" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[profileStyle.shortcutTitle, { color: "#C64338" }]}>
+                  {item.title[language === "th" ? "th" : "en"]}
+                </Text>
+                <Text style={profileStyle.shortcutSub}>
+                  {item.sub[language === "th" ? "th" : "en"]}
+                </Text>
+              </View>
+              <ChevronRight size={18} color="#8D7C75" />
+            </Pressable>
+          );
+        })}
 
         <Pressable
           style={[profileStyle.retryButton, { backgroundColor: "#FAF6F0", borderWidth: 1, borderColor: "#EADCD3", alignItems: "center" }]}

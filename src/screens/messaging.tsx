@@ -1,6 +1,21 @@
 import { useEffect, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  ArrowLeft,
+  Ban,
+  Bell,
+  ChevronRight,
+  Eye,
+  Globe,
+  KeyRound,
+  LogOut,
+  Mail,
+  MessageSquare,
+  Search,
+  Send,
+  User,
+} from "lucide-react-native";
 import { Card, Header, ScreenShell } from "../components/ui";
 import { LanguageToggle, useI18n } from "../i18n";
 import { api, appState } from "../services/api";
@@ -30,13 +45,18 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
   return (
     <ScreenShell>
       <Header title={t("messages")} right={`${conversations.length} chats`} />
-      <TextInput
-        style={s.input}
-        placeholder="Search conversations..."
-        placeholderTextColor={C.muted}
-        value={query}
-        onChangeText={setQuery}
-      />
+      <View style={{ position: "relative", marginBottom: 12 }}>
+        <TextInput
+          style={[s.input, { paddingLeft: 40 }]}
+          placeholder="Search conversations..."
+          placeholderTextColor={C.muted}
+          value={query}
+          onChangeText={setQuery}
+        />
+        <View style={{ position: "absolute", left: 12, top: 14 }}>
+          <Search size={18} color="#8D7C75" />
+        </View>
+      </View>
       {conversations
         .filter((c) =>
           c.other?.displayName?.toLowerCase().includes(query.toLowerCase()),
@@ -138,7 +158,7 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
         )}
       </View>
       <View style={s.composer}>
-        <Text style={{ fontSize: 22 }}>▣</Text>
+        <MessageSquare size={22} color="#8D7C75" />
         <TextInput
           style={[s.input, { height: 48, flex: 1 }]}
           placeholder="Message..."
@@ -147,7 +167,7 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
           onSubmitEditing={send}
         />
         <Pressable style={s.send} onPress={send}>
-          <Text style={{ color: C.ink }}>➤</Text>
+          <Send size={18} color="#FFFFFF" />
         </Pressable>
       </View>
     </SafeAreaView>
@@ -223,7 +243,7 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
         {/* Header */}
         <View style={settingStyles.headerRow}>
           <Pressable style={settingStyles.backButton} onPress={() => go("myprofile")}>
-            <Text style={settingStyles.backChevron}>←</Text>
+            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
           </Pressable>
           <Text style={settingStyles.headerTitle}>
             {language === "th" ? "การตั้งค่า" : "Settings"}
@@ -235,9 +255,12 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
         <View style={settingStyles.sectionCard}>
           <View style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}>
             <View>
-              <Text style={settingStyles.rowTitle}>
-                🌐 {language === "th" ? "สลับภาษาแอป" : "App Language"}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <Globe size={16} color="#463826" />
+                <Text style={settingStyles.rowTitle}>
+                  {language === "th" ? "สลับภาษาแอป" : "App Language"}
+                </Text>
+              </View>
               <Text style={settingStyles.rowSub}>
                 {language === "th" ? "ภาษาไทย (TH) / English (EN)" : "Thai (TH) / English (EN)"}
               </Text>
@@ -248,26 +271,38 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
 
         {/* Account Info */}
         <View style={settingStyles.sectionCard}>
-          <Text style={settingStyles.sectionTitle}>
-            👤 {language === "th" ? "ข้อมูลบัญชีผู้ใช้" : "Account Information"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+            <User size={16} color="#463826" />
+            <Text style={settingStyles.sectionTitle}>
+              {language === "th" ? "ข้อมูลบัญชีผู้ใช้" : "Account Information"}
+            </Text>
+          </View>
 
           <View style={settingStyles.rowBetween}>
-            <Text style={settingStyles.rowTitle}>{language === "th" ? "อีเมลประจำตัว" : "Registered Email"}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Mail size={15} color="#8D7C75" />
+              <Text style={settingStyles.rowTitle}>{language === "th" ? "อีเมลประจำตัว" : "Registered Email"}</Text>
+            </View>
             <Text style={settingStyles.rowSub}>{email || "student@sut.ac.th"}</Text>
           </View>
 
           <Pressable style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]} onPress={() => Alert.alert("Password", "Feature enabled in next update")}>
-            <Text style={settingStyles.rowTitle}>{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</Text>
-            <Text style={settingStyles.rowSub}>›</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <KeyRound size={15} color="#8D7C75" />
+              <Text style={settingStyles.rowTitle}>{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</Text>
+            </View>
+            <ChevronRight size={16} color="#8D7C75" />
           </Pressable>
         </View>
 
         {/* Notification Preferences */}
         <View style={settingStyles.sectionCard}>
-          <Text style={settingStyles.sectionTitle}>
-            🔔 {language === "th" ? "การตั้งค่าการแจ้งเตือน" : "Notification Preferences"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+            <Bell size={16} color="#463826" />
+            <Text style={settingStyles.sectionTitle}>
+              {language === "th" ? "การตั้งค่าการแจ้งเตือน" : "Notification Preferences"}
+            </Text>
+          </View>
 
           <View style={settingStyles.rowBetween}>
             <Text style={settingStyles.rowTitle}>{language === "th" ? "คู่แมตช์ใหม่" : "New Matches"}</Text>
@@ -299,9 +334,12 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
 
         {/* Privacy */}
         <View style={settingStyles.sectionCard}>
-          <Text style={settingStyles.sectionTitle}>
-            👁️ {language === "th" ? "ความเป็นส่วนตัว" : "Privacy & Visibility"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+            <Eye size={16} color="#463826" />
+            <Text style={settingStyles.sectionTitle}>
+              {language === "th" ? "ความเป็นส่วนตัว" : "Privacy & Visibility"}
+            </Text>
+          </View>
 
           <View style={settingStyles.rowBetween}>
             <View style={{ flex: 1, paddingRight: 8 }}>
@@ -320,16 +358,22 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
           </View>
 
           <Pressable style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]} onPress={() => go("requests")}>
-            <Text style={settingStyles.rowTitle}>{language === "th" ? "ผู้ใช้ที่บล็อก" : "Blocked Users"}</Text>
-            <Text style={settingStyles.rowSub}>›</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ban size={15} color="#8D7C75" />
+              <Text style={settingStyles.rowTitle}>{language === "th" ? "ผู้ใช้ที่บล็อก" : "Blocked Users"}</Text>
+            </View>
+            <ChevronRight size={16} color="#8D7C75" />
           </Pressable>
         </View>
 
         {/* Logout Button */}
         <Pressable style={settingStyles.logoutBtn} onPress={handleLogout}>
-          <Text style={settingStyles.logoutBtnText}>
-            🚪 {language === "th" ? "ออกจากระบบ" : "Log Out"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <LogOut size={18} color="#FFFFFF" />
+            <Text style={settingStyles.logoutBtnText}>
+              {language === "th" ? "ออกจากระบบ" : "Log Out"}
+            </Text>
+          </View>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -387,7 +431,6 @@ const settingStyles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
     color: "#463826",
-    marginBottom: 12,
   },
   rowBetween: {
     flexDirection: "row",

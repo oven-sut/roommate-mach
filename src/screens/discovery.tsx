@@ -11,6 +11,23 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  ArrowRight,
+  Bell,
+  Flame,
+  Heart,
+  MapPin,
+  MessageCircle,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  User,
+  Users,
+  X,
+} from "lucide-react-native";
 import { useI18n } from "../i18n";
 import { api, appState } from "../services/api";
 import type { Screen } from "../types/navigation";
@@ -31,16 +48,17 @@ export function BottomNav({
   const { language } = useI18n();
 
   const navItems = [
-    { id: "feed", icon: "🔍", label: { th: "ค้นหา", en: "Discover" } },
-    { id: "matches", icon: "💖", label: { th: "คู่แมตช์", en: "Matches" } },
-    { id: "messages", icon: "💬", label: { th: "ข้อความ", en: "Messages" } },
-    { id: "myprofile", icon: "👤", label: { th: "โปรไฟล์", en: "Profile" } },
+    { id: "feed", Icon: Search, label: { th: "ค้นหา", en: "Discover" } },
+    { id: "matches", Icon: Heart, label: { th: "คู่แมตช์", en: "Matches" } },
+    { id: "messages", Icon: MessageCircle, label: { th: "ข้อความ", en: "Messages" } },
+    { id: "myprofile", Icon: User, label: { th: "โปรไฟล์", en: "Profile" } },
   ];
 
   return (
     <View style={feedStyles.navContainer}>
       {navItems.map((item) => {
         const isActive = screen === item.id;
+        const Icon = item.Icon;
         return (
           <Pressable
             key={item.id}
@@ -49,9 +67,12 @@ export function BottomNav({
             style={feedStyles.navItem}
             onPress={() => go(item.id as Screen)}
           >
-            <Text style={[feedStyles.navIcon, isActive && { fontSize: 24 }]}>
-              {item.icon}
-            </Text>
+            <Icon
+              size={22}
+              color={isActive ? "#C64338" : "#8D7C75"}
+              fill={isActive && (item.id === "matches" || item.id === "myprofile") ? "#C64338" : "none"}
+              strokeWidth={isActive ? 2.2 : 1.8}
+            />
             <Text
               style={[
                 feedStyles.navText,
@@ -141,7 +162,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
             style={feedStyles.filterBtn}
             onPress={() => go("filters")}
           >
-            <Text style={{ fontSize: 15 }}>🎛️</Text>
+            <SlidersHorizontal size={16} color="#463826" />
             <Text style={feedStyles.filterBtnText}>
               {language === "th" ? "ตัวกรอง" : "Filters"}
             </Text>
@@ -154,7 +175,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
             style={feedStyles.quickPill}
             onPress={() => go("requests")}
           >
-            <Text style={{ fontSize: 14 }}>💖</Text>
+            <Heart size={15} color="#C64338" fill="#C64338" />
             <Text style={feedStyles.quickPillText}>
               {language === "th" ? "คนที่ถูกใจคุณ" : "Liked You"}
             </Text>
@@ -164,7 +185,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
             style={feedStyles.quickPill}
             onPress={() => go("notifications")}
           >
-            <Text style={{ fontSize: 14 }}>🔔</Text>
+            <Bell size={15} color="#C64338" />
             <Text style={feedStyles.quickPillText}>
               {language === "th" ? "การแจ้งเตือน" : "Notifications"}
             </Text>
@@ -203,16 +224,22 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
               {/* Verified Badge */}
               <View style={feedStyles.verifiedBadge}>
-                <Text style={feedStyles.verifiedText}>
-                  {person.verification?.status === "VERIFIED"
-                    ? language === "th" ? "✅ ยืนยันตัวตนแล้ว" : "✅ Verified Student"
-                    : language === "th" ? "🎓 นักศึกษา SUT" : "🎓 SUT Student"}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <ShieldCheck size={14} color="#4ADE80" />
+                  <Text style={feedStyles.verifiedText}>
+                    {person.verification?.status === "VERIFIED"
+                      ? language === "th" ? "ยืนยันตัวตนแล้ว" : "Verified Student"
+                      : language === "th" ? "นักศึกษา SUT" : "SUT Student"}
+                  </Text>
+                </View>
               </View>
 
               {/* Match Score Badge */}
               <View style={feedStyles.scoreBadge}>
-                <Text style={feedStyles.scoreText}>🔥 {person.score ?? 85}% Match</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Flame size={14} color="#C64338" fill="#C64338" />
+                  <Text style={feedStyles.scoreText}>{person.score ?? 85}% Match</Text>
+                </View>
               </View>
 
               {/* Bottom Card Profile Overlay */}
@@ -228,13 +255,19 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
                 <View style={feedStyles.chipsRow}>
                   <View style={feedStyles.cardChip}>
-                    <Text style={feedStyles.cardChipText}>
-                      ✨ {language === "th" ? "เข้ากันได้ดี" : "High Match"}
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Sparkles size={12} color="#FFFFFF" />
+                      <Text style={feedStyles.cardChipText}>
+                        {language === "th" ? "เข้ากันได้ดี" : "High Match"}
+                      </Text>
+                    </View>
                   </View>
                   {person.profile?.zone ? (
                     <View style={feedStyles.cardChip}>
-                      <Text style={feedStyles.cardChipText}>📍 {person.profile.zone}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <MapPin size={12} color="#FFFFFF" />
+                        <Text style={feedStyles.cardChipText}>{person.profile.zone}</Text>
+                      </View>
                     </View>
                   ) : null}
                 </View>
@@ -253,7 +286,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 style={feedStyles.btnPass}
                 onPress={() => swipe("PASS")}
               >
-                <Text style={feedStyles.btnPassIcon}>✕</Text>
+                <X size={26} color="#74675E" strokeWidth={2.5} />
               </Pressable>
 
               <Pressable
@@ -262,7 +295,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 style={feedStyles.btnSuper}
                 onPress={() => swipe("LIKE")}
               >
-                <Text style={feedStyles.btnSuperIcon}>⭐</Text>
+                <Star size={24} color="#D97706" fill="#F59E0B" />
               </Pressable>
 
               <Pressable
@@ -271,7 +304,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 style={feedStyles.btnLike}
                 onPress={() => swipe("LIKE")}
               >
-                <Text style={feedStyles.btnLikeIcon}>❤️</Text>
+                <Heart size={28} color="#FFFFFF" fill="#FFFFFF" />
               </Pressable>
             </View>
           </>
@@ -284,7 +317,9 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
           </View>
         ) : (
           <View style={feedStyles.emptyBox}>
-            <Text style={{ fontSize: 44, marginBottom: 12 }}>✨ 🔍</Text>
+            <View style={{ marginBottom: 12 }}>
+              <Sparkles size={44} color="#C64338" />
+            </View>
             <Text style={feedStyles.emptyTitle}>
               {language === "th" ? "ดูโปรไฟล์ทั้งหมดครบแล้ว!" : "You're all caught up!"}
             </Text>
@@ -297,9 +332,12 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
               style={feedStyles.refreshBtn}
               onPress={() => loadPage(true)}
             >
-              <Text style={feedStyles.refreshBtnText}>
-                {language === "th" ? "🔄 โหลดโปรไฟล์อีกครั้ง" : "🔄 Refresh Feed"}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <RotateCcw size={16} color="#FFFFFF" />
+                <Text style={feedStyles.refreshBtnText}>
+                  {language === "th" ? "โหลดโปรไฟล์อีกครั้ง" : "Refresh Feed"}
+                </Text>
+              </View>
             </Pressable>
           </View>
         )}
@@ -320,15 +358,18 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
             {language === "th" ? "ตัวกรองค้นหา" : "Search Filters"}
           </Text>
           <Pressable onPress={() => go("feed")}>
-            <Text style={{ fontSize: 20, color: "#7F232D", fontWeight: "bold" }}>✕</Text>
+            <X size={24} color="#7F232D" strokeWidth={2.5} />
           </Pressable>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           <View style={filterStyles.sectionCard}>
-            <Text style={filterStyles.sectionTitle}>
-              🚻 {language === "th" ? "เพศของรูมเมท" : "Roommate Gender"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+              <Users size={18} color="#463826" />
+              <Text style={filterStyles.sectionTitle}>
+                {language === "th" ? "เพศของรูมเมท" : "Roommate Gender"}
+              </Text>
+            </View>
             <View style={filterStyles.pillsRow}>
               {[
                 { label: { th: "ผู้หญิง", en: "Female" }, active: false },
@@ -356,9 +397,12 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
           </View>
 
           <View style={filterStyles.sectionCard}>
-            <Text style={filterStyles.sectionTitle}>
-              📍 {language === "th" ? "โซนหอพักที่ต้องการ" : "Preferred Zone"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+              <MapPin size={18} color="#463826" />
+              <Text style={filterStyles.sectionTitle}>
+                {language === "th" ? "โซนหอพักที่ต้องการ" : "Preferred Zone"}
+              </Text>
+            </View>
             <View style={filterStyles.pillsRow}>
               {[
                 { label: { th: "ประตู 1", en: "Gate 1" }, active: true },
@@ -387,18 +431,24 @@ export function Filters({ go }: { go: (x: Screen) => void }) {
           </View>
 
           <View style={filterStyles.sectionCard}>
-            <Text style={filterStyles.sectionTitle}>
-              🔥 {language === "th" ? "คะแนนความเข้ากันได้ขั้นต่ำ" : "Minimum Match Score"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 }}>
+              <Flame size={18} color="#C64338" />
+              <Text style={filterStyles.sectionTitle}>
+                {language === "th" ? "คะแนนความเข้ากันได้ขั้นต่ำ" : "Minimum Match Score"}
+              </Text>
+            </View>
             <View style={filterStyles.scoreRow}>
               <Text style={filterStyles.scoreValueText}>70%+ Match</Text>
             </View>
           </View>
 
           <Pressable style={feedStyles.refreshBtn} onPress={() => go("feed")}>
-            <Text style={feedStyles.refreshBtnText}>
-              {language === "th" ? "บันทึกตัวกรอง ➔" : "Apply Filters ➔"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={feedStyles.refreshBtnText}>
+                {language === "th" ? "บันทึกตัวกรอง" : "Apply Filters"}
+              </Text>
+              <ArrowRight size={16} color="#FFFFFF" />
+            </View>
           </Pressable>
         </ScrollView>
       </View>
@@ -451,9 +501,12 @@ export function Matches({ go }: { go: (x: Screen) => void }) {
             {language === "th" ? "คู่แมตช์ของคุณ" : "Your Matches"}
           </Text>
           <Pressable onPress={() => go("requests")}>
-            <Text style={feedStyles.filterBtnText}>
-              💖 {matches.length} {language === "th" ? "แมตช์" : "Matches"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Heart size={16} color="#C64338" fill="#C64338" />
+              <Text style={feedStyles.filterBtnText}>
+                {matches.length} {language === "th" ? "แมตช์" : "Matches"}
+              </Text>
+            </View>
           </Pressable>
         </View>
 
@@ -476,7 +529,9 @@ export function Matches({ go }: { go: (x: Screen) => void }) {
 
           {!matches.length && (
             <View style={feedStyles.emptyBox}>
-              <Text style={{ fontSize: 44, marginBottom: 12 }}>💖 ✨</Text>
+              <View style={{ marginBottom: 12 }}>
+                <Heart size={44} color="#C64338" fill="#FEEAE6" />
+              </View>
               <Text style={feedStyles.emptyTitle}>
                 {language === "th" ? "ยังไม่มีคู่แมตช์ในขณะนี้" : "No matches yet"}
               </Text>
@@ -486,9 +541,12 @@ export function Matches({ go }: { go: (x: Screen) => void }) {
                   : "Like profiles in the discover feed. When they like you back, matches will appear here!"}
               </Text>
               <Pressable style={feedStyles.refreshBtn} onPress={() => go("feed")}>
-                <Text style={feedStyles.refreshBtnText}>
-                  {language === "th" ? "ไปค้นหารูมเมท ➔" : "Go to Discover ➔"}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={feedStyles.refreshBtnText}>
+                    {language === "th" ? "ไปค้นหารูมเมท" : "Go to Discover"}
+                  </Text>
+                  <ArrowRight size={16} color="#FFFFFF" />
+                </View>
               </Pressable>
             </View>
           )}
@@ -505,9 +563,12 @@ export function Match({ go }: { go: (x: Screen) => void }) {
   return (
     <SafeAreaView style={matchStyles.page}>
       <View style={matchStyles.container}>
-        <Text style={matchStyles.eyebrow}>
-          {language === "th" ? "🎉 ถูกใจกันทั้งคู่!" : "🎉 It's a Match!"}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <Sparkles size={20} color="#C64338" />
+          <Text style={matchStyles.eyebrow}>
+            {language === "th" ? "ถูกใจกันทั้งคู่!" : "It's a Match!"}
+          </Text>
+        </View>
         <Text style={matchStyles.title}>
           {language === "th" ? "จับคู่สำเร็จ!" : "Match Successful!"}
         </Text>
@@ -531,9 +592,12 @@ export function Match({ go }: { go: (x: Screen) => void }) {
         </Text>
 
         <Pressable style={feedStyles.refreshBtn} onPress={() => go("messages")}>
-          <Text style={feedStyles.refreshBtnText}>
-            {language === "th" ? "เริ่มแชทเลย 💬" : "Start Chatting 💬"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <MessageCircle size={18} color="#FFFFFF" />
+            <Text style={feedStyles.refreshBtnText}>
+              {language === "th" ? "เริ่มแชทเลย" : "Start Chatting"}
+            </Text>
+          </View>
         </Pressable>
 
         <Pressable style={matchStyles.secondaryBtn} onPress={() => go("feed")}>
@@ -573,7 +637,7 @@ export function Requests({ go }: { go: (x: Screen) => void }) {
             {language === "th" ? "คนที่ถูกใจคุณ" : "People Who Liked You"}
           </Text>
           <Pressable onPress={() => go("feed")}>
-            <Text style={{ fontSize: 20, color: "#7F232D", fontWeight: "bold" }}>✕</Text>
+            <X size={24} color="#7F232D" strokeWidth={2.5} />
           </Pressable>
         </View>
 
@@ -593,7 +657,9 @@ export function Requests({ go }: { go: (x: Screen) => void }) {
 
           {!likes.length && (
             <View style={feedStyles.emptyBox}>
-              <Text style={{ fontSize: 44, marginBottom: 12 }}>💖 ✨</Text>
+              <View style={{ marginBottom: 12 }}>
+                <Heart size={44} color="#C64338" fill="#FEEAE6" />
+              </View>
               <Text style={feedStyles.emptyTitle}>
                 {language === "th" ? "ยังไม่มีคนที่ถูกใจคุณในขณะนี้" : "No likes yet"}
               </Text>
@@ -642,7 +708,7 @@ const feedStyles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#EADCD3",
-    gap: 4,
+    gap: 6,
   },
   filterBtnText: {
     fontFamily: serifFont,
@@ -804,11 +870,6 @@ const feedStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  btnPassIcon: {
-    fontSize: 24,
-    color: "#74675E",
-    fontWeight: "bold",
-  },
   btnSuper: {
     width: 52,
     height: 52,
@@ -818,9 +879,6 @@ const feedStyles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: "#FFD477",
-  },
-  btnSuperIcon: {
-    fontSize: 22,
   },
   btnLike: {
     width: 64,
@@ -834,9 +892,6 @@ const feedStyles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-  },
-  btnLikeIcon: {
-    fontSize: 26,
   },
   emptyBox: {
     flex: 1,
@@ -895,15 +950,12 @@ const feedStyles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 6,
   },
-  navIcon: {
-    fontSize: 22,
-    marginBottom: 2,
-  },
   navText: {
     fontFamily: serifFont,
     fontSize: 11,
     color: "#8D7C75",
     fontWeight: "500",
+    marginTop: 3,
   },
   navTextActive: {
     color: "#C64338",
@@ -925,7 +977,6 @@ const filterStyles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
     color: "#463826",
-    marginBottom: 12,
   },
   pillsRow: {
     flexDirection: "row",
@@ -1037,7 +1088,6 @@ const matchStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#C64338",
-    marginBottom: 8,
   },
   title: {
     fontFamily: serifFont,
