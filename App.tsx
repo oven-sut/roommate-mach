@@ -30,7 +30,16 @@ import { MyProfile, Notifications, Profile, Report } from "./src/screens/profile
 import { Intro, Question, Summary } from "./src/screens/questionnaire";
 import { SplashScreen } from "./src/screens/splash";
 import { Verify } from "./src/screens/verification";
-import { api, appState, getAccessToken, populateProfileDraft, saveToken } from "./src/services/api";
+import {
+  api,
+  appState,
+  getAccessToken,
+  hasSeenOnboarding,
+  initAuthToken,
+  populateProfileDraft,
+  saveToken,
+  setHasSeenOnboarding,
+} from "./src/services/api";
 import { getPushNotificationToken } from "./src/services/notifications";
 import { C } from "./src/theme/colors";
 import { s } from "./src/theme/styles";
@@ -53,6 +62,7 @@ const appFont = {
 
 function AppContent() {
   const [screen, setScreen] = useState<Screen>("splash");
+  const [initializing, setInitializing] = useState(true);
   const transition = useRef(new Animated.Value(1)).current;
   const reduceMotion = useRef(false);
 
@@ -60,6 +70,48 @@ function AppContent() {
     AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
       reduceMotion.current = enabled;
     });
+
+    async function bootstrap() {
+      const token = await initAuthToken();
+      const seenOnboarding = await hasSeenOnboarding();
+
+      if (token) {
+        try {
+          const me = await api<AuthenticatedUser>("/api/me");
+          appState.currentUserId = me.id;
+          populateProfileDraft(me);
+
+          getPushNotificationToken().then((pushToken) => {
+            if (pushToken) {
+              api("/api/push/register", {
+                method: "POST",
+                body: JSON.stringify({ token: pushToken, device: Platform.OS }),
+              }).catch(() => undefined);
+            }
+          });
+
+          setScreen(
+            me.role === "ADMIN"
+              ? "dashboard"
+              : me.profile?.completed
+                ? "feed"
+                : "basics",
+          );
+        } catch {
+          saveToken(null);
+          setScreen(seenOnboarding ? "authChoice" : "splash");
+        }
+      } else {
+        if (seenOnboarding) {
+          setScreen("authChoice");
+        } else {
+          setScreen("splash");
+        }
+      }
+      setInitializing(false);
+    }
+
+    bootstrap();
   }, []);
 
   useEffect(() => {
@@ -78,6 +130,7 @@ function AppContent() {
   }, [screen, transition]);
 
   const continueFromSplash = async () => {
+    await setHasSeenOnboarding(true);
     if (getAccessToken()) {
       try {
         const me = await api<AuthenticatedUser>("/api/me");
@@ -102,15 +155,23 @@ function AppContent() {
         );
       } catch {
         saveToken(null);
-        setScreen("welcome1");
+        setScreen("authChoice");
       }
     } else {
       setScreen("welcome1");
     }
   };
-  const go = (x: Screen) => setScreen(x);
+
+  const go = (x: Screen) => {
+    if (x.startsWith("welcome") || x === "authChoice") {
+      setHasSeenOnboarding(true);
+    }
+    setScreen(x);
+  };
+
   const onAuth = (token: string, user: AuthenticatedUser) => {
     saveToken(token);
+    setHasSeenOnboarding(true);
     appState.currentUserId = user.id;
     populateProfileDraft(user);
     api("/api/me")
@@ -118,6 +179,14 @@ function AppContent() {
       .catch(() => undefined);
     setScreen(user.role === "ADMIN" ? "dashboard" : "basics");
   };
+
+  if (initializing) {
+    return (
+      <View style={[s.loading, { backgroundColor: "#FEFCFA" }]}>
+        <ActivityIndicator size="large" color="#C64338" />
+      </View>
+    );
+  }
   if (screen === "splash") {
     return <SplashScreen onComplete={continueFromSplash} />;
   }

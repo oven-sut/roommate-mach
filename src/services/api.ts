@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import type { MatchProfile, ProfileDraft } from "../types/models";
 
@@ -22,10 +23,57 @@ export function formatImageUri(uri?: string): string {
   return trimmed;
 }
 
-let accessToken =
-  Platform.OS === "web" && typeof localStorage !== "undefined"
-    ? localStorage.getItem("roomie_token")
-    : null;
+let accessToken: string | null = null;
+
+export async function initAuthToken(): Promise<string | null> {
+  try {
+    const storedToken = await AsyncStorage.getItem("roomie_token");
+    if (storedToken) {
+      accessToken = storedToken;
+    } else if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+      accessToken = localStorage.getItem("roomie_token");
+    }
+  } catch (e) {
+    console.error("Error initializing auth token", e);
+  }
+  return accessToken;
+}
+
+export function saveToken(token: string | null) {
+  accessToken = token;
+  if (token) {
+    AsyncStorage.setItem("roomie_token", token).catch(() => undefined);
+    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+      localStorage.setItem("roomie_token", token);
+    }
+  } else {
+    AsyncStorage.removeItem("roomie_token").catch(() => undefined);
+    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+      localStorage.removeItem("roomie_token");
+    }
+  }
+}
+
+export async function hasSeenOnboarding(): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem("has_seen_onboarding");
+    return value === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setHasSeenOnboarding(seen = true): Promise<void> {
+  try {
+    if (seen) {
+      await AsyncStorage.setItem("has_seen_onboarding", "true");
+    } else {
+      await AsyncStorage.removeItem("has_seen_onboarding");
+    }
+  } catch (e) {
+    console.error("Error setting has_seen_onboarding", e);
+  }
+}
 
 export async function api<T = any>(
   path: string,
@@ -90,15 +138,6 @@ export function populateProfileDraft(me: any) {
     photos: p.photos ?? (appState.profileDraft.photos || []),
     completed: Boolean(p.completed),
   };
-}
-
-export function saveToken(token: string | null) {
-  accessToken = token;
-  if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-    token
-      ? localStorage.setItem("roomie_token", token)
-      : localStorage.removeItem("roomie_token");
-  }
 }
 
 export const getAccessToken = () => accessToken;
