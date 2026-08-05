@@ -357,7 +357,15 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
             />
           </View>
 
-          <Pressable style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]} onPress={() => go("requests")}>
+          <Pressable style={settingStyles.rowBetween} onPress={() => go("search")}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Search size={15} color="#8D7C75" />
+              <Text style={settingStyles.rowTitle}>{language === "th" ? "ค้นหาผู้ใช้" : "Search Users"}</Text>
+            </View>
+            <ChevronRight size={16} color="#8D7C75" />
+          </Pressable>
+
+          <Pressable style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]} onPress={() => go("blocked")}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Ban size={15} color="#8D7C75" />
               <Text style={settingStyles.rowTitle}>{language === "th" ? "ผู้ใช้ที่บล็อก" : "Blocked Users"}</Text>
@@ -375,6 +383,154 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
             </Text>
           </View>
         </Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+export function BlockedUsers({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
+  const [blocked, setBlocked] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api("/api/blocks")
+      .then(setBlocked)
+      .catch((e) => Alert.alert("Blocked users", e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const unblock = async (userId: string) => {
+    try {
+      await api(`/api/blocks/${userId}`, { method: "DELETE" });
+      setBlocked((items) => items.filter((u) => u.id !== userId));
+    } catch (e) {
+      Alert.alert("Unblock", e instanceof Error ? e.message : "Unable to unblock");
+    }
+  };
+
+  return (
+    <SafeAreaView style={settingStyles.safeArea}>
+      <ScrollView contentContainerStyle={settingStyles.container} showsVerticalScrollIndicator={false}>
+        <View style={settingStyles.headerRow}>
+          <Pressable style={settingStyles.backButton} onPress={() => go("settings")}>
+            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
+          </Pressable>
+          <Text style={settingStyles.headerTitle}>
+            {language === "th" ? "ผู้ใช้ที่บล็อก" : "Blocked Users"}
+          </Text>
+          <View style={{ width: 38 }} />
+        </View>
+
+        <View style={settingStyles.sectionCard}>
+          {blocked.map((u) => (
+            <View key={u.id} style={settingStyles.rowBetween}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, paddingRight: 8 }}>
+                <Ban size={15} color="#8D7C75" />
+                <View style={{ flex: 1 }}>
+                  <Text style={settingStyles.rowTitle}>{u.displayName}</Text>
+                  <Text style={settingStyles.rowSub}>{u.profile?.major ?? u.email}</Text>
+                </View>
+              </View>
+              <Pressable onPress={() => unblock(u.id)} hitSlop={8}>
+                <Text style={settingStyles.unblockAction}>
+                  {language === "th" ? "ปลดบล็อก" : "Unblock"}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+          {!loading && !blocked.length ? (
+            <Text style={[settingStyles.rowSub, { textAlign: "center", paddingVertical: 12 }]}>
+              {language === "th" ? "ยังไม่มีผู้ใช้ที่ถูกบล็อก" : "No blocked users yet"}
+            </Text>
+          ) : null}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+export function SearchUsers({ go }: { go: (x: Screen) => void }) {
+  const { language } = useI18n();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      api(`/api/users/search${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`)
+        .then(setResults)
+        .catch((e) => Alert.alert("Search", e.message));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const toggleBlock = async (u: any) => {
+    try {
+      if (u.isBlocked) {
+        await api("/api/users/unblock", { method: "POST", body: JSON.stringify({ userId: u.id }) });
+      } else {
+        await api("/api/users/block", { method: "POST", body: JSON.stringify({ userId: u.id }) });
+      }
+      setResults((items) =>
+        items.map((item) => (item.id === u.id ? { ...item, isBlocked: !item.isBlocked } : item)),
+      );
+    } catch (e) {
+      Alert.alert("Block", e instanceof Error ? e.message : "Unable to update");
+    }
+  };
+
+  return (
+    <SafeAreaView style={settingStyles.safeArea}>
+      <ScrollView
+        contentContainerStyle={settingStyles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={settingStyles.headerRow}>
+          <Pressable style={settingStyles.backButton} onPress={() => go("settings")}>
+            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
+          </Pressable>
+          <Text style={settingStyles.headerTitle}>
+            {language === "th" ? "ค้นหาผู้ใช้" : "Search Users"}
+          </Text>
+          <View style={{ width: 38 }} />
+        </View>
+
+        <View style={{ position: "relative", marginBottom: 16 }}>
+          <TextInput
+            style={[s.input, { paddingLeft: 40 }]}
+            placeholder={language === "th" ? "ค้นหาชื่อ, อีเมล, สาขา..." : "Search name, email, major..."}
+            placeholderTextColor={C.muted}
+            value={query}
+            onChangeText={setQuery}
+          />
+          <View style={{ position: "absolute", left: 12, top: 14 }}>
+            <Search size={18} color="#8D7C75" />
+          </View>
+        </View>
+
+        <View style={settingStyles.sectionCard}>
+          {results.map((u) => (
+            <View key={u.id} style={settingStyles.rowBetween}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={settingStyles.rowTitle}>{u.displayName}</Text>
+                <Text style={settingStyles.rowSub}>{u.profile?.major ?? u.email}</Text>
+              </View>
+              <Pressable onPress={() => toggleBlock(u)} hitSlop={8}>
+                <Text style={u.isBlocked ? settingStyles.unblockAction : settingStyles.blockAction}>
+                  {u.isBlocked
+                    ? language === "th" ? "ปลดบล็อก" : "Unblock"
+                    : language === "th" ? "บล็อก" : "Block"}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+          {!results.length ? (
+            <Text style={[settingStyles.rowSub, { textAlign: "center", paddingVertical: 12 }]}>
+              {language === "th" ? "ไม่พบผู้ใช้" : "No users found"}
+            </Text>
+          ) : null}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -470,5 +626,17 @@ const settingStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#FFFFFF",
+  },
+  blockAction: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#C64338",
+  },
+  unblockAction: {
+    fontFamily: serifFont,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2F9142",
   },
 });

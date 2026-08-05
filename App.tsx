@@ -24,7 +24,7 @@ import { Auth, Basics } from "./src/screens/auth";
 import { Config, Dashboard, Users } from "./src/screens/admin";
 import { Feed, Filters, Match, Matches, Requests } from "./src/screens/discovery";
 import { Legal } from "./src/screens/legal";
-import { Chat, Messages, Settings } from "./src/screens/messaging";
+import { BlockedUsers, Chat, Messages, SearchUsers, Settings } from "./src/screens/messaging";
 import { AuthChoice, Welcome } from "./src/screens/onboarding";
 import { MyProfile, Notifications, Profile, Report } from "./src/screens/profile";
 import { Intro, Question, Summary } from "./src/screens/questionnaire";
@@ -216,6 +216,8 @@ function AppContent() {
   else if (screen === "myprofile") content = <MyProfile go={go} />;
   else if (screen === "messages") content = <Messages go={go} />;
   else if (screen === "chat") content = <Chat go={go} />;
+  else if (screen === "blocked") content = <BlockedUsers go={go} />;
+  else if (screen === "search") content = <SearchUsers go={go} />;
   else if (screen === "settings")
     content = (
       <Settings

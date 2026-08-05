@@ -189,6 +189,9 @@ export function Auth({
   const [confirm, setConfirm] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [accepted, setAccepted] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -378,7 +381,7 @@ export function Auth({
     try {
       setBusy(true);
       setError("");
-      await api("/auth/forgot-password", {
+      await api("/auth/send-otp", {
         method: "POST",
         body: JSON.stringify({ email }),
       });
@@ -386,6 +389,58 @@ export function Auth({
       setCountdown(47);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to send OTP");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyForgotOtp = async () => {
+    if (!otp.trim()) {
+      setError("Please enter the OTP sent to your email");
+      return;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      await api("/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, otp }),
+      });
+      setOtpVerified(true);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Invalid or expired OTP",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitNewPassword = async () => {
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      await api("/auth/reset-password-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, password: newPassword }),
+      });
+      Alert.alert(
+        "สำเร็จ",
+        "รีเซ็ตรหัสผ่านเรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่",
+      );
+      go("login");
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Unable to reset password",
+      );
     } finally {
       setBusy(false);
     }
@@ -458,55 +513,91 @@ export function Auth({
               </Animated.View>
               <Text style={auth.resetTitle}>รีเซ็ตรหัสผ่านของคุณ</Text>
               <Text style={auth.resetDescription}>
-                Enter your SUT email and we’ll send you a{"\n"}
-                secure reset link. It expires in 15 minutes.
+                {otpVerified
+                  ? "Enter and confirm your new password below."
+                  : otpSent
+                    ? "Enter the OTP code we sent to your email.\nIt expires in 10 minutes."
+                    : "Enter your SUT email and we’ll send you a\nverification OTP."}
               </Text>
             </View>
 
-            <AuthField
-              label="อีเมล SUT หรือรหัสนักศึกษา"
-              placeholder="กรอกอีเมล SUT หรือ OTP"
-              value={sutId}
-              onChangeText={setSutId}
-              action={
-                <Pressable
-                  onPress={sendOtp}
-                  disabled={busy || countdown > 0}
-                  style={auth.inlineButton}
-                >
-                  <Text style={auth.inlineButtonText}>
+            {!otpSent ? (
+              <AuthField
+                label="อีเมล SUT หรือรหัสนักศึกษา"
+                placeholder="กรอกอีเมล SUT"
+                value={sutId}
+                onChangeText={setSutId}
+                action={
+                  <Pressable
+                    onPress={sendOtp}
+                    disabled={busy}
+                    style={auth.inlineButton}
+                  >
+                    <Text style={auth.inlineButtonText}>
+                      {busy ? "กำลังส่ง..." : "ส่ง OTP"}
+                    </Text>
+                  </Pressable>
+                }
+              />
+            ) : !otpVerified ? (
+              <>
+                <AuthField
+                  label="กรอก OTP"
+                  placeholder="กรอก OTP"
+                  value={otp}
+                  onChangeText={setOtp}
+                  action={
+                    <Pressable
+                      onPress={verifyForgotOtp}
+                      disabled={busy}
+                      style={auth.inlineButton}
+                    >
+                      <Text style={auth.inlineButtonText}>
+                        {busy ? "กำลังยืนยัน..." : "ยืนยัน"}
+                      </Text>
+                    </Pressable>
+                  }
+                />
+                <View style={auth.resendCard}>
+                  <Text style={auth.mailIcon}>✉</Text>
+                  <Text style={auth.resendText}>
+                    Didn’t get it? Check spam, or{" "}
                     {countdown > 0
-                      ? `Send OTP\n(1.3 s)     in 0:${String(countdown).padStart(2, "0")}`
-                      : busy
-                        ? "กำลังส่ง..."
-                        : "ส่ง OTP"}
+                      ? `resend in 0:${String(countdown).padStart(2, "0")}`
+                      : ""}
                   </Text>
-                </Pressable>
-              }
-            />
-
-            <AuthField
-              label="กรอก OTP"
-              placeholder="กรอก OTP"
-              value={otp}
-              onChangeText={setOtp}
-              action={
-                <Pressable style={auth.inlineButton}>
-                  <Text style={auth.inlineButtonText}>ส่ง</Text>
-                </Pressable>
-              }
-            />
+                  {countdown <= 0 ? (
+                    <Pressable onPress={sendOtp} disabled={busy} hitSlop={8}>
+                      <Text style={auth.footerAccent}>ส่งอีกครั้ง</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </>
+            ) : (
+              <>
+                <AuthField
+                  label="รหัสผ่านใหม่"
+                  placeholder="กรอกรหัสผ่านใหม่"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secure
+                />
+                <AuthField
+                  label="ยืนยันรหัสผ่านใหม่"
+                  placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                  value={confirmNewPassword}
+                  onChangeText={setConfirmNewPassword}
+                  secure
+                />
+              </>
+            )}
 
             {error ? <Text style={auth.error}>{error}</Text> : null}
-            <AuthButton onPress={() => go("login")}>ดำเนินการต่อ</AuthButton>
-
-            <View style={auth.resendCard}>
-              <Text style={auth.mailIcon}>✉</Text>
-              <Text style={auth.resendText}>
-                Didn’t get it? Check spam, or resend in{" "}
-                {otpSent ? `0:${String(countdown).padStart(2, "0")}` : "0:00"}
-              </Text>
-            </View>
+            {otpVerified ? (
+              <AuthButton onPress={submitNewPassword} disabled={busy}>
+                {busy ? "กำลังบันทึก..." : "ตั้งรหัสผ่านใหม่"}
+              </AuthButton>
+            ) : null}
 
             {footer(t("rememberedIt"), t("backToLogin"), "login")}
             </Animated.View>
@@ -569,6 +660,11 @@ export function Auth({
             value={sutId}
             onChangeText={setSutId}
           />
+          {!login && checkingEmail ? (
+            <Text style={[auth.footerMuted, { marginTop: -8, marginBottom: 8 }]}>
+              กำลังตรวจสอบอีเมล...
+            </Text>
+          ) : null}
           <AuthField
             label={t("password")}
             placeholder={t("enterPassword")}

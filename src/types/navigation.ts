@@ -32,6 +32,8 @@ export type Screen =
   | "messages"
   | "chat"
   | "settings"
+  | "blocked"
+  | "search"
   | "adminLogin"
   | "dashboard"
   | "users"
