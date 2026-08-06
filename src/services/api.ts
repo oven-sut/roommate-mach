@@ -5,8 +5,8 @@ import type { MatchProfile, ProfileDraft } from "../types/models";
 export const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
   (Platform.OS === "android"
-    ? "http://192.168.1.55:8888"
-    : "http://localhost:8888")
+    ? "http://192.168.1.237:18888"
+    : "http://localhost:18888")
 ).replace(/\/$/, "");
 
 export function formatImageUri(uri?: string): string {
