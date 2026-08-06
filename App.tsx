@@ -23,13 +23,14 @@ import { I18nProvider } from "./src/i18n";
 import { Config, Dashboard, Users } from "./src/features/admin";
 import { Feed, Filters, Match, Matches, Requests } from "./src/features/discovery";
 import { Legal } from "./src/features/legal";
+import { Basics, MyProfile, Notifications, Profile, Report } from "./src/features/profile";
 import { Chat, Messages } from "./src/features/messaging";
 import { AuthChoice, SplashScreen, Welcome } from "./src/features/onboarding";
 import { BlockedUsers, SearchUsers, Settings } from "./src/features/settings";
 import { Verify } from "./src/features/verification";
-import { Auth, Basics } from "./src/screens/auth";
-import { MyProfile, Notifications, Profile, Report } from "./src/screens/profile";
-import { Intro, Question, Summary } from "./src/screens/questionnaire";
+import { Auth } from "./src/features/auth";
+
+import { Intro, Question, Summary } from "./src/features/questionnaire";
 import {
   api,
   appState,

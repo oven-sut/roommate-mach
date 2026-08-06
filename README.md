@@ -91,31 +91,38 @@ npx eas-cli build --platform ios
 
 ## โครงสร้าง
 
+แต่ละหน้าจออยู่ในไฟล์ของตัวเอง จัดกลุ่มตาม feature — style ที่หลายจอในกลุ่มเดียวกัน
+ใช้ร่วมกันอยู่ใน `<feature>.styles.ts` ส่วนข้อความ/ข้อมูลคงที่อยู่ใน `<feature>.content.ts`
+
 ```
 App.tsx                   # entry + state machine สลับหน้าจอ + bootstrap auth/push
 app.json                  # config Expo (ไอคอน, permission, plugins, eas.projectId)
 eas.json                  # โปรไฟล์ build
 src/
-  screens/                # หน้าจอทั้งหมด — แต่ละไฟล์ export หลายหน้า
-    onboarding.tsx        # Welcome, AuthChoice
-    splash.tsx            # SplashScreen
-    auth.tsx              # Auth (login/signup/forgot), Basics (โปรไฟล์ + หอพัก)
-    questionnaire.tsx     # Intro, Question (q1-q6), Summary
-    discovery.tsx         # Feed, Filters, Matches, Match, Requests
-    profile.tsx           # Profile, MyProfile, Notifications, Report
-    messaging.tsx         # Messages, Chat, Settings, SearchUsers, BlockedUsers
-    verification.tsx      # Verify
-    admin.tsx             # Dashboard, Users, Config
-    legal.tsx             # Legal (terms/privacy)
-  components/ui.tsx       # UI kit ที่ใช้ร่วมกัน
-  services/api.ts         # base URL, token, ตัวห่อ fetch, appState
-  services/notifications.ts  # ขอ Expo push token
+  features/
+    onboarding/           # Splash, Welcome, AuthChoice + onboarding.content.ts (ลำดับหน้าจอ)
+    auth/                 # Auth (login/signup/forgot) + password-strength.ts
+                          # + components/AuthField, AuthButton
+    profile/              # Basics (ตั้งค่าโปรไฟล์), MyProfile, Profile, Notifications, Report
+    questionnaire/        # Intro, Question (q1–q6), Summary + questionnaire.content.ts (คำแปล)
+    discovery/            # Feed, Filters, Matches, Match, Requests
+    messaging/            # Messages, Chat
+    settings/             # Settings, SearchUsers, BlockedUsers
+    verification/         # Verify
+    admin/                # Dashboard, Users, Config
+    legal/                # Legal (terms/privacy) + legal.content.ts
+  components/             # ใช้ข้าม feature: BottomNav, PersonRow, ui.tsx (UI kit)
+  services/
+    api.ts                # base URL, ตัวห่อ fetch (มี timeout), appState
+    secureStorage.ts      # เก็บ JWT ใน Keychain/Keystore
+    media.ts              # ตรวจ/แปลงรูปจาก image picker ให้ตรงกติกาฝั่ง server
+    notifications.ts      # ขอ Expo push token
   theme/                  # colors.ts, styles.ts (design tokens)
   types/                  # models.ts, navigation.ts (union ของชื่อหน้าจอ)
   i18n.tsx                # I18nProvider + คำแปล TH/EN
 ```
 
-> โฟลเดอร์ `src/app/`, `src/hooks/`, `src/navigation/`, `src/store/`, `src/utils/` ยังว่าง (มีแค่ `.gitkeep`)
+> ทุก feature มี `index.ts` เป็น barrel — `App.tsx` import จาก `./src/features/<ชื่อ>` เท่านั้น
 
 ## คำสั่งที่ใช้บ่อย
 
