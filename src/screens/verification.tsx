@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useI18n } from "../i18n";
 import { api } from "../services/api";
+import { toImageDataUri } from "../services/media";
 import type { Screen } from "../types/navigation";
 
 type VerificationStatus = "PENDING" | "VERIFIED" | "REJECTED";
@@ -286,15 +287,12 @@ export function Verify({ go }: { go: (screen: Screen) => void }) {
   );
 
   const processAsset = (asset: ImagePicker.ImagePickerAsset) => {
-    if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
-      Alert.alert("Student ID", "Please choose an image smaller than 10 MB.");
+    const picked = toImageDataUri(asset);
+    if (!picked.ok) {
+      Alert.alert("Student ID", picked.reason);
       return;
     }
-    setDocument(
-      asset.base64
-        ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
-        : asset.uri,
-    );
+    setDocument(picked.dataUri);
     setPhase("selected");
   };
 

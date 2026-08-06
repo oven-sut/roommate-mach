@@ -1,63 +1,89 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
+import Constants from "expo-constants";
 import type { MatchProfile, ProfileDraft } from "../types/models";
+import { secureStorage } from "./secureStorage";
 
-export const API_URL = (
-  process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === "android"
-    ? "http://192.168.1.237:18888"
-    : "http://localhost:18888")
-).replace(/\/$/, "");
+/** Port the backend listens on in development (see roommate-mach-be/.env). */
+const DEV_API_PORT = 18888;
+/** Abandon a request that has not responded in this long. */
+const REQUEST_TIMEOUT_MS = 20_000;
 
+const TOKEN_KEY = "roomie_token";
+const ONBOARDING_KEY = "has_seen_onboarding";
+
+/**
+ * Where the API lives.
+ *
+ * `EXPO_PUBLIC_API_URL` wins and is what a production build must set. Failing
+ * that we derive the host from the Expo dev server the app was loaded from, so
+ * a physical phone reaches the developer's machine over the LAN without anyone
+ * hardcoding an address that goes stale the next time DHCP moves.
+ */
+function resolveApiUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+
+  const devHost = Constants.expoConfig?.hostUri?.split(":")[0];
+  if (devHost) return `http://${devHost}:${DEV_API_PORT}`;
+
+  return `http://localhost:${DEV_API_PORT}`;
+}
+
+export const API_URL = resolveApiUrl();
+
+const API_HOST = API_URL.match(/^https?:\/\/([^:/]+)/)?.[1] ?? "localhost";
+
+/**
+ * Makes a server-supplied image URL reachable from this device.
+ *
+ * Object storage hands back URLs built from its own configured endpoint, which
+ * in development is `localhost` — and on a phone `localhost` is the phone. The
+ * host is swapped for the API host while the port is preserved, because the
+ * storage port (19000 in this project) differs from the API port.
+ */
 export function formatImageUri(uri?: string): string {
   if (!uri || typeof uri !== "string") return "";
+
   const trimmed = uri.trim();
   if (!trimmed) return "";
-  if (trimmed.startsWith("data:") || trimmed.startsWith("file://")) return trimmed;
-
-  if (trimmed.includes("localhost:9000") || trimmed.includes("127.0.0.1:9000")) {
-    const apiHostMatch = API_URL.match(/https?:\/\/([^:]+)/);
-    const host = apiHostMatch ? apiHostMatch[1] : "localhost";
-    return trimmed.replace(/localhost|127\.0\.0\.1/, host);
+  if (trimmed.startsWith("data:") || trimmed.startsWith("file://")) {
+    return trimmed;
   }
-  return trimmed;
+
+  return trimmed.replace(
+    /^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/,
+    `$1${API_HOST}`,
+  );
 }
 
 let accessToken: string | null = null;
 
 export async function initAuthToken(): Promise<string | null> {
-  try {
-    const storedToken = await AsyncStorage.getItem("roomie_token");
-    if (storedToken) {
-      accessToken = storedToken;
-    } else if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      accessToken = localStorage.getItem("roomie_token");
+  accessToken = await secureStorage.get(TOKEN_KEY);
+
+  if (!accessToken) {
+    // Tokens used to live in AsyncStorage. Move any leftover one across so an
+    // existing install is not silently signed out by the upgrade.
+    const legacy = await AsyncStorage.getItem(TOKEN_KEY).catch(() => null);
+    if (legacy) {
+      accessToken = legacy;
+      await secureStorage.set(TOKEN_KEY, legacy);
+      await AsyncStorage.removeItem(TOKEN_KEY).catch(() => undefined);
     }
-  } catch (e) {
-    console.error("Error initializing auth token", e);
   }
+
   return accessToken;
 }
 
 export function saveToken(token: string | null) {
   accessToken = token;
-  if (token) {
-    AsyncStorage.setItem("roomie_token", token).catch(() => undefined);
-    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      localStorage.setItem("roomie_token", token);
-    }
-  } else {
-    AsyncStorage.removeItem("roomie_token").catch(() => undefined);
-    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      localStorage.removeItem("roomie_token");
-    }
-  }
+  if (token) void secureStorage.set(TOKEN_KEY, token);
+  else void secureStorage.remove(TOKEN_KEY);
 }
 
 export async function hasSeenOnboarding(): Promise<boolean> {
   try {
-    const value = await AsyncStorage.getItem("has_seen_onboarding");
-    return value === "true";
+    return (await AsyncStorage.getItem(ONBOARDING_KEY)) === "true";
   } catch {
     return false;
   }
@@ -65,35 +91,55 @@ export async function hasSeenOnboarding(): Promise<boolean> {
 
 export async function setHasSeenOnboarding(seen = true): Promise<void> {
   try {
-    if (seen) {
-      await AsyncStorage.setItem("has_seen_onboarding", "true");
-    } else {
-      await AsyncStorage.removeItem("has_seen_onboarding");
-    }
-  } catch (e) {
-    console.error("Error setting has_seen_onboarding", e);
+    if (seen) await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    else await AsyncStorage.removeItem(ONBOARDING_KEY);
+  } catch {
+    // Worst case the welcome screens show once more.
   }
 }
 
+/**
+ * Calls the API with the stored bearer token attached.
+ *
+ * Rejects with the server's message so screens can surface it directly, and
+ * gives up after `REQUEST_TIMEOUT_MS` rather than leaving a spinner running
+ * forever on a flaky connection.
+ */
 export async function api<T = any>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...(options.headers ?? {}),
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...(options.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("The server took too long to respond");
+    }
+    throw new Error("Unable to reach the server");
+  } finally {
+    clearTimeout(timeout);
+  }
+
   const data = await response.json().catch(() => ({}));
-  if (!response.ok)
+  if (!response.ok) {
     throw new Error(
       Array.isArray(data.message)
         ? data.message[0]
         : data.message || "Request failed",
     );
+  }
   return data as T;
 }
 
@@ -123,19 +169,21 @@ export const appState = {
 export function populateProfileDraft(me: any) {
   if (!me) return;
   const p = me.profile || {};
+  const draft = appState.profileDraft;
+
   appState.profileDraft = {
-    displayName: me.displayName || appState.profileDraft.displayName || "",
-    age: p.age != null ? String(p.age) : (appState.profileDraft.age || ""),
-    major: p.major ?? (appState.profileDraft.major || ""),
-    gender: p.gender ?? (appState.profileDraft.gender || ""),
-    bio: p.bio ?? (appState.profileDraft.bio || ""),
-    year: p.year ?? (appState.profileDraft.year || 1),
-    roomType: p.roomType ?? (appState.profileDraft.roomType || "Single"),
-    roommateGender: p.roommateGender ?? (appState.profileDraft.roommateGender || "Same gender"),
-    zone: p.zone ?? (appState.profileDraft.zone || "Gate 1"),
-    budgetMin: p.budgetMin ?? (appState.profileDraft.budgetMin ?? 2500),
-    budgetMax: p.budgetMax ?? (appState.profileDraft.budgetMax ?? 4500),
-    photos: p.photos ?? (appState.profileDraft.photos || []),
+    displayName: me.displayName || draft.displayName || "",
+    age: p.age != null ? String(p.age) : draft.age || "",
+    major: p.major ?? (draft.major || ""),
+    gender: p.gender ?? (draft.gender || ""),
+    bio: p.bio ?? (draft.bio || ""),
+    year: p.year ?? (draft.year || 1),
+    roomType: p.roomType ?? (draft.roomType || "Single"),
+    roommateGender: p.roommateGender ?? (draft.roommateGender || "Same gender"),
+    zone: p.zone ?? (draft.zone || "Gate 1"),
+    budgetMin: p.budgetMin ?? (draft.budgetMin ?? 2500),
+    budgetMax: p.budgetMax ?? (draft.budgetMax ?? 4500),
+    photos: p.photos ?? (draft.photos || []),
     completed: Boolean(p.completed),
   };
 }

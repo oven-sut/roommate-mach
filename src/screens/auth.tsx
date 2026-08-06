@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { useI18n } from "../i18n";
 import { api, appState, formatImageUri, populateProfileDraft } from "../services/api";
+import { toImageDataUri } from "../services/media";
 import type { AuthenticatedUser, ProfileDraft } from "../types/models";
 import type { Screen } from "../types/navigation";
 
@@ -1144,13 +1145,14 @@ export function Basics({
       aspect: [1, 1],
     });
     if (!result.canceled && result.assets?.[0]) {
-      const asset = result.assets[0];
-      const value = asset.base64
-        ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
-        : asset.uri;
+      const picked = toImageDataUri(result.assets[0]);
+      if (!picked.ok) {
+        Alert.alert("Photo", picked.reason);
+        return;
+      }
       const current = appState.profileDraft.photos || [];
       const newPhotos = [...current];
-      newPhotos[index] = value;
+      newPhotos[index] = picked.dataUri;
       set("photos", newPhotos.filter(Boolean));
     }
   };
