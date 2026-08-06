@@ -12,10 +12,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useI18n } from "../i18n";
-import { api } from "../services/api";
-import { toImageDataUri } from "../services/media";
-import type { Screen } from "../types/navigation";
+import { useI18n } from "../../i18n";
+import { api } from "../../services/api";
+import { toImageDataUri } from "../../services/media";
+import type { Screen } from "../../types/navigation";
 
 type VerificationStatus = "PENDING" | "VERIFIED" | "REJECTED";
 type VerificationPhase =

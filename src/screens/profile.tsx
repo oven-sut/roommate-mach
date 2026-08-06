@@ -35,7 +35,7 @@ import { useI18n } from "../i18n";
 import { api, appState, formatImageUri } from "../services/api";
 import type { Screen } from "../types/navigation";
 
-import { BottomNav } from "./discovery";
+import { BottomNav } from "../components/BottomNav";
 
 const serifFont = Platform.select({
   ios: "Georgia",

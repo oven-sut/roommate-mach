@@ -9,8 +9,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Logo } from "../components/ui";
-import { s } from "../theme/styles";
+import { Logo } from "../../components/ui";
+import { s } from "../../theme/styles";
 
 const KNOB_SIZE = 70;
 const TRACK_PADDING = 5;
