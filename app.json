@@ -2,7 +2,10 @@
   "expo": {
     "name": "Roommate Match",
     "slug": "roommate-mach",
-    "scheme": ["roomiematch", "com.ovensut.roommatemach"],
+    "scheme": [
+      "roomiematch",
+      "com.ovensut.roommatemach"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -43,7 +46,8 @@
           "defaultChannel": "default",
           "color": "#8F1938"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

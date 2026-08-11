@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { C } from "./theme/colors";
+import { F } from "./theme/typography";
 
 export type Language = "en" | "th";
 
@@ -104,6 +105,275 @@ const dict: Dict = {
   support: { en: "SUPPORT", th: "ช่วยเหลือ" },
   helpFaq: { en: "Help centre & FAQ", th: "ศูนย์ช่วยเหลือและ FAQ" },
   reportProblem: { en: "Report a problem", th: "รายงานปัญหา" },
+
+  /* ---------------------------------------------------------- onboarding */
+  appName: { en: "SUT Roommate Match", th: "SUT Roommate Match" },
+  tagline: {
+    en: "Find your people. Share your space.",
+    th: "หาคนที่ใช่ แชร์พื้นที่ที่ชอบ",
+  },
+  university: {
+    en: "SURANAREE UNIVERSITY OF TECHNOLOGY",
+    th: "มหาวิทยาลัยเทคโนโลยีสุรนารี",
+  },
+  swipeToEnter: { en: "Swipe to enter", th: "ปัดเพื่อเริ่ม" },
+  getStart: { en: "Get start", th: "เริ่มใช้งาน" },
+  w1Title: { en: "Build your lifestyle profile", th: "สร้างโปรไฟล์ไลฟ์สไตล์ของคุณ" },
+  w1Sub: {
+    en: "Answer a fun 4-part questionnaire — sleep, cleanliness, guests, and study habits.",
+    th: "ตอบแบบสอบถามสั้น ๆ 4 หมวด — การนอน ความสะอาด แขก และการอ่านหนังสือ",
+  },
+  w2Title: { en: "Get high-compatibility matches", th: "จับคู่กับคนที่เข้ากันได้จริง" },
+  w2Sub: {
+    en: "Our score compares 20+ lifestyle signals so you only meet people who fit how you live.",
+    th: "ระบบเทียบพฤติกรรมกว่า 20 จุด เพื่อให้คุณเจอเฉพาะคนที่ใช้ชีวิตเข้ากับคุณ",
+  },
+  w3Title: { en: "Connect & chat safely", th: "เชื่อมต่อและแชทอย่างปลอดภัย" },
+  w3Sub: {
+    en: "Every account is verified with an SUT student ID before anyone can chat.",
+    th: "ทุกบัญชียืนยันด้วยรหัสนักศึกษา SUT ก่อนเริ่มแชทได้",
+  },
+
+  /* ---------------------------------------------------------------- auth */
+  resetPassword: { en: "Reset password", th: "ตั้งรหัสผ่านใหม่" },
+  resetYourPassword: { en: "Reset your password", th: "ตั้งรหัสผ่านใหม่ของคุณ" },
+  resetSub: {
+    en: "Enter your SUT email and we'll send you a secure reset code. It expires in 15 minutes.",
+    th: "กรอกอีเมล SUT ของคุณ แล้วเราจะส่งรหัสยืนยันให้ รหัสมีอายุ 15 นาที",
+  },
+  emailOrCell: { en: "Email or Cell", th: "อีเมลหรือเบอร์โทร" },
+  emailOrCellHint: {
+    en: "Enter your email or Cell for OTP",
+    th: "กรอกอีเมลหรือเบอร์โทรเพื่อรับ OTP",
+  },
+  enterOtpLabel: { en: "Enter OTP", th: "กรอกรหัส OTP" },
+  sendOtp: { en: "Send OTP", th: "ส่ง OTP" },
+  submit: { en: "Submit", th: "ยืนยัน" },
+  didntGetIt: { en: "Didn't get it? Check spam, or resend in", th: "ยังไม่ได้รับ? ตรวจสอบสแปม หรือส่งใหม่ใน" },
+  newPassword: { en: "New password", th: "รหัสผ่านใหม่" },
+  perfect: { en: "Perfect", th: "ยอดเยี่ยม" },
+  sutIdHint: { en: "B67xxxxx", th: "B67xxxxx" },
+  otpVerified: { en: "Code verified", th: "ยืนยันรหัสแล้ว" },
+
+  /* -------------------------------------------------------------- basics */
+  aboutYou: { en: "About you", th: "เกี่ยวกับคุณ" },
+  aboutYouSub: {
+    en: "This appears on your match card",
+    th: "ข้อมูลนี้จะแสดงบนการ์ดจับคู่ของคุณ",
+  },
+  photosHint: { en: "1-3 photos", th: "รูป 1-3 ใบ" },
+  fullName: { en: "Full Name", th: "ชื่อ-นามสกุล" },
+  enterYourName: { en: "Enter your name", th: "กรอกชื่อของคุณ" },
+  age: { en: "Age", th: "อายุ" },
+  yourAge: { en: "your age", th: "อายุ" },
+  major: { en: "Major", th: "สาขาวิชา" },
+  chooseMajor: { en: "Choose your major", th: "เลือกสาขาวิชา" },
+  gender: { en: "Gender", th: "เพศ" },
+  yourGender: { en: "your gender", th: "เพศ" },
+  shortBio: { en: "Short Bio", th: "แนะนำตัวสั้น ๆ" },
+  bioPlaceholder: {
+    en: "write something sounds likes you",
+    th: "เขียนอะไรที่บอกความเป็นคุณ",
+  },
+  roomType: { en: "Room Type", th: "ประเภทห้อง" },
+  single: { en: "Single", th: "ห้องเดี่ยว" },
+  double: { en: "Double", th: "ห้องคู่" },
+  either: { en: "Either", th: "ได้ทั้งคู่" },
+  propertyType: { en: "Property Type", th: "ประเภทที่พัก" },
+  onCampus: { en: "On-campus", th: "ในมหาวิทยาลัย" },
+  offCampus: { en: "Off-campus", th: "นอกมหาวิทยาลัย" },
+  house: { en: "House", th: "บ้าน" },
+  condo: { en: "Condo", th: "คอนโด" },
+  roommateGenderPref: {
+    en: "Roommate Gender Preference",
+    th: "เพศของเพื่อนร่วมห้องที่ต้องการ",
+  },
+  sameGender: { en: "Same Gender", th: "เพศเดียวกัน" },
+  anyGender: { en: "Any", th: "ได้ทุกเพศ" },
+  nonBinaryFriendly: { en: "Non-binary friendly", th: "เปิดรับทุกเพศสภาพ" },
+  male: { en: "Male", th: "ชาย" },
+  female: { en: "Female", th: "หญิง" },
+  otherGender: { en: "Other", th: "อื่น ๆ" },
+
+  /* ------------------------------------------------------- questionnaire */
+  introTitle: { en: "Let's find how you live", th: "มาดูกันว่าคุณใช้ชีวิตยังไง" },
+  introSub: {
+    en: "4 quick categories power your match score. Be honest — it's how we find your fit. Takes about 3 minutes.",
+    th: "4 หมวดสั้น ๆ ที่ใช้คำนวณคะแนนจับคู่ ตอบตามจริงเพื่อให้เจอคนที่เข้ากับคุณ ใช้เวลาประมาณ 3 นาที",
+  },
+  retakeAnytime: {
+    en: "You can retake it anytime from your profile",
+    th: "ทำใหม่ได้ทุกเมื่อจากหน้าโปรไฟล์",
+  },
+  catSleep: { en: "Sleep & wake", th: "การนอน" },
+  catClean: { en: "Cleanliness", th: "ความสะอาด" },
+  catGuests: { en: "Guests", th: "แขก" },
+  catTemp: { en: "Temp & Study", th: "อุณหภูมิและการเรียน" },
+
+  q1Title: { en: "Sleep & wake", th: "เวลานอนและเวลาตื่น" },
+  q1Sub: { en: "Drag the handles to your usual range", th: "เลื่อนปุ่มให้ตรงกับช่วงเวลาปกติของคุณ" },
+  sleepAt: { en: "I usually sleep at", th: "ปกติฉันเข้านอนเวลา" },
+  wakeAt: { en: "I usually wake at", th: "ปกติฉันตื่นเวลา" },
+  nightOwlNotePrefix: { en: "Based on your answers you'll get the", th: "จากคำตอบของคุณ คุณจะได้แท็ก" },
+  nightOwlNoteSuffix: { en: "tag on your card.", th: "บนการ์ดของคุณ" },
+
+  q2Title: { en: "Cleanliness", th: "ความสะอาด" },
+  q2Sub: { en: "Pick every habit that sounds like you", th: "เลือกทุกนิสัยที่ตรงกับคุณ" },
+  cleanMatter: { en: "How much does a clean room matter?", th: "ห้องสะอาดสำคัญกับคุณแค่ไหน?" },
+  relaxed: { en: "Relaxed", th: "สบาย ๆ" },
+  nonNegotiable: { en: "Non-negotiable", th: "ต่อรองไม่ได้" },
+  q2Weight: {
+    en: "Cleanliness is weighted 25% of your match score — the single biggest factor in roommate conflicts.",
+    th: "ความสะอาดคิดเป็น 25% ของคะแนนจับคู่ และเป็นสาเหตุขัดแย้งอันดับหนึ่งของเพื่อนร่วมห้อง",
+  },
+  chipSpotless: { en: "Spotless", th: "สะอาดเอี่ยม" },
+  chipDishes: { en: "Dishes same day", th: "ล้างจานภายในวัน" },
+  chipChoreChart: { en: "Shared chore chart", th: "แบ่งเวรทำความสะอาด" },
+  chipOrganizedChaos: { en: "Organized chaos", th: "รกแบบมีระบบ" },
+  chipDeepClean: { en: "Weekly deep clean", th: "ทำความสะอาดใหญ่ทุกสัปดาห์" },
+  chipLaundryPiles: { en: "Laundry piles up", th: "ผ้ากองได้บ้าง" },
+  chipShoesOff: { en: "Shoes off inside", th: "ถอดรองเท้าก่อนเข้าห้อง" },
+  chipTidyish: { en: "Tidy-ish", th: "เรียบร้อยพอประมาณ" },
+
+  q3Title: { en: "Guests & social life", th: "แขกและการเข้าสังคม" },
+  q3Sub: { en: "Set your comfort zone for visitors", th: "กำหนดขอบเขตที่คุณสบายใจกับผู้มาเยือน" },
+  allowOvernight: { en: "Allow overnight guests", th: "อนุญาตให้แขกค้างคืน" },
+  optNo: { en: "no", th: "ไม่" },
+  optSometime: { en: "sometime", th: "บางครั้ง" },
+  optYes: { en: "yes", th: "ได้" },
+  preferredFrequency: { en: "Preferred frequency", th: "ความถี่ที่รับได้" },
+  freqNever: { en: "never", th: "ไม่เลย" },
+  freqMonthly: { en: "monthly", th: "เดือนละครั้ง" },
+  freqWeekly: { en: "weekly", th: "สัปดาห์ละครั้ง" },
+  freqAnytime: { en: "anytime", th: "เมื่อไหร่ก็ได้" },
+  guestsOkayWith: { en: "guests i'm okay with", th: "แขกที่ฉันโอเค" },
+  chipCloseFriends: { en: "Close friends", th: "เพื่อนสนิท" },
+  chipStudyGroup: { en: "Study group", th: "กลุ่มติว" },
+  chipPartner: { en: "Partner", th: "แฟน" },
+  chipFamily: { en: "Family", th: "ครอบครัว" },
+  chipAnyone: { en: "Anyone", th: "ใครก็ได้" },
+  chipNoOne: { en: "No one", th: "ไม่มีใคร" },
+
+  q4Title: { en: "Temperature & study", th: "อุณหภูมิและการเรียน" },
+  q4Sub: { en: "the room environment", th: "สภาพแวดล้อมในห้อง" },
+  acTemperature: { en: "AC Temperature", th: "อุณหภูมิแอร์" },
+  acJustDay: { en: "Just day", th: "เฉพาะกลางวัน" },
+  acJustNight: { en: "Just night", th: "เฉพาะกลางคืน" },
+  acAnytime: { en: "Anytime", th: "เมื่อไหร่ก็ได้" },
+  acAllTime: { en: "All time", th: "ตลอดเวลา" },
+  noiseTolerance: { en: "How much does quiet matter?", th: "ความเงียบสำคัญแค่ไหน?" },
+  noiseFine: { en: "Fine", th: "เสียงดังได้" },
+  noiseSilence: { en: "Silence please", th: "ขอเงียบ ๆ" },
+  mostlyStudy: { en: "I mostly study..", th: "ส่วนใหญ่ฉันอ่านหนังสือ.." },
+  studyInRoom: { en: "In room", th: "ในห้อง" },
+  studyLibrary: { en: "Library", th: "ห้องสมุด" },
+  studyCafe: { en: "Cafe / out", th: "คาเฟ่ / นอกห้อง" },
+  finish: { en: "Finish", th: "เสร็จสิ้น" },
+
+  summaryTitle: { en: "looking good", th: "ดูดีมาก" },
+  summarySub: {
+    en: "Here's the profile your match will see",
+    th: "นี่คือโปรไฟล์ที่คู่แมตช์ของคุณจะเห็น",
+  },
+  lifestyleSignature: { en: "Your lifestyle signature", th: "ลายเซ็นไลฟ์สไตล์ของคุณ" },
+  signatureNote: {
+    en: "These signals are compared with every profile to compute your match %. Edit any category by tapping its tag.",
+    th: "สัญญาณเหล่านี้จะถูกเทียบกับทุกโปรไฟล์เพื่อคำนวณ % ความเข้ากัน แตะแท็กเพื่อแก้ไขหมวดนั้น",
+  },
+  completeProfile: { en: "Complete Profile", th: "บันทึกโปรไฟล์" },
+  nextFirstMatches: { en: "Next: your first matches", th: "ถัดไป: แมตช์แรกของคุณ" },
+
+  /* ----------------------------------------------------------- discovery */
+  tapCardExpand: { en: "Tap card to expand", th: "แตะการ์ดเพื่อดูเพิ่ม" },
+  slideToMatch: { en: "Slide to start matching", th: "เลื่อนเพื่อเริ่มจับคู่" },
+  noMoreProfiles: { en: "No one left for now", th: "ยังไม่มีคนใหม่ตอนนี้" },
+  noMoreProfilesSub: {
+    en: "Widen your filters or check back later.",
+    th: "ลองปรับตัวกรองหรือกลับมาดูใหม่ภายหลัง",
+  },
+  wantsRoom: { en: "wants", th: "ต้องการ" },
+  year: { en: "Year", th: "ชั้นปี" },
+
+  filters: { en: "Filters", th: "ตัวกรอง" },
+  resetAll: { en: "Reset all", th: "ล้างทั้งหมด" },
+  showMe: { en: "SHOW ME", th: "แสดง" },
+  yearUnder: { en: "Under", th: "ปีน้อยกว่า" },
+  yearPeer: { en: "Peer", th: "ปีเดียวกัน" },
+  yearUpper: { en: "Upper", th: "ปีสูงกว่า" },
+  yearEveryone: { en: "Everyone", th: "ทุกคน" },
+  budget: { en: "Budget", th: "งบประมาณ" },
+  perMonth: { en: "THB / month", th: "บาท / เดือน" },
+  mustMatchOn: { en: "MUST MATCH ON", th: "ต้องตรงกันเรื่อง" },
+  sleepSchedule: { en: "Sleep schedule", th: "เวลานอน" },
+  cleanlinessFilter: { en: "Cleanliness", th: "ความสะอาด" },
+  guestsFilter: { en: "Guests", th: "แขก" },
+  acTempFilter: { en: "AC temp", th: "อุณหภูมิแอร์" },
+  minMatchScore: { en: "Minimum match score", th: "คะแนนจับคู่ขั้นต่ำ" },
+  apply: { en: "Apply", th: "ใช้ตัวกรอง" },
+  anyOption: { en: "Any", th: "ทั้งหมด" },
+
+  /* ------------------------------------------------------------- matches */
+  matchTab: { en: "Match", th: "แมตช์" },
+  yourMatches: { en: "YOUR MATCHES", th: "แมตช์ของคุณ" },
+  likeYouSection: { en: "LIKE YOU", th: "คนที่ถูกใจคุณ" },
+  totalSuffix: { en: "Total", th: "ทั้งหมด" },
+  noOneNow: { en: "No one now,", th: "ยังไม่มีตอนนี้" },
+  letsMatch: { en: "let's match?", th: "ไปจับคู่กันไหม?" },
+  chat: { en: "Chat", th: "แชท" },
+  likeBackNote: {
+    en: "Liking back creates a match and opens chat immediately — no waiting.",
+    th: "กดถูกใจกลับจะกลายเป็นแมตช์และเปิดแชททันที ไม่ต้องรอ",
+  },
+  matchedAgo: { en: "matched", th: "แมตช์เมื่อ" },
+  whyScore: { en: "Why", th: "ทำไมถึง" },
+  messagePrefix: { en: "Message", th: "ส่งข้อความหา" },
+
+  /* ------------------------------------------------------------ messages */
+  messageTab: { en: "Message", th: "ข้อความ" },
+  searchConversations: { en: "Search conversations...", th: "ค้นหาบทสนทนา..." },
+  typing: { en: "typing...", th: "กำลังพิมพ์..." },
+  online: { en: "Online", th: "ออนไลน์" },
+  messagePlaceholder: { en: "Message...", th: "พิมพ์ข้อความ..." },
+  noConversations: { en: "No conversations yet", th: "ยังไม่มีบทสนทนา" },
+  sayHi: { en: "Say hi to start the conversation", th: "ทักทายเพื่อเริ่มบทสนทนา" },
+
+  /* ------------------------------------------------------------- profile */
+  profileStrength: { en: "Profile strength", th: "ความสมบูรณ์ของโปรไฟล์" },
+  strengthHint: {
+    en: "Add a 3rd photo to reach 100% and get seen more.",
+    th: "เพิ่มรูปที่ 3 เพื่อให้ครบ 100% และถูกเห็นมากขึ้น",
+  },
+  photosRow: { en: "Photos", th: "รูปภาพ" },
+  uploadedCount: { en: "uploaded", th: "อัปโหลดแล้ว" },
+  basicsBio: { en: "Basics & bio", th: "ข้อมูลพื้นฐาน" },
+  basicsBioSub: {
+    en: "Name, major, room type, preference",
+    th: "ชื่อ สาขา ประเภทห้อง ความชอบ",
+  },
+  lifestyleQuestionnaire: { en: "Lifestyle questionnaire", th: "แบบสอบถามไลฟ์สไตล์" },
+  lastTaken: { en: "Last taken", th: "ทำล่าสุด" },
+  affectsScores: { en: "affects all match scores", th: "มีผลกับคะแนนจับคู่ทั้งหมด" },
+  neverTaken: { en: "Not taken yet", th: "ยังไม่ได้ทำ" },
+  retake: { en: "Retake", th: "ทำใหม่" },
+  accountStatus: { en: "Account status", th: "สถานะบัญชี" },
+  activeVisible: { en: "Active · visible in Discover", th: "ใช้งานอยู่ · แสดงในหน้าค้นหา" },
+  hiddenFromDiscover: { en: "Hidden from Discover", th: "ซ่อนจากหน้าค้นหา" },
+  settingTitle: { en: "Setting", th: "ตั้งค่า" },
+  blockUsers: { en: "Block users", th: "ผู้ใช้ที่บล็อก" },
+  messageNotif: { en: "Message", th: "ข้อความ" },
+
+  /* --------------------------------------------------------------- misc */
+  save: { en: "Save", th: "บันทึก" },
+  cancel: { en: "Cancel", th: "ยกเลิก" },
+  done: { en: "Done", th: "เสร็จสิ้น" },
+  loading: { en: "Loading...", th: "กำลังโหลด..." },
+  somethingWrong: { en: "Something went wrong", th: "เกิดข้อผิดพลาด" },
+  retry: { en: "Try again", th: "ลองใหม่" },
+  block: { en: "Block", th: "บล็อก" },
+  unblock: { en: "Unblock", th: "ปลดบล็อก" },
+  report: { en: "Report", th: "รายงาน" },
+  search: { en: "Search", th: "ค้นหา" },
+  empty: { en: "Nothing here yet", th: "ยังไม่มีข้อมูล" },
 };
 
 type I18nContextValue = {
@@ -162,7 +432,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     color: C.wine,
-    fontFamily: "NotoSansThai_800ExtraBold",
+    fontFamily: F.bold,
     fontSize: 11,
   },
   dot: {
