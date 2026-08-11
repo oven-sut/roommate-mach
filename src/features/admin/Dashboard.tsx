@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Alert, Text, View } from "react-native";
-import { Button, Card, Header, ScreenShell } from "../../components/ui";
-import { api, saveToken } from "../../services/api";
+import { Alert, View } from "react-native";
+import { Button, LogoTile, ScreenShell, Tag, Txt } from "../../components/ui";
+import { api, resetAppState, saveToken } from "../../services/api";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
+import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 
 type Stats = {
@@ -22,65 +23,101 @@ const EMPTY_STATS: Stats = {
   reports: 0,
 };
 
-/** Colour per stat tile, in the order the tiles are rendered. */
-const STAT_COLORS = [C.orange, C.green, C.wine, C.amber];
+/** Accent colour per tile, in render order. */
+const TILE_COLORS = [C.orange, C.green, C.wine, C.amber];
 
+/** Admin overview: headline counts plus links into the moderation tools. */
 export function Dashboard({ go }: { go: (x: Screen) => void }) {
-  const [d, setD] = useState<Stats>(EMPTY_STATS);
+  const [stats, setStats] = useState<Stats>(EMPTY_STATS);
 
   useEffect(() => {
-    api("/api/admin/dashboard")
-      .then(setD)
-      .catch((e) => {
+    api<Stats>("/api/admin/dashboard")
+      .then((data) => setStats({ ...EMPTY_STATS, ...data }))
+      .catch((reason) => {
         saveToken(null);
-        Alert.alert("Admin", e.message);
+        resetAppState();
+        Alert.alert(
+          "Admin",
+          reason instanceof Error ? reason.message : "Session expired",
+        );
         go("login");
       });
-  }, []);
+  }, [go]);
+
+  const tiles: [number, string][] = [
+    [stats.members, "Members"],
+    [stats.active, "Active now"],
+    [stats.matches, "Matches"],
+    [stats.messages, "Messages"],
+  ];
 
   return (
     <ScreenShell>
-      <Header title="Dashboard" right="Admin" />
-      <View style={s.grid}>
-        {[
-          [d.members, "Members"],
-          [d.active, "Active Now"],
-          [d.matches, "Matches"],
-          [d.messages, "Messages"],
-        ].map((x, i) => (
-          <View style={s.stat} key={String(x[1])}>
-            <Text style={[s.statNum, { color: STAT_COLORS[i] }]}>
-              {String(x[0])}
-            </Text>
-            <Text style={s.muted}>{String(x[1])}</Text>
+      <View style={[s.rowBetween, { height: 60 }]}>
+        <View style={[s.row, { gap: 14 }]}>
+          <LogoTile />
+          <Txt role="h1">Dashboard</Txt>
+        </View>
+        <Tag tone="outline">ADMIN</Tag>
+      </View>
+
+      <View style={[s.wrap, { rowGap: 12 }]}>
+        {tiles.map(([value, label], index) => (
+          <View
+            key={label}
+            style={[
+              s.card,
+              {
+                width: "47.5%",
+                minHeight: 110,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              },
+            ]}
+          >
+            <Txt
+              style={{
+                fontFamily: F.bold,
+                fontSize: 30,
+                color: TILE_COLORS[index],
+              }}
+            >
+              {value}
+            </Txt>
+            <Txt role="small">{label}</Txt>
           </View>
         ))}
       </View>
-      <Card>
-        <View style={s.rowBetween}>
-          <View>
-            <Text style={s.title}>Reported Users</Text>
-            <Text style={s.muted}>{d.reports} pending review</Text>
-          </View>
-          <Text style={s.tinyOrange}>{d.reports}</Text>
+
+      <View style={[s.card, s.rowBetween]}>
+        <View style={{ gap: 4 }}>
+          <Txt role="h3">Reported users</Txt>
+          <Txt role="small">{stats.reports} pending review</Txt>
         </View>
-      </Card>
-      <Text style={s.title}>Quick Actions</Text>
-      <Button outline tone="wine" onPress={() => go("users")}>
-        Manage Users & Reports
+        <Txt style={{ fontFamily: F.bold, fontSize: 22, color: C.primary }}>
+          {stats.reports}
+        </Txt>
+      </View>
+
+      <Txt role="h3" style={{ marginTop: 6 }}>
+        Quick actions
+      </Txt>
+      <Button tone="outline" onPress={() => go("users")}>
+        Manage users & reports
       </Button>
-      <Button outline tone="wine" onPress={() => go("config")}>
-        System Configs
+      <Button tone="outline" onPress={() => go("config")}>
+        System configuration
       </Button>
       <Button
-        outline
-        tone="wine"
+        tone="ghost"
         onPress={() => {
           saveToken(null);
+          resetAppState();
           go("login");
         }}
       >
-        Log Out
+        Log out
       </Button>
     </ScreenShell>
   );

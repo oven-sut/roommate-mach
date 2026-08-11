@@ -1,102 +1,132 @@
-import { ArrowLeft, Bell, Sparkles } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, View } from "react-native";
+import { Bell, Heart, Sparkles } from "lucide-react-native";
 import { useI18n } from "../../i18n";
 import { api } from "../../services/api";
+import { Chevron, MotionPressable, ScreenShell, Txt } from "../../components/ui";
+import { C } from "../../theme/colors";
+import { s } from "../../theme/styles";
+import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
-import { profileStyle } from "./profile.styles";
+import { relativeTime } from "../discovery/discovery.content";
 
+type Notification = {
+  id: string;
+  type?: string;
+  title?: string;
+  body?: string;
+  readAt?: string | null;
+  createdAt?: string;
+};
+
+function iconFor(type?: string) {
+  if (type === "match") return Sparkles;
+  if (type === "like") return Heart;
+  return Bell;
+}
+
+/** In-app notification centre. */
 export function Notifications({ go }: { go: (x: Screen) => void }) {
-  const { language } = useI18n();
-  const [items, setItems] = useState<any[]>([]);
+  const { t } = useI18n();
+  const [items, setItems] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api("/api/notifications")
-      .then(setItems)
-      .catch((e) => Alert.alert("Notifications", e.message));
+    api<Notification[]>("/api/notifications")
+      .then((data) => setItems(data ?? []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const markRead = async (id: string) => {
-    await api(`/api/notifications/${id}/read`, { method: "PATCH" });
-    setItems((a) =>
-      a.map((n) =>
+    setItems((all) =>
+      all.map((n) =>
         n.id === id ? { ...n, readAt: new Date().toISOString() } : n,
       ),
+    );
+    await api(`/api/notifications/${id}/read`, { method: "PATCH" }).catch(
+      () => undefined,
     );
   };
 
   return (
-    <SafeAreaView style={profileStyle.safe}>
-      <ScrollView
-        contentContainerStyle={profileStyle.page}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={profileStyle.header}>
-          <Pressable
-            style={profileStyle.settingsButton}
-            onPress={() => go("feed")}
-          >
-            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
-          </Pressable>
-          <Text style={profileStyle.pageTitle}>
-            {language === "th" ? "การแจ้งเตือน" : "Notifications"}
-          </Text>
-          <View style={{ width: 40 }} />
-        </View>
+    <ScreenShell>
+      <View style={[s.row, { gap: 16, height: 60 }]}>
+        <MotionPressable
+          onPress={() => go("feed")}
+          pressedScale={0.9}
+          style={s.iconBtn}
+          accessibilityLabel="Back"
+        >
+          <Chevron direction="left" />
+        </MotionPressable>
+        <Txt role="h1">{t("notifications")}</Txt>
+      </View>
 
-        {items.length ? (
-          items.map((x) => (
-            <Pressable
-              key={x.id}
-              style={profileStyle.shortcutRow}
-              onPress={() => markRead(x.id)}
+      {loading ? (
+        <View style={[s.center, { paddingVertical: 60 }]}>
+          <ActivityIndicator color={C.primary} />
+        </View>
+      ) : items.length === 0 ? (
+        <View style={[s.card, s.center, { paddingVertical: 40 }]}>
+          <Txt role="subtitle">{t("empty")}</Txt>
+        </View>
+      ) : (
+        items.map((item) => {
+          const Icon = iconFor(item.type);
+          const unread = !item.readAt;
+          return (
+            <MotionPressable
+              key={item.id}
+              onPress={() => markRead(item.id)}
+              pressedScale={0.99}
+              style={[s.card, s.row, { gap: 14 }]}
             >
-              <View style={profileStyle.shortcutIconBox}>
-                {x.type === "match" ? (
-                  <Sparkles size={20} color="#C64338" />
-                ) : x.type === "like" ? (
-                  <Sparkles size={20} color="#C64338" fill="#C64338" />
-                ) : (
-                  <Bell size={20} color="#C64338" />
-                )}
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 23,
+                  backgroundColor: C.pink,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon size={20} color={C.primary} strokeWidth={1.9} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={profileStyle.shortcutTitle}>{x.title}</Text>
-                <Text style={profileStyle.shortcutSub}>{x.body}</Text>
+
+              <View style={{ flex: 1, gap: 3 }}>
+                <Txt role="h3" style={{ fontSize: 15 }}>
+                  {item.title ?? "—"}
+                </Txt>
+                {item.body ? <Txt role="small">{item.body}</Txt> : null}
+                {item.createdAt ? (
+                  <Txt role="tiny">{relativeTime(item.createdAt)}</Txt>
+                ) : null}
               </View>
-              {!x.readAt ? (
+
+              {unread ? (
                 <View
                   style={{
-                    backgroundColor: "#C64338",
-                    paddingHorizontal: 8,
-                    paddingVertical: 2,
-                    borderRadius: 10,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 999,
+                    backgroundColor: C.primary,
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      color: "#FFFFFF",
-                      fontWeight: "bold",
-                    }}
+                  <Txt
+                    style={{ fontFamily: F.bold, fontSize: 10, color: C.white }}
                   >
-                    {language === "th" ? "ใหม่" : "New"}
-                  </Text>
+                    NEW
+                  </Txt>
                 </View>
-              ) : null}
-            </Pressable>
-          ))
-        ) : (
-          <View style={profileStyle.sectionCard}>
-            <Text style={[profileStyle.description, { textAlign: "center" }]}>
-              {language === "th"
-                ? "ยังไม่มีการแจ้งเตือนในขณะนี้"
-                : "No notifications yet"}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+              ) : (
+                <Chevron direction="right" size={8} />
+              )}
+            </MotionPressable>
+          );
+        })
+      )}
+    </ScreenShell>
   );
 }

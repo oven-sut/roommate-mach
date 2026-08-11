@@ -1,99 +1,77 @@
-import { Heart, MessageCircle, Search, User } from "lucide-react-native";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { useI18n } from "../i18n";
+import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Heart, House, MessageCircle, User } from "lucide-react-native";
+import { C } from "../theme/colors";
+import { MAX_WIDTH, NAV_HEIGHT, s } from "../theme/styles";
+import { F } from "../theme/typography";
 import type { Screen } from "../types/navigation";
+import { MotionPressable } from "./ui";
 
-const serifFont = Platform.select({
-  ios: "Georgia",
-  android: "serif",
-  default: "serif",
-});
+export type Tab = "feed" | "matches" | "messages" | "myprofile";
 
-/** Tabs, in display order. `id` doubles as the screen to navigate to. */
-const NAV_ITEMS = [
-  { id: "feed", Icon: Search, label: { th: "ค้นหา", en: "Discover" } },
-  { id: "matches", Icon: Heart, label: { th: "คู่แมตช์", en: "Matches" } },
-  {
-    id: "messages",
-    Icon: MessageCircle,
-    label: { th: "ข้อความ", en: "Messages" },
-  },
-  { id: "myprofile", Icon: User, label: { th: "โปรไฟล์", en: "Profile" } },
-] as const;
-
-/** Icons that read better filled when their tab is active. */
-const FILLED_WHEN_ACTIVE: string[] = ["matches", "myprofile"];
+const TABS: { key: Tab; label: string; Icon: typeof House }[] = [
+  { key: "feed", label: "Home", Icon: House },
+  { key: "matches", label: "Match", Icon: Heart },
+  { key: "messages", label: "Message", Icon: MessageCircle },
+  { key: "myprofile", label: "Profile", Icon: User },
+];
 
 /**
- * The persistent tab bar. Shared by discovery, matches, messages and profile,
- * which is why it lives here rather than inside any one feature.
+ * The four-tab bar pinned to the bottom of the main app screens.
+ * Rendered as a sibling of the screen body, so it floats over content.
  */
 export function BottomNav({
-  screen,
+  active,
   go,
 }: {
-  screen: Screen;
-  go: (x: Screen) => void;
+  active: Tab;
+  go: (screen: Screen) => void;
 }) {
-  const { language } = useI18n();
-  const locale = language === "th" ? "th" : "en";
-
   return (
-    <View style={styles.navContainer}>
-      {NAV_ITEMS.map(({ id, Icon, label }) => {
-        const isActive = screen === id;
-        return (
-          <Pressable
-            key={id}
-            accessibilityRole="button"
-            accessibilityLabel={label[locale]}
-            style={styles.navItem}
-            onPress={() => go(id as Screen)}
-          >
-            <Icon
-              size={22}
-              color={isActive ? "#C64338" : "#8D7C75"}
-              fill={
-                isActive && FILLED_WHEN_ACTIVE.includes(id) ? "#C64338" : "none"
-              }
-              strokeWidth={isActive ? 2.2 : 1.8}
-            />
-            <Text style={[styles.navText, isActive && styles.navTextActive]}>
-              {label[locale]}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <SafeAreaView edges={["bottom"]} style={s.nav}>
+      {/* `flex: 1` so the row fills the bar; capped and centred so the tabs
+          line up with the content column on tablet and web widths. */}
+      <View
+        style={{
+          flex: 1,
+          width: "100%",
+          maxWidth: MAX_WIDTH,
+          alignSelf: "center",
+          flexDirection: "row",
+          height: NAV_HEIGHT,
+          paddingTop: 10,
+        }}
+      >
+        {TABS.map(({ key, label, Icon }) => {
+          const on = key === active;
+          return (
+            <MotionPressable
+              key={key}
+              onPress={() => go(key)}
+              pressedScale={0.9}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={label}
+              style={{ flex: 1, alignItems: "center", gap: 5 }}
+            >
+              <Icon
+                size={25}
+                color={on ? C.primary : C.muted}
+                strokeWidth={on ? 2.3 : 1.8}
+              />
+              <Text
+                style={{
+                  fontFamily: on ? F.bold : F.regular,
+                  fontSize: 12,
+                  color: on ? C.primary : C.muted,
+                }}
+              >
+                {label}
+              </Text>
+            </MotionPressable>
+          );
+        })}
+      </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  navContainer: {
-    flexDirection: "row",
-    height: 64,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#EADCD3",
-    alignItems: "center",
-    justifyContent: "space-around",
-    paddingHorizontal: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 6,
-  },
-  navText: {
-    fontFamily: serifFont,
-    fontSize: 11,
-    color: "#8D7C75",
-    fontWeight: "500",
-    marginTop: 3,
-  },
-  navTextActive: {
-    color: "#C64338",
-    fontWeight: "bold",
-  },
-});

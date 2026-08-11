@@ -1,252 +1,120 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  Animated,
-  PanResponder,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Logo } from "../../components/ui";
-import { s } from "../../theme/styles";
+import { StatusBar } from "expo-status-bar";
+import { useI18n } from "../../i18n";
+import { SlideAction } from "../../components/SlideAction";
+import { HouseMark, Txt } from "../../components/ui";
+import { C, G } from "../../theme/colors";
+import { GUTTER, MAX_WIDTH, shadow } from "../../theme/styles";
+import { F } from "../../theme/typography";
 
-const KNOB_SIZE = 70;
-const TRACK_PADDING = 5;
-
+/**
+ * First-run screen: full-bleed wine-to-ember gradient with the brand lockup and
+ * a swipe control at the bottom. The swipe (rather than a button) is the design's
+ * way of making entering the app feel like opening a door.
+ */
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const { width, height } = useWindowDimensions();
-  const compact = width < 370 || height < 720;
-  const logoOp = useRef(new Animated.Value(0)).current;
-  const logoTy = useRef(new Animated.Value(30)).current;
-  const textOp = useRef(new Animated.Value(0)).current;
-  const dragX = useRef(new Animated.Value(0)).current;
-  const maxTravel = useRef(0);
-  const completed = useRef(false);
-  const [trackWidth, setTrackWidth] = useState(0);
+  const { t } = useI18n();
+  const rise = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(logoOp, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.spring(logoTy, {
-          toValue: 0,
-          bounciness: 12,
-          speed: 10,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(textOp, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [logoOp, logoTy, textOp]);
-
-  useEffect(() => {
-    const knobSize = compact ? 56 : KNOB_SIZE;
-    maxTravel.current = Math.max(
-      0,
-      trackWidth - knobSize - TRACK_PADDING * 2,
-    );
-    dragX.setValue(0);
-  }, [compact, dragX, trackWidth]);
-
-  const finish = () => {
-    if (completed.current) return;
-    completed.current = true;
-    Animated.timing(dragX, {
-      toValue: maxTravel.current,
-      duration: 180,
+    Animated.timing(rise, {
+      toValue: 1,
+      duration: 700,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) onComplete();
-    });
-  };
+    }).start();
+  }, [rise]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !completed.current,
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          !completed.current && Math.abs(gesture.dx) > 2,
-        onPanResponderMove: (_, gesture) => {
-          dragX.setValue(
-            Math.max(0, Math.min(gesture.dx, maxTravel.current)),
-          );
-        },
-        onPanResponderRelease: (_, gesture) => {
-          const position = Math.max(
-            0,
-            Math.min(gesture.dx, maxTravel.current),
-          );
-          if (
-            maxTravel.current > 0 &&
-            position >= maxTravel.current * 0.78
-          ) {
-            finish();
-            return;
-          }
-          Animated.spring(dragX, {
-            toValue: 0,
-            speed: 18,
-            bounciness: 7,
-            useNativeDriver: true,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          if (completed.current) return;
-          Animated.spring(dragX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        },
-      }),
-    [dragX],
-  );
+  const lift = {
+    opacity: rise,
+    transform: [
+      {
+        translateY: rise.interpolate({
+          inputRange: [0, 1],
+          outputRange: [18, 0],
+        }),
+      },
+    ],
+  };
 
   return (
     <LinearGradient
-      colors={["#70152E", "#8D1E32", "#B82F2D", "#D74825"]}
-      locations={[0, 0.38, 0.7, 1]}
-      start={{ x: 0.16, y: 0 }}
-      end={{ x: 0.84, y: 1 }}
-      style={s.splash}
+      colors={[...G.splash]}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+      style={{ flex: 1 }}
     >
-      <SafeAreaView style={local.safe}>
-        <View style={local.hero}>
-          <Animated.View
-            style={{
-              opacity: logoOp,
-              transform: [{ translateY: logoTy }],
-              alignItems: "center",
-            }}
-          >
-            <Logo />
-          </Animated.View>
+      <StatusBar style="light" />
+      <SafeAreaView
+        style={{
+          flex: 1,
+          paddingHorizontal: GUTTER,
+          width: "100%",
+          maxWidth: MAX_WIDTH,
+          alignSelf: "center",
+        }}
+      >
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <Animated.View style={[{ alignItems: "center" }, lift]}>
+            <View
+              style={[
+                {
+                  width: 96,
+                  height: 96,
+                  borderRadius: 30,
+                  backgroundColor: "rgba(255,255,255,.14)",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,.24)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+                shadow(2),
+              ]}
+            >
+              <HouseMark size={50} />
+            </View>
 
-          <Animated.Text style={[s.splashTag, { opacity: textOp }]}>
-            เจอรูมเมทที่ใช่ แชร์พื้นที่ที่สบายใจ
-          </Animated.Text>
+            <Txt role="brand" style={{ marginTop: 30 }}>
+              {t("appName")}
+            </Txt>
+            <Txt
+              role="body"
+              style={{
+                color: "rgba(255,255,255,.82)",
+                marginTop: 14,
+                textAlign: "center",
+              }}
+            >
+              {t("tagline")}
+            </Txt>
+          </Animated.View>
         </View>
 
-        <Animated.View
-          style={[
-            local.sliderArea,
-            compact && local.sliderAreaCompact,
-            { opacity: textOp },
-          ]}
-        >
-          <Text style={local.hint}>เลื่อนเพื่อเริ่มใช้งาน</Text>
-          <View
-            style={[local.track, compact && local.trackCompact]}
-            onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+        <Animated.View style={[{ gap: 26, paddingBottom: 26 }, lift]}>
+          <SlideAction
+            tone="onDark"
+            label={t("swipeToEnter")}
+            onComplete={onComplete}
+          />
+          <Txt
+            style={{
+              textAlign: "center",
+              color: "rgba(255,255,255,.62)",
+              fontFamily: F.semibold,
+              fontSize: 10,
+              letterSpacing: 1.6,
+            }}
           >
-            <Animated.View
-              accessible
-              accessibilityRole="adjustable"
-              accessibilityLabel="เลื่อนเพื่อเริ่มใช้งาน"
-              accessibilityHint="ลากปุ่มลูกศรไปทางขวาเพื่อเข้าแอพ"
-              style={[
-                local.knob,
-                compact && local.knobCompact,
-                { transform: [{ translateX: dragX }] },
-              ]}
-              {...panResponder.panHandlers}
-            >
-              <Text style={[local.arrow, compact && local.arrowCompact]}>›</Text>
-            </Animated.View>
-          </View>
+            {t("university").toUpperCase()}
+          </Txt>
         </Animated.View>
-
-        <Animated.Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          style={[local.university, { opacity: textOp }]}
-        >
-          มหาวิทยาลัยเทคโนโลยีสุรนารี
-        </Animated.Text>
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
-const local = StyleSheet.create({
-  safe: {
-    flex: 1,
-    width: "100%",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  hero: {
-    flex: 1,
-    minHeight: 280,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sliderArea: {
-    width: "82%",
-    maxWidth: 350,
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  sliderAreaCompact: { width: "88%", marginBottom: 18 },
-  hint: {
-    color: "rgba(255,255,255,0.72)",
-    fontFamily: "NotoSansThai_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 1.7,
-    marginBottom: 10,
-  },
-  track: {
-    width: "100%",
-    height: 80,
-    padding: TRACK_PADDING,
-    borderRadius: 40,
-    justifyContent: "center",
-    backgroundColor: "#D58D7D",
-  },
-  trackCompact: { height: 66, borderRadius: 33 },
-  knob: {
-    width: KNOB_SIZE,
-    height: KNOB_SIZE,
-    borderRadius: KNOB_SIZE / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF8E7",
-    shadowColor: "#511323",
-    shadowOpacity: 0.22,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-  },
-  knobCompact: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  arrow: {
-    color: "#222944",
-    fontSize: 48,
-    lineHeight: 52,
-    fontFamily: "NotoSansThai_700Bold",
-    marginTop: -4,
-  },
-  arrowCompact: { fontSize: 40, lineHeight: 44 },
-  university: {
-    width: "100%",
-    maxWidth: 430,
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#FFF1D6",
-    fontFamily: "NotoSansThai_700Bold",
-    fontSize: 10,
-    letterSpacing: 0.8,
-  },
-});
+/** Re-exported for the auth-choice screen, which shares the same backdrop. */
+export const SPLASH_BG = C.wineDeep;

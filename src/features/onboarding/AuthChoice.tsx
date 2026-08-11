@@ -1,55 +1,104 @@
+import { View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Logo } from "../../components/ui";
+import { StatusBar } from "expo-status-bar";
 import { useI18n } from "../../i18n";
+import { HouseMark, MotionPressable, Txt } from "../../components/ui";
+import { G } from "../../theme/colors";
+import { GUTTER, MAX_WIDTH, shadow } from "../../theme/styles";
+import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
-import { choice } from "./onboarding.styles";
 
-export function AuthChoice({ go }: { go: (x: Screen) => void }) {
-  const { width, height } = useWindowDimensions();
+/** Frosted button used for both actions on the gradient backdrop. */
+function GlassButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <MotionPressable
+      onPress={onPress}
+      style={{
+        height: 60,
+        borderRadius: 14,
+        backgroundColor: "rgba(255,255,255,.22)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,.28)",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Txt style={{ color: "#FFF6EE", fontFamily: F.bold, fontSize: 17 }}>
+        {label}
+      </Txt>
+    </MotionPressable>
+  );
+}
+
+/** Login / Register fork shown once the welcome deck is done. */
+export function AuthChoice({ go }: { go: (screen: Screen) => void }) {
   const { t } = useI18n();
-  const compact = width < 370 || height < 720;
 
   return (
     <LinearGradient
-      colors={["#70152E", "#8D1E32", "#B82F2D", "#D74825"]}
-      locations={[0, 0.38, 0.7, 1]}
-      start={{ x: 0.16, y: 0 }}
-      end={{ x: 0.84, y: 1 }}
-      style={choice.page}
+      colors={[...G.splash]}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+      style={{ flex: 1 }}
     >
-      <SafeAreaView style={choice.safe}>
-        <View style={[choice.content, compact && choice.contentCompact]}>
-          <Logo />
-          <View style={[choice.actions, compact && choice.actionsCompact]}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => go("login")}
-              style={({ pressed }) => [
-                choice.button,
-                compact && choice.buttonCompact,
-                pressed && choice.buttonPressed,
-              ]}
-            >
-              <Text style={choice.buttonText}>{t("login")}</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => go("signup")}
-              style={({ pressed }) => [
-                choice.button,
-                compact && choice.buttonCompact,
-                pressed && choice.buttonPressed,
-              ]}
-            >
-              <Text style={choice.buttonText}>{t("register")}</Text>
-            </Pressable>
+      <StatusBar style="light" />
+      <SafeAreaView
+        style={{
+          flex: 1,
+          paddingHorizontal: GUTTER,
+          width: "100%",
+          maxWidth: MAX_WIDTH,
+          alignSelf: "center",
+        }}
+      >
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={[
+              {
+                width: 96,
+                height: 96,
+                borderRadius: 30,
+                backgroundColor: "rgba(255,255,255,.14)",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,.24)",
+                alignItems: "center",
+                justifyContent: "center",
+              },
+              shadow(2),
+            ]}
+          >
+            <HouseMark size={50} />
           </View>
+          <Txt role="brand" style={{ marginTop: 30 }}>
+            {t("appName")}
+          </Txt>
         </View>
-        <Text numberOfLines={1} adjustsFontSizeToFit style={choice.university}>
-          SURANAREE UNIVERSITY OF TECHNOLOGY
-        </Text>
+
+        <View style={{ gap: 18 }}>
+          <GlassButton label={t("login")} onPress={() => go("login")} />
+          <GlassButton label={t("register")} onPress={() => go("signup")} />
+        </View>
+
+        <Txt
+          style={{
+            textAlign: "center",
+            color: "rgba(255,255,255,.62)",
+            fontFamily: F.semibold,
+            fontSize: 10,
+            letterSpacing: 1.6,
+            marginTop: 40,
+            marginBottom: 26,
+          }}
+        >
+          {t("university").toUpperCase()}
+        </Txt>
       </SafeAreaView>
     </LinearGradient>
   );

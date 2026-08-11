@@ -1,82 +1,190 @@
-import {
-  ArrowLeft,
-  Ban,
-  Bell,
-  ChevronRight,
-  Eye,
-  Globe,
-  KeyRound,
-  LogOut,
-  Mail,
-  Search,
-  User,
-} from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, View } from "react-native";
+import { LogOut } from "lucide-react-native";
+import { CenterModal } from "../../components/Sheet";
+import { Toggle } from "../../components/Toggle";
+import {
+  Button,
+  Chevron,
+  Field,
+  MotionPressable,
+  ScreenShell,
+  SectionLabel,
+  Txt,
+} from "../../components/ui";
 import { LanguageToggle, useI18n } from "../../i18n";
 import { api } from "../../services/api";
+import { C } from "../../theme/colors";
+import { s } from "../../theme/styles";
 import type { Screen } from "../../types/navigation";
-import { settingStyles } from "./settings.styles";
 
-/** Index of each switch in the `toggles` array. */
-const MATCHES = 0;
-const MESSAGES = 1;
-const LIKES = 2;
-const HIDE_PROFILE = 3;
+type Prefs = {
+  matches: boolean;
+  messages: boolean;
+  likes: boolean;
+  /** Mirrors the design's "Hide me from Discover" switch, not `discoverable`. */
+  hidden: boolean;
+};
 
+const DEFAULT_PREFS: Prefs = {
+  matches: true,
+  messages: true,
+  likes: false,
+  hidden: false,
+};
+
+/** A row inside one of the grouped setting cards. */
+function Row({
+  label,
+  value,
+  onPress,
+  right,
+  last = false,
+}: {
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  right?: React.ReactNode;
+  last?: boolean;
+}) {
+  const content = (
+    <View
+      style={[
+        s.rowBetween,
+        {
+          paddingVertical: 18,
+          gap: 12,
+          borderBottomWidth: last ? 0 : 1,
+          borderBottomColor: C.line,
+        },
+      ]}
+    >
+      <Txt role="body" style={{ flex: 1 }}>
+        {label}
+      </Txt>
+      {value ? (
+        <Txt role="small" numberOfLines={1} style={{ maxWidth: 190 }}>
+          {value}
+        </Txt>
+      ) : null}
+      {right ?? (onPress ? <Chevron direction="right" size={8} /> : null)}
+    </View>
+  );
+
+  if (!onPress) return content;
+  return (
+    <MotionPressable onPress={onPress} pressedScale={0.995}>
+      {content}
+    </MotionPressable>
+  );
+}
+
+/** Card grouping a set of rows under an all-caps label. */
+function Group({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <SectionLabel>{label}</SectionLabel>
+      <View style={[s.card, { paddingVertical: 0, gap: 0 }]}>{children}</View>
+    </>
+  );
+}
+
+/** Account, notification and privacy settings. */
 export function Settings({ go }: { go: (x: Screen) => void }) {
-  const { language } = useI18n();
-  const [toggles, setToggles] = useState([true, true, false, false]);
+  const { t, language } = useI18n();
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [email, setEmail] = useState("");
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    api("/api/me")
+    api<any>("/api/me")
       .then((me) => {
-        const p = me.notificationPrefs ?? {};
-        setEmail(me.email || "");
-        setToggles([
-          p.matches !== false,
-          p.messages !== false,
-          p.likes === true,
-          !me.discoverable,
-        ]);
+        const p = me?.notificationPrefs ?? {};
+        setEmail(me?.email ?? "");
+        setPrefs({
+          matches: p.matches !== false,
+          messages: p.messages !== false,
+          likes: p.likes === true,
+          hidden: me?.discoverable === false,
+        });
       })
-      .catch((e) => Alert.alert("Settings", e.message));
+      .catch(() => undefined);
   }, []);
 
-  const updateToggle = async (idx: number, value: boolean) => {
-    const next = toggles.map((x, j) => (j === idx ? value : x));
-    setToggles(next);
+  const update = async (patch: Partial<Prefs>) => {
+    const merged = { ...prefs, ...patch };
+    setPrefs(merged);
     try {
-      // The privacy switch reads as "hide me", so it is the inverse of the
-      // `discoverable` flag the API stores.
       const body =
-        idx === HIDE_PROFILE
-          ? { discoverable: !value }
+        "hidden" in patch
+          ? { discoverable: !merged.hidden }
           : {
               notificationPrefs: {
-                matches: next[MATCHES],
-                messages: next[MESSAGES],
-                likes: next[LIKES],
+                matches: merged.matches,
+                messages: merged.messages,
+                likes: merged.likes,
               },
             };
       await api("/api/me", { method: "PATCH", body: JSON.stringify(body) });
-    } catch (e) {
-      Alert.alert("Settings", e instanceof Error ? e.message : "Unable to save");
+    } catch (reason) {
+      setPrefs(prefs);
+      Alert.alert(
+        t("settingTitle"),
+        reason instanceof Error ? reason.message : t("somethingWrong"),
+      );
     }
   };
 
-  const handleLogout = () => {
+  const changePassword = async () => {
+    if (next.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (next !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      await api("/api/password", {
+        method: "PATCH",
+        body: JSON.stringify({ currentPassword: current, password: next }),
+      });
+      setPasswordOpen(false);
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : t("somethingWrong"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmLogout = () => {
     Alert.alert(
-      language === "th" ? "ออกจากระบบ" : "Log Out",
+      t("logout"),
       language === "th"
         ? "คุณต้องการออกจากระบบใช่หรือไม่?"
         : "Are you sure you want to log out?",
       [
-        { text: language === "th" ? "ยกเลิก" : "Cancel", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: language === "th" ? "ออกจากระบบ" : "Log Out",
+          text: t("logout"),
           style: "destructive",
           onPress: () => go("login"),
         },
@@ -85,225 +193,156 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
   };
 
   return (
-    <SafeAreaView style={settingStyles.safeArea}>
-      <ScrollView
-        contentContainerStyle={settingStyles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={settingStyles.headerRow}>
-          <Pressable
-            style={settingStyles.backButton}
-            onPress={() => go("myprofile")}
-          >
-            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
-          </Pressable>
-          <Text style={settingStyles.headerTitle}>
-            {language === "th" ? "การตั้งค่า" : "Settings"}
-          </Text>
-          <View style={{ width: 38 }} />
-        </View>
-
-        <View style={settingStyles.sectionCard}>
-          <View style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}>
-            <View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 2,
-                }}
-              >
-                <Globe size={16} color="#463826" />
-                <Text style={settingStyles.rowTitle}>
-                  {language === "th" ? "สลับภาษาแอป" : "App Language"}
-                </Text>
-              </View>
-              <Text style={settingStyles.rowSub}>
-                {language === "th"
-                  ? "ภาษาไทย (TH) / English (EN)"
-                  : "Thai (TH) / English (EN)"}
-              </Text>
-            </View>
-            <LanguageToggle />
-          </View>
-        </View>
-
-        <View style={settingStyles.sectionCard}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 12,
-            }}
-          >
-            <User size={16} color="#463826" />
-            <Text style={settingStyles.sectionTitle}>
-              {language === "th" ? "ข้อมูลบัญชีผู้ใช้" : "Account Information"}
-            </Text>
-          </View>
-
-          <View style={settingStyles.rowBetween}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+    <>
+      <ScreenShell>
+        <View style={[s.rowBetween, { height: 60 }]}>
+          <View style={[s.row, { gap: 16 }]}>
+            <MotionPressable
+              onPress={() => go("myprofile")}
+              pressedScale={0.9}
+              style={s.iconBtn}
+              accessibilityLabel="Back"
             >
-              <Mail size={15} color="#8D7C75" />
-              <Text style={settingStyles.rowTitle}>
-                {language === "th" ? "อีเมลประจำตัว" : "Registered Email"}
-              </Text>
-            </View>
-            <Text style={settingStyles.rowSub}>
-              {email || "student@sut.ac.th"}
-            </Text>
+              <Chevron direction="left" />
+            </MotionPressable>
+            <Txt role="h1">{t("settingTitle")}</Txt>
           </View>
+          <LanguageToggle />
+        </View>
 
-          <Pressable
-            style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}
-            onPress={() =>
-              Alert.alert("Password", "Feature enabled in next update")
+        <Group label={t("account")}>
+          <Row label={t("email")} value={email} onPress={() => undefined} />
+          <Row
+            label={t("changePassword")}
+            onPress={() => setPasswordOpen(true)}
+            last
+          />
+        </Group>
+
+        <Group label={t("notifications")}>
+          <Row
+            label={t("newMatches")}
+            right={
+              <Toggle
+                value={prefs.matches}
+                onChange={(v) => update({ matches: v })}
+                accessibilityLabel={t("newMatches")}
+              />
             }
+          />
+          <Row
+            label={t("messageNotif")}
+            right={
+              <Toggle
+                value={prefs.messages}
+                onChange={(v) => update({ messages: v })}
+                accessibilityLabel={t("messageNotif")}
+              />
+            }
+          />
+          <Row
+            label={t("likesYou")}
+            last
+            right={
+              <Toggle
+                value={prefs.likes}
+                onChange={(v) => update({ likes: v })}
+                accessibilityLabel={t("likesYou")}
+              />
+            }
+          />
+        </Group>
+
+        <Group label={t("privacy")}>
+          <Row
+            label={t("hideDiscover")}
+            right={
+              <Toggle
+                value={prefs.hidden}
+                onChange={(v) => update({ hidden: v })}
+                accessibilityLabel={t("hideDiscover")}
+              />
+            }
+          />
+          <Row label={t("blockUsers")} onPress={() => go("blocked")} />
+          <Row label={t("search")} onPress={() => go("search")} />
+          <Row
+            label={t("downloadData")}
+            last
+            onPress={() =>
+              Alert.alert(t("downloadData"), t("pleaseWait"))
+            }
+          />
+        </Group>
+
+        <Group label={t("support")}>
+          <Row label={t("helpFaq")} onPress={() => go("terms")} />
+          <Row label={t("privacyPolicy")} onPress={() => go("privacy")} />
+          <Row label={t("reportProblem")} last onPress={() => go("report")} />
+        </Group>
+
+        <MotionPressable
+          onPress={confirmLogout}
+          pressedScale={0.98}
+          style={{
+            height: 58,
+            borderRadius: 14,
+            borderWidth: 1.5,
+            borderColor: C.primary,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            marginTop: 10,
+          }}
+        >
+          <LogOut size={20} color={C.primary} strokeWidth={2} />
+          <Txt role="button" style={{ color: C.primary }}>
+            {t("logout")}
+          </Txt>
+        </MotionPressable>
+      </ScreenShell>
+
+      <CenterModal
+        visible={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+      >
+        <Txt role="h2">{t("changePassword")}</Txt>
+        <Field
+          label={t("password")}
+          value={current}
+          onChangeText={setCurrent}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+        <Field
+          label={t("newPassword")}
+          value={next}
+          onChangeText={setNext}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+        <Field
+          label={t("confirmPassword")}
+          value={confirm}
+          onChangeText={setConfirm}
+          secureTextEntry
+          autoCapitalize="none"
+          error={error || undefined}
+        />
+        <View style={[s.row, { gap: 12 }]}>
+          <Button
+            tone="outline"
+            style={{ flex: 1 }}
+            onPress={() => setPasswordOpen(false)}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <KeyRound size={15} color="#8D7C75" />
-              <Text style={settingStyles.rowTitle}>
-                {language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}
-              </Text>
-            </View>
-            <ChevronRight size={16} color="#8D7C75" />
-          </Pressable>
+            {t("cancel")}
+          </Button>
+          <Button style={{ flex: 1 }} loading={busy} onPress={changePassword}>
+            {t("save")}
+          </Button>
         </View>
-
-        <View style={settingStyles.sectionCard}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 12,
-            }}
-          >
-            <Bell size={16} color="#463826" />
-            <Text style={settingStyles.sectionTitle}>
-              {language === "th"
-                ? "การตั้งค่าการแจ้งเตือน"
-                : "Notification Preferences"}
-            </Text>
-          </View>
-
-          <View style={settingStyles.rowBetween}>
-            <Text style={settingStyles.rowTitle}>
-              {language === "th" ? "คู่แมตช์ใหม่" : "New Matches"}
-            </Text>
-            <Switch
-              value={toggles[MATCHES]}
-              trackColor={{ true: "#C64338", false: "#EADCD3" }}
-              onValueChange={(v) => updateToggle(MATCHES, v)}
-            />
-          </View>
-
-          <View style={settingStyles.rowBetween}>
-            <Text style={settingStyles.rowTitle}>
-              {language === "th" ? "ข้อความแชทใหม่" : "New Messages"}
-            </Text>
-            <Switch
-              value={toggles[MESSAGES]}
-              trackColor={{ true: "#C64338", false: "#EADCD3" }}
-              onValueChange={(v) => updateToggle(MESSAGES, v)}
-            />
-          </View>
-
-          <View style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}>
-            <Text style={settingStyles.rowTitle}>
-              {language === "th" ? "คนที่ถูกใจโปรไฟล์คุณ" : "Likes You"}
-            </Text>
-            <Switch
-              value={toggles[LIKES]}
-              trackColor={{ true: "#C64338", false: "#EADCD3" }}
-              onValueChange={(v) => updateToggle(LIKES, v)}
-            />
-          </View>
-        </View>
-
-        <View style={settingStyles.sectionCard}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 12,
-            }}
-          >
-            <Eye size={16} color="#463826" />
-            <Text style={settingStyles.sectionTitle}>
-              {language === "th" ? "ความเป็นส่วนตัว" : "Privacy & Visibility"}
-            </Text>
-          </View>
-
-          <View style={settingStyles.rowBetween}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={settingStyles.rowTitle}>
-                {language === "th"
-                  ? "ซ่อนโปรไฟล์จากการค้นหา"
-                  : "Hide Profile from Discovery"}
-              </Text>
-              <Text style={settingStyles.rowSub}>
-                {language === "th"
-                  ? "จะไม่แสดงโปรไฟล์ให้รูมเมทคนอื่นเห็น"
-                  : "Your card won't appear to others"}
-              </Text>
-            </View>
-            <Switch
-              value={toggles[HIDE_PROFILE]}
-              trackColor={{ true: "#C64338", false: "#EADCD3" }}
-              onValueChange={(v) => updateToggle(HIDE_PROFILE, v)}
-            />
-          </View>
-
-          <Pressable
-            style={settingStyles.rowBetween}
-            onPress={() => go("search")}
-          >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Search size={15} color="#8D7C75" />
-              <Text style={settingStyles.rowTitle}>
-                {language === "th" ? "ค้นหาผู้ใช้" : "Search Users"}
-              </Text>
-            </View>
-            <ChevronRight size={16} color="#8D7C75" />
-          </Pressable>
-
-          <Pressable
-            style={[settingStyles.rowBetween, { borderBottomWidth: 0 }]}
-            onPress={() => go("blocked")}
-          >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Ban size={15} color="#8D7C75" />
-              <Text style={settingStyles.rowTitle}>
-                {language === "th" ? "ผู้ใช้ที่บล็อก" : "Blocked Users"}
-              </Text>
-            </View>
-            <ChevronRight size={16} color="#8D7C75" />
-          </Pressable>
-        </View>
-
-        <Pressable style={settingStyles.logoutBtn} onPress={handleLogout}>
-          <View
-            style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-          >
-            <LogOut size={18} color="#FFFFFF" />
-            <Text style={settingStyles.logoutBtnText}>
-              {language === "th" ? "ออกจากระบบ" : "Log Out"}
-            </Text>
-          </View>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      </CenterModal>
+    </>
   );
 }

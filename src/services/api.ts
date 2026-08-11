@@ -156,15 +156,57 @@ export const appState = {
     bio: "",
     year: 1,
     roomType: "Single",
+    propertyType: "On-campus",
     roommateGender: "Same gender",
     zone: "Gate 1",
     budgetMin: 2500,
     budgetMax: 4500,
     photos: [],
   } as ProfileDraft,
-  questionnaireDraft: null as Record<string, number[][]> | null,
-  questions: null as Record<string, unknown> | null,
+  /** Answers to the four lifestyle categories, keyed by category id. */
+  questionnaireDraft: null as Record<string, unknown> | null,
+  /** Filter state for the discover feed, persisted for the session. */
+  feedFilters: {
+    yearBand: "everyone" as "under" | "peer" | "upper" | "everyone",
+    major: "",
+    budgetMin: 3500,
+    budgetMax: 6000,
+    mustMatch: [] as string[],
+    minScore: 25,
+  },
 };
+
+/** Clears per-user state so a second account never sees the first one's data. */
+export function resetAppState() {
+  appState.activeConversationId = null;
+  appState.activeConversationName = "Chat";
+  appState.currentUserId = null;
+  appState.activeProfile = null;
+  appState.questionnaireDraft = null;
+  appState.profileDraft = {
+    displayName: "",
+    age: "",
+    major: "",
+    gender: "",
+    bio: "",
+    year: 1,
+    roomType: "Single",
+    propertyType: "On-campus",
+    roommateGender: "Same gender",
+    zone: "Gate 1",
+    budgetMin: 2500,
+    budgetMax: 4500,
+    photos: [],
+  };
+  appState.feedFilters = {
+    yearBand: "everyone",
+    major: "",
+    budgetMin: 3500,
+    budgetMax: 6000,
+    mustMatch: [],
+    minScore: 25,
+  };
+}
 
 export function populateProfileDraft(me: any) {
   if (!me) return;
@@ -179,6 +221,7 @@ export function populateProfileDraft(me: any) {
     bio: p.bio ?? (draft.bio || ""),
     year: p.year ?? (draft.year || 1),
     roomType: p.roomType ?? (draft.roomType || "Single"),
+    propertyType: p.propertyType ?? (draft.propertyType || "On-campus"),
     roommateGender: p.roommateGender ?? (draft.roommateGender || "Same gender"),
     zone: p.zone ?? (draft.zone || "Gate 1"),
     budgetMin: p.budgetMin ?? (draft.budgetMin ?? 2500),

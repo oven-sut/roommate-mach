@@ -1,54 +1,60 @@
-import { AlertTriangle, ArrowLeft, Ban, ChevronRight, UserX } from "lucide-react-native";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useState } from "react";
+import { Alert, View } from "react-native";
+import { AlertTriangle, Ban, UserX } from "lucide-react-native";
 import { useI18n } from "../../i18n";
 import { api, appState } from "../../services/api";
+import { Chevron, MotionPressable, ScreenShell, Txt } from "../../components/ui";
+import { C } from "../../theme/colors";
+import { s } from "../../theme/styles";
 import type { Screen } from "../../types/navigation";
-import { profileStyle } from "./profile.styles";
 
 type ModerationAction = "unmatch" | "block" | "report";
 
 const ACTIONS = [
   {
+    kind: "unmatch" as const,
     Icon: UserX,
-    title: { th: "ยกเลิกการจับคู่ (Unmatch)", en: "Unmatch User" },
+    title: { th: "ยกเลิกการจับคู่", en: "Unmatch" },
     sub: {
-      th: "ลบผู้อยู่อาศัยนี้ออกจากรายการแมตช์ของคุณ",
+      th: "ลบออกจากรายการแมตช์ของคุณ",
       en: "Remove from your matches list",
     },
-    kind: "unmatch" as const,
   },
   {
-    Icon: Ban,
-    title: { th: "บล็อกผู้ใช้ (Block User)", en: "Block User" },
-    sub: {
-      th: "ซ่อนและไม่อนุญาตให้เห็นโปรไฟล์อีก",
-      en: "Prevent future interactions",
-    },
     kind: "block" as const,
+    Icon: Ban,
+    title: { th: "บล็อกผู้ใช้", en: "Block user" },
+    sub: {
+      th: "ซ่อนโปรไฟล์และไม่ให้ติดต่อกันอีก",
+      en: "Prevent any future interaction",
+    },
   },
   {
-    Icon: AlertTriangle,
-    title: {
-      th: "รายงานพฤติกรรมไม่เหมาะสม (Report)",
-      en: "Report Inappropriate Behavior",
-    },
-    sub: {
-      th: "ส่งรายงานให้ทีมงานผู้ดูแลระบบตรวจสอบ",
-      en: "Send report to admin team",
-    },
     kind: "report" as const,
+    Icon: AlertTriangle,
+    title: { th: "รายงานพฤติกรรมไม่เหมาะสม", en: "Report inappropriate behaviour" },
+    sub: {
+      th: "ส่งเรื่องให้ทีมผู้ดูแลตรวจสอบ",
+      en: "Send a report to the admin team",
+    },
   },
 ];
 
+/** Moderation actions for the profile currently being viewed. */
 export function Report({ go }: { go: (x: Screen) => void }) {
-  const { language } = useI18n();
+  const { t, language } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const target = appState.activeProfile;
 
   const act = async (kind: ModerationAction) => {
-    const targetId = appState.activeProfile?.id;
-    if (!targetId) return go("matches");
+    const targetId = target?.id;
+    if (!targetId) {
+      go("matches");
+      return;
+    }
 
     try {
+      setBusy(true);
       if (kind === "unmatch") {
         await api(`/api/matches/user/${targetId}`, { method: "DELETE" });
       }
@@ -64,83 +70,64 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           }),
         });
       }
-      Alert.alert(
-        "Done",
-        kind === "report"
-          ? "Report sent to the admin team."
-          : "Your preference has been updated.",
-      );
       go("matches");
-    } catch (e) {
+    } catch (reason) {
       Alert.alert(
-        "Unable to continue",
-        e instanceof Error ? e.message : "Please try again",
+        t("somethingWrong"),
+        reason instanceof Error ? reason.message : t("retry"),
       );
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <SafeAreaView style={profileStyle.safe}>
-      <ScrollView
-        contentContainerStyle={profileStyle.page}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={profileStyle.header}>
-          <Pressable
-            style={profileStyle.settingsButton}
-            onPress={() => go("profile")}
-          >
-            <ArrowLeft size={18} color="#463826" strokeWidth={2.2} />
-          </Pressable>
-          <Text style={profileStyle.pageTitle}>
-            {language === "th" ? "รายงานผู้ใช้" : "Report User"}
-          </Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        {ACTIONS.map((item, idx) => {
-          const Icon = item.Icon;
-          return (
-            <Pressable
-              key={idx}
-              style={profileStyle.shortcutRow}
-              onPress={() => act(item.kind)}
-            >
-              <View style={profileStyle.shortcutIconBox}>
-                <Icon size={18} color="#C64338" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[profileStyle.shortcutTitle, { color: "#C64338" }]}
-                >
-                  {item.title[language === "th" ? "th" : "en"]}
-                </Text>
-                <Text style={profileStyle.shortcutSub}>
-                  {item.sub[language === "th" ? "th" : "en"]}
-                </Text>
-              </View>
-              <ChevronRight size={18} color="#8D7C75" />
-            </Pressable>
-          );
-        })}
-
-        <Pressable
-          style={[
-            profileStyle.retryButton,
-            {
-              backgroundColor: "#FAF6F0",
-              borderWidth: 1,
-              borderColor: "#EADCD3",
-              alignItems: "center",
-            },
-          ]}
+    <ScreenShell>
+      <View style={[s.row, { gap: 16, height: 60 }]}>
+        <MotionPressable
           onPress={() => go("profile")}
+          pressedScale={0.9}
+          style={s.iconBtn}
+          accessibilityLabel="Back"
         >
-          <Text style={[profileStyle.retryText, { color: "#463826" }]}>
-            {language === "th" ? "ยกเลิก" : "Cancel"}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+          <Chevron direction="left" />
+        </MotionPressable>
+        <Txt role="h1">{t("report")}</Txt>
+      </View>
+
+      {target?.displayName ? (
+        <Txt role="subtitle">{target.displayName}</Txt>
+      ) : null}
+
+      {ACTIONS.map(({ kind, Icon, title, sub }) => (
+        <MotionPressable
+          key={kind}
+          disabled={busy}
+          onPress={() => act(kind)}
+          pressedScale={0.99}
+          style={[s.card, s.row, { gap: 14 }]}
+        >
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              backgroundColor: C.pink,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon size={20} color={C.primary} strokeWidth={1.9} />
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Txt role="h3" style={{ fontSize: 15 }}>
+              {title[language]}
+            </Txt>
+            <Txt role="small">{sub[language]}</Txt>
+          </View>
+          <Chevron direction="right" size={8} />
+        </MotionPressable>
+      ))}
+    </ScreenShell>
   );
 }

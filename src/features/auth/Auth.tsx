@@ -3,77 +3,151 @@ import * as Google from "expo-auth-session/providers/google";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Eye, EyeOff } from "lucide-react-native";
 import { useI18n } from "../../i18n";
 import { api } from "../../services/api";
+import { Checkbox } from "../../components/Toggle";
+import {
+  Button,
+  Field,
+  LogoTile,
+  MotionPressable,
+  Txt,
+} from "../../components/ui";
+import { C } from "../../theme/colors";
+import { GUTTER, MAX_WIDTH, s } from "../../theme/styles";
+import { F } from "../../theme/typography";
 import type { AuthenticatedUser } from "../../types/models";
 import type { Screen } from "../../types/navigation";
-import { auth } from "./auth.styles";
-import { AuthButton } from "./components/AuthButton";
-import { AuthField } from "./components/AuthField";
 import { getPasswordStrength } from "./password-strength";
+import { sutIdToEmail } from "./sut-id";
 
 /** Deep link Google returns to after the OAuth round trip. */
 const googleRedirectUri = makeRedirectUri({
   native: "com.ovensut.roommatemach:/oauthredirect",
 });
 
+/** Eye toggle rendered inside password fields. */
+function RevealToggle({
+  hidden,
+  onToggle,
+}: {
+  hidden: boolean;
+  onToggle: () => void;
+}) {
+  const Icon = hidden ? EyeOff : Eye;
+  return (
+    <MotionPressable
+      onPress={onToggle}
+      pressedScale={0.85}
+      hitSlop={10}
+      accessibilityLabel={hidden ? "Show password" : "Hide password"}
+    >
+      <Icon size={21} color={C.muted} strokeWidth={1.8} />
+    </MotionPressable>
+  );
+}
+
+/**
+ * Three-segment password meter. The design fills red → amber → green as the
+ * score climbs, with the verdict spelled out beside it.
+ */
+function StrengthMeter({
+  score,
+  label,
+  color,
+  hint,
+}: {
+  score: number;
+  label: string;
+  color: string;
+  hint: string;
+}) {
+  const filled = score >= 5 ? 3 : score >= 4 ? 2 : score >= 2 ? 1 : 0;
+  const segmentColors = ["#C93A32", "#E9B23C", "#3FA45C"];
+
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={[s.row, { gap: 8 }]}>
+        {[0, 1, 2].map((i) => (
+          <View
+            key={i}
+            style={{
+              flex: 1,
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: i < filled ? segmentColors[i] : "#EADFD4",
+            }}
+          />
+        ))}
+        <Txt style={{ fontFamily: F.bold, fontSize: 13, color }}>{label}</Txt>
+      </View>
+      <Txt role="tiny">{hint}</Txt>
+    </View>
+  );
+}
+
+/**
+ * Login and sign-up. The design labels the identity field "SUT ID"; the
+ * backend authenticates on email, so the entered ID is expanded to
+ * `<id>@g.sut.ac.th` before it leaves the screen (a full address typed in is
+ * passed through untouched).
+ */
 export function Auth({
   mode,
   go,
   onAuth,
 }: {
-  mode: "login" | "signup" | "forgot";
+  mode: "login" | "signup";
   go: (x: Screen) => void;
   onAuth: (token: string, user: AuthenticatedUser) => void;
 }) {
   const { t } = useI18n();
+  const login = mode === "login";
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [sutId, setSutId] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [countdown, setCountdown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [accepted, setAccepted] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState("");
+  const [emailTaken, setEmailTaken] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
   const entrance = useRef(new Animated.Value(0)).current;
-  const passwordStrength = useMemo(
+  const strength = useMemo(
     () => getPasswordStrength(password, t),
     [password, t],
   );
+  const email = sutIdToEmail(sutId);
+
   const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  const googleAndroidClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   // EAS does not upload the gitignored local .env file. The provider hook
-  // requires a non-empty client ID during render, so keep the screen alive
-  // and let signInWithGoogle show the configuration message instead.
-  const googleClientIdFallback = "google-sign-in-not-configured";
+  // requires a non-empty client ID during render, so keep the screen alive and
+  // let signInWithGoogle surface the configuration message instead.
+  const fallbackClientId = "google-sign-in-not-configured";
   const [googleRequest, googleResponse, promptGoogleAsync] =
     Google.useIdTokenAuthRequest({
-      webClientId: googleWebClientId ?? googleClientIdFallback,
+      webClientId: googleWebClientId ?? fallbackClientId,
       androidClientId:
-        googleAndroidClientId ?? googleWebClientId ?? googleClientIdFallback,
-      iosClientId:
-        googleIosClientId ?? googleWebClientId ?? googleClientIdFallback,
+        googleAndroidClientId ?? googleWebClientId ?? fallbackClientId,
+      iosClientId: googleIosClientId ?? googleWebClientId ?? fallbackClientId,
       redirectUri: googleRedirectUri,
       selectAccount: true,
     });
@@ -82,7 +156,7 @@ export function Auth({
     entrance.setValue(0);
     Animated.timing(entrance, {
       toValue: 1,
-      duration: 480,
+      duration: 460,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -100,9 +174,7 @@ export function Auth({
     }
 
     const idToken =
-      googleResponse.authentication?.idToken ??
-      googleResponse.params.id_token;
-
+      googleResponse.authentication?.idToken ?? googleResponse.params.id_token;
     if (!idToken) {
       setGoogleBusy(false);
       setError("Google did not return an identity token");
@@ -114,15 +186,40 @@ export function Auth({
       body: JSON.stringify({ idToken }),
     })
       .then((result) => onAuth(result.access_token, result.user))
-      .catch((reason) => {
+      .catch((reason) =>
         setError(
           reason instanceof Error
             ? reason.message
             : "Unable to sign in with Google",
-        );
-      })
+        ),
+      )
       .finally(() => setGoogleBusy(false));
   }, [googleResponse, onAuth]);
+
+  /** Debounced availability check so the user is not told at submit time. */
+  useEffect(() => {
+    if (mode !== "signup" || !sutId.trim()) {
+      setEmailTaken(false);
+      return;
+    }
+    const target = sutIdToEmail(sutId);
+    const timer = setTimeout(async () => {
+      try {
+        setCheckingEmail(true);
+        const result = await api<{ exists: boolean }>(
+          `/auth/check-email?email=${encodeURIComponent(target)}`,
+        );
+        setEmailTaken(result.exists);
+      } catch {
+        // A failed lookup is not worth interrupting the form for; submit will
+        // surface the conflict if there is one.
+      } finally {
+        setCheckingEmail(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [sutId, mode]);
 
   const signInWithGoogle = async () => {
     const platformClientId = Platform.select({
@@ -132,9 +229,7 @@ export function Auth({
     });
 
     if (!platformClientId) {
-      setError(
-        "Google sign-in is not configured. Add a Google client ID to .env.",
-      );
+      setError("Google sign-in is not configured. Add a Google client ID to .env.");
       return;
     }
 
@@ -148,168 +243,48 @@ export function Auth({
     } catch (reason) {
       setGoogleBusy(false);
       setError(
-        reason instanceof Error
-          ? reason.message
-          : "Unable to open Google sign-in",
+        reason instanceof Error ? reason.message : "Unable to open Google sign-in",
       );
     }
   };
 
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(
-      () => setCountdown((seconds) => Math.max(0, seconds - 1)),
-      1000,
-    );
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  const [emailTaken, setEmailTaken] = useState(false);
-  const [checkingEmail, setCheckingEmail] = useState(false);
-
-  const email = sutId.includes("@") ? sutId : `${sutId}@g.sut.ac.th`;
-
-  useEffect(() => {
-    if (mode !== "signup" || !sutId.trim()) {
-      setEmailTaken(false);
-      return;
-    }
-    const targetEmail = sutId.includes("@") ? sutId.trim() : `${sutId.trim()}@g.sut.ac.th`;
-    const timer = setTimeout(async () => {
-      try {
-        setCheckingEmail(true);
-        const res = await api<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(targetEmail)}`);
-        setEmailTaken(res.exists);
-        if (res.exists) {
-          setError("อีเมลนี้ถูกใช้งานแล้วในระบบ");
-        } else if (error === "อีเมลนี้ถูกใช้งานแล้วในระบบ") {
-          setError("");
-        }
-      } catch {
-        // ignore
-      } finally {
-        setCheckingEmail(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [sutId, mode]);
-
-  const submitAuth = async () => {
+  const submit = async () => {
     try {
       setBusy(true);
       setError("");
       if (!sutId.trim()) throw new Error("Please enter your SUT ID");
-      if (mode === "signup" && emailTaken)
-        throw new Error("This email is already registered");
-      if (mode === "signup" && passwordStrength.score < 2)
-        throw new Error("Please use a stronger password");
-      if (mode === "signup" && password !== confirm)
-        throw new Error("Passwords do not match");
-      if (mode === "signup" && !accepted)
-        throw new Error("Please accept the Terms and Privacy Policy");
-      const d = await api(`/auth/${mode === "login" ? "login" : "register"}`, {
+      if (!password) throw new Error("Please enter your password");
+      if (!login) {
+        if (emailTaken) throw new Error("This SUT ID is already registered");
+        if (strength.score < 2) throw new Error("Please use a stronger password");
+        if (password !== confirm) throw new Error("Passwords do not match");
+        if (!accepted)
+          throw new Error("Please accept the Terms and Privacy Policy");
+      }
+
+      const result = await api<{
+        access_token: string;
+        user: AuthenticatedUser;
+      }>(`/auth/${login ? "login" : "register"}`, {
         method: "POST",
         body: JSON.stringify(
-          mode === "login"
+          login
             ? { email, password }
             : {
                 displayName: `${firstName} ${lastName}`.trim(),
                 email,
                 password,
-                sutId,
+                sutId: sutId.trim(),
               },
         ),
       });
-      onAuth(d.access_token, d.user);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to continue");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const sendOtp = async () => {
-    if (!sutId.trim()) {
-      setError("Please enter your SUT email or ID");
-      return;
-    }
-    try {
-      setBusy(true);
-      setError("");
-      await api("/auth/send-otp", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      setOtpSent(true);
-      setCountdown(47);
+      onAuth(result.access_token, result.user);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to send OTP");
+      setError(reason instanceof Error ? reason.message : "Unable to continue");
     } finally {
       setBusy(false);
     }
   };
-
-  const verifyForgotOtp = async () => {
-    if (!otp.trim()) {
-      setError("Please enter the OTP sent to your email");
-      return;
-    }
-    try {
-      setBusy(true);
-      setError("");
-      await api("/auth/verify-otp", {
-        method: "POST",
-        body: JSON.stringify({ email, otp }),
-      });
-      setOtpVerified(true);
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Invalid or expired OTP",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const submitNewPassword = async () => {
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    try {
-      setBusy(true);
-      setError("");
-      await api("/auth/reset-password-otp", {
-        method: "POST",
-        body: JSON.stringify({ email, password: newPassword }),
-      });
-      Alert.alert(
-        "สำเร็จ",
-        "รีเซ็ตรหัสผ่านเรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่",
-      );
-      go("login");
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Unable to reset password",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const footer = (prompt: string, action: string, screen: Screen) => (
-    <View style={auth.footerLink}>
-      <Text style={auth.footerMuted}>{prompt} </Text>
-      <Pressable onPress={() => go(screen)} hitSlop={8}>
-        <Text style={auth.footerAccent}>{action}</Text>
-      </Pressable>
-    </View>
-  );
 
   const entranceStyle = {
     opacity: entrance,
@@ -317,330 +292,226 @@ export function Auth({
       {
         translateY: entrance.interpolate({
           inputRange: [0, 1],
-          outputRange: [18, 0],
+          outputRange: [16, 0],
         }),
       },
     ],
   };
 
-  const emblemStyle = {
-    opacity: entrance,
-    transform: [
-      {
-        scale: entrance.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.82, 1],
-        }),
-      },
-    ],
-  };
-
-  if (mode === "forgot") {
-    return (
-      <SafeAreaView style={auth.safe}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={auth.flex}
-        >
-          <ScrollView
-            contentContainerStyle={auth.forgotPage}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <Animated.View style={[auth.animatedContent, entranceStyle]}>
-            <View style={auth.forgotHeader}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back to login"
-                onPress={() => go("login")}
-                style={auth.backButton}
-              >
-                <Text style={auth.backIcon}>‹</Text>
-              </Pressable>
-              <Text style={auth.forgotHeaderTitle}>รีเซ็ตรหัสผ่าน</Text>
-            </View>
-
-            <View style={auth.resetHero}>
-              <Animated.View style={[auth.lockTile, emblemStyle]}>
-                <View style={auth.lockShackle} />
-                <View style={auth.lockBody}>
-                  <View style={auth.lockKeyhole} />
-                </View>
-              </Animated.View>
-              <Text style={auth.resetTitle}>รีเซ็ตรหัสผ่านของคุณ</Text>
-              <Text style={auth.resetDescription}>
-                {otpVerified
-                  ? "Enter and confirm your new password below."
-                  : otpSent
-                    ? "Enter the OTP code we sent to your email.\nIt expires in 10 minutes."
-                    : "Enter your SUT email and we’ll send you a\nverification OTP."}
-              </Text>
-            </View>
-
-            {!otpSent ? (
-              <AuthField
-                label="อีเมล SUT หรือรหัสนักศึกษา"
-                placeholder="กรอกอีเมล SUT"
-                value={sutId}
-                onChangeText={setSutId}
-                action={
-                  <Pressable
-                    onPress={sendOtp}
-                    disabled={busy}
-                    style={auth.inlineButton}
-                  >
-                    <Text style={auth.inlineButtonText}>
-                      {busy ? "กำลังส่ง..." : "ส่ง OTP"}
-                    </Text>
-                  </Pressable>
-                }
-              />
-            ) : !otpVerified ? (
-              <>
-                <AuthField
-                  label="กรอก OTP"
-                  placeholder="กรอก OTP"
-                  value={otp}
-                  onChangeText={setOtp}
-                  action={
-                    <Pressable
-                      onPress={verifyForgotOtp}
-                      disabled={busy}
-                      style={auth.inlineButton}
-                    >
-                      <Text style={auth.inlineButtonText}>
-                        {busy ? "กำลังยืนยัน..." : "ยืนยัน"}
-                      </Text>
-                    </Pressable>
-                  }
-                />
-                <View style={auth.resendCard}>
-                  <Text style={auth.mailIcon}>✉</Text>
-                  <Text style={auth.resendText}>
-                    Didn’t get it? Check spam, or{" "}
-                    {countdown > 0
-                      ? `resend in 0:${String(countdown).padStart(2, "0")}`
-                      : ""}
-                  </Text>
-                  {countdown <= 0 ? (
-                    <Pressable onPress={sendOtp} disabled={busy} hitSlop={8}>
-                      <Text style={auth.footerAccent}>ส่งอีกครั้ง</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              </>
-            ) : (
-              <>
-                <AuthField
-                  label="รหัสผ่านใหม่"
-                  placeholder="กรอกรหัสผ่านใหม่"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secure
-                />
-                <AuthField
-                  label="ยืนยันรหัสผ่านใหม่"
-                  placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
-                  value={confirmNewPassword}
-                  onChangeText={setConfirmNewPassword}
-                  secure
-                />
-              </>
-            )}
-
-            {error ? <Text style={auth.error}>{error}</Text> : null}
-            {otpVerified ? (
-              <AuthButton onPress={submitNewPassword} disabled={busy}>
-                {busy ? "กำลังบันทึก..." : "ตั้งรหัสผ่านใหม่"}
-              </AuthButton>
-            ) : null}
-
-            {footer(t("rememberedIt"), t("backToLogin"), "login")}
-            </Animated.View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
-  }
-
-  const login = mode === "login";
   return (
-    <SafeAreaView style={auth.safe}>
+    <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={auth.flex}
+        style={s.flex}
       >
         <ScrollView
-          contentContainerStyle={[auth.page, login && auth.loginPage]}
+          contentContainerStyle={{
+            flexGrow: 1,
+            width: "100%",
+            maxWidth: MAX_WIDTH,
+            alignSelf: "center",
+            paddingHorizontal: GUTTER,
+            paddingTop: 26,
+            paddingBottom: 32,
+          }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={[auth.animatedContent, entranceStyle]}>
-          <View style={[auth.titleRow, login && auth.loginTitleRow]}>
+          <Animated.View style={[{ gap: 18 }, entranceStyle]}>
+            <View style={[s.row, { gap: 16, marginBottom: 8 }]}>
+              <LogoTile size={56} radius={17} />
+              <View style={{ flex: 1 }}>
+                <Txt role="h1">
+                  {login ? t("welcomeBack") : t("createAccount")}
+                </Txt>
+                <Txt role="subtitle">
+                  {login ? t("loginSub") : t("signupSub")}
+                </Txt>
+              </View>
+            </View>
+
             {!login ? (
-              <Animated.View style={[auth.logoTile, emblemStyle]}>
-                <Text style={auth.houseIcon}>⌂</Text>
-              </Animated.View>
+              <>
+                <Field
+                  label={t("firstName")}
+                  placeholder={t("enterFirstName")}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                />
+                <Field
+                  label={t("lastName")}
+                  placeholder={t("enterLastName")}
+                  value={lastName}
+                  onChangeText={setLastName}
+                />
+              </>
             ) : null}
-            <View>
-              <Text style={auth.title}>
-                {login ? t("welcomeBack") : t("createAccount")}
-              </Text>
-              <Text style={auth.subtitle}>
-                {login
-                  ? t("loginSub")
-                  : t("signupSub")}
-              </Text>
-            </View>
-          </View>
-          {!login ? (
-            <>
-              <AuthField
-                label={t("firstName")}
-                placeholder={t("enterFirstName")}
-                value={firstName}
-                onChangeText={setFirstName}
-              />
-              <AuthField
-                label={t("lastName")}
-                placeholder={t("enterLastName")}
-                value={lastName}
-                onChangeText={setLastName}
-              />
-            </>
-          ) : null}
 
-          <AuthField
-            label={t("sutId")}
-            placeholder="B67xxxxx"
-            value={sutId}
-            onChangeText={setSutId}
-          />
-          {!login && checkingEmail ? (
-            <Text style={[auth.footerMuted, { marginTop: -8, marginBottom: 8 }]}>
-              กำลังตรวจสอบอีเมล...
-            </Text>
-          ) : null}
-          <AuthField
-            label={t("password")}
-            placeholder={t("enterPassword")}
-            value={password}
-            onChangeText={setPassword}
-            secure
-          />
+            <Field
+              label={t("sutId")}
+              placeholder={t("sutIdHint")}
+              value={sutId}
+              onChangeText={setSutId}
+              autoCapitalize="none"
+              error={
+                !login && emailTaken
+                  ? "This SUT ID is already registered"
+                  : undefined
+              }
+            />
+            {!login && checkingEmail ? <Txt role="tiny">…</Txt> : null}
 
-          {!login ? (
-            <>
-              <View style={auth.passwordStrength}>
-                {[1, 2, 3, 4].map((level) => (
-                  <View
-                    key={level}
-                    style={[
-                      auth.strengthBar,
-                      {
-                        backgroundColor:
-                          passwordStrength.score >= level
-                            ? passwordStrength.color
-                            : "#E5D9CD",
-                      },
-                    ]}
+            <Field
+              label={t("password")}
+              placeholder={t("enterPassword")}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              right={
+                <RevealToggle
+                  hidden={!showPassword}
+                  onToggle={() => setShowPassword((v) => !v)}
+                />
+              }
+            />
+
+            {!login ? (
+              <>
+                <StrengthMeter
+                  score={strength.score}
+                  label={strength.label}
+                  color={strength.color}
+                  hint={strength.hint}
+                />
+                <Field
+                  label={t("confirmPassword")}
+                  placeholder={t("confirmYourPassword")}
+                  value={confirm}
+                  onChangeText={setConfirm}
+                  secureTextEntry={!showConfirm}
+                  autoCapitalize="none"
+                  right={
+                    <RevealToggle
+                      hidden={!showConfirm}
+                      onToggle={() => setShowConfirm((v) => !v)}
+                    />
+                  }
+                />
+              </>
+            ) : null}
+
+            {login ? (
+              <View style={[s.rowBetween, { marginTop: 4 }]}>
+                <View style={[s.row, { gap: 12 }]}>
+                  <Checkbox
+                    value={remember}
+                    onChange={setRemember}
+                    accessibilityLabel={t("rememberMe")}
                   />
-                ))}
-                <Text style={[auth.strengthLabel, { color: passwordStrength.color }]}>
-                  {passwordStrength.label}
-                </Text>
-              </View>
-              <Text style={auth.strengthHint}>{passwordStrength.hint}</Text>
-              <AuthField
-                label={t("confirmPassword")}
-                placeholder={t("confirmYourPassword")}
-                value={confirm}
-                onChangeText={setConfirm}
-                secure
-              />
-            </>
-          ) : null}
-
-          {login ? (
-            <View style={auth.loginOptions}>
-              <Pressable
-                onPress={() => setRemember((current) => !current)}
-                style={auth.checkRow}
-              >
-                <View style={[auth.checkbox, remember && auth.checkboxChecked]}>
-                  {remember ? <Text style={auth.checkmark}>✓</Text> : null}
+                  <Txt role="body" style={{ color: C.muted }}>
+                    {t("rememberMe")}
+                  </Txt>
                 </View>
-                <Text style={auth.optionText}>{t("rememberMe")}</Text>
-              </Pressable>
-              <Pressable onPress={() => go("forgot")}>
-                <Text style={auth.forgotLink}>{t("forgotPassword")}</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => setAccepted((current) => !current)}
-              style={auth.termsRow}
-            >
-              <View style={[auth.checkbox, accepted && auth.checkboxChecked]}>
-                {accepted ? <Text style={auth.checkmark}>✓</Text> : null}
+                <MotionPressable onPress={() => go("forgot")} hitSlop={10}>
+                  <Txt role="link">{t("forgotPassword")}</Txt>
+                </MotionPressable>
               </View>
-              <Text style={auth.termsText}>
-                {t("termsAgreePrefix")}{" "}
-                <Text style={auth.termsLink} onPress={() => go("terms")}>
-                  {t("terms")}
-                </Text>{" "}
-                {t("and")}{" "}
-                <Text style={auth.termsLink} onPress={() => go("privacy")}>
-                  {t("privacyPolicy")}
-                </Text>
-                , {t("sutConfirm")}
-              </Text>
-            </Pressable>
-          )}
-
-          {error ? <Text style={auth.error}>{error}</Text> : null}
-          <AuthButton onPress={submitAuth} disabled={busy}>
-            {busy ? t("pleaseWait") : t("continue")}
-          </AuthButton>
-
-          {login ? (
-            <>
-              <View style={auth.divider}>
-                <View style={auth.dividerLine} />
-                <Text style={auth.dividerText}>{t("orContinueWith")}</Text>
-                <View style={auth.dividerLine} />
+            ) : (
+              <View style={[s.row, { gap: 12, alignItems: "flex-start" }]}>
+                <Checkbox value={accepted} onChange={setAccepted} />
+                <Txt role="small" style={{ flex: 1, color: C.muted }}>
+                  {t("termsAgreePrefix")}{" "}
+                  <Txt
+                    role="small"
+                    style={{ color: C.primary, fontFamily: F.bold }}
+                    onPress={() => go("terms")}
+                  >
+                    {t("terms")}
+                  </Txt>{" "}
+                  {t("and")}{" "}
+                  <Txt
+                    role="small"
+                    style={{ color: C.primary, fontFamily: F.bold }}
+                    onPress={() => go("privacy")}
+                  >
+                    {t("privacyPolicy")}
+                  </Txt>
+                  , {t("sutConfirm")}
+                </Txt>
               </View>
-              <View style={auth.socialRow}>
-                <Pressable
+            )}
+
+            {error ? (
+              <View
+                style={{
+                  backgroundColor: C.pink,
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <Txt role="small" style={{ color: C.primaryDark }}>
+                  {error}
+                </Txt>
+              </View>
+            ) : null}
+
+            <Button onPress={submit} loading={busy} style={{ marginTop: 8 }}>
+              {busy ? t("pleaseWait") : t("continue")}
+            </Button>
+
+            {login ? (
+              <>
+                <View style={[s.row, { gap: 14, marginVertical: 10 }]}>
+                  <View style={[s.divider, { flex: 1 }]} />
+                  <Txt role="small">{t("orContinueWith")}</Txt>
+                  <View style={[s.divider, { flex: 1 }]} />
+                </View>
+
+                <MotionPressable
                   accessibilityRole="button"
                   accessibilityLabel={t("continueGoogle")}
                   disabled={!googleRequest || googleBusy}
                   onPress={signInWithGoogle}
-                  style={({ pressed }) => [
-                    auth.socialButton,
-                    pressed && auth.socialButtonPressed,
-                    (!googleRequest || googleBusy) &&
-                      auth.socialButtonDisabled,
-                  ]}
+                  style={{
+                    alignSelf: "center",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingHorizontal: 34,
+                    height: 54,
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    borderColor: C.lineStrong,
+                    backgroundColor: C.card,
+                  }}
                 >
-                  <Text style={auth.googleIcon}>G</Text>
-                  <Text style={auth.socialText}>
-                    {googleBusy ? t("pleaseWait") : "Google"}
-                  </Text>
-                </Pressable>
-              </View>
-            </>
-          ) : null}
+                  <Txt style={{ fontFamily: F.bold, fontSize: 19, color: C.ink }}>
+                    G
+                  </Txt>
+                  <Txt role="h3">{googleBusy ? t("pleaseWait") : "Google"}</Txt>
+                </MotionPressable>
+              </>
+            ) : null}
 
-          {footer(
-            login ? t("newHere") : t("alreadyAccount"),
-            login ? t("signUp") : t("logInAction"),
-            login ? "signup" : "login",
-          )}
+            <View style={{ flex: 1, minHeight: 30 }} />
+
+            <View
+              style={[s.row, { justifyContent: "center", gap: 6, marginTop: 20 }]}
+            >
+              <Txt role="small">
+                {login ? t("newHere") : t("alreadyAccount")}
+              </Txt>
+              <MotionPressable
+                onPress={() => go(login ? "signup" : "login")}
+                hitSlop={8}
+              >
+                <Txt role="link">{login ? t("signUp") : t("logInAction")}</Txt>
+              </MotionPressable>
+            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-

@@ -1,133 +1,199 @@
-import { ArrowRight, Flame, MapPin, Users, X } from "lucide-react-native";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
 import { useI18n } from "../../i18n";
-import type { Screen } from "../../types/navigation";
-import { feedStyles, filterStyles } from "./discovery.styles";
+import { appState } from "../../services/api";
+import { OptionPicker } from "../../components/OptionPicker";
+import { RangeSlider, Slider } from "../../components/Slider";
+import { Segmented } from "../../components/Segmented";
+import { Sheet } from "../../components/Sheet";
+import {
+  Button,
+  Chevron,
+  Chip,
+  Field,
+  MotionPressable,
+  SectionLabel,
+  Txt,
+} from "../../components/ui";
+import { C } from "../../theme/colors";
+import { s } from "../../theme/styles";
+import { F } from "../../theme/typography";
+import { MAJOR_OPTIONS, labelFor } from "../profile/profile.content";
+import {
+  BUDGET_MAX,
+  BUDGET_MIN,
+  BUDGET_STEP,
+  MUST_MATCH,
+  YEAR_BANDS,
+} from "./discovery.content";
+
+export type FeedFilters = typeof appState.feedFilters;
+
+const DEFAULTS: FeedFilters = {
+  yearBand: "everyone",
+  major: "",
+  budgetMin: 3500,
+  budgetMax: 6000,
+  mustMatch: [],
+  minScore: 25,
+};
+
+function money(value: number) {
+  return value.toLocaleString("en-US");
+}
 
 /**
- * Placeholder filters — the selections below are hard-coded and "Apply" just
- * returns to the feed. `/api/discover` does not accept filter parameters yet.
+ * Discover filters, presented as a sheet over the deck.
+ *
+ * Edits are held locally and only committed on Apply, so dismissing the sheet
+ * leaves the current results alone.
  */
-const GENDER_OPTIONS = [
-  { label: { th: "ผู้หญิง", en: "Female" }, active: false },
-  { label: { th: "ผู้ชาย", en: "Male" }, active: true },
-  { label: { th: "ทุกคน", en: "Everyone" }, active: false },
-];
+export function Filters({
+  visible,
+  onClose,
+  onApply,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onApply: (filters: FeedFilters) => void;
+}) {
+  const { t, language } = useI18n();
+  const [draft, setDraft] = useState<FeedFilters>({ ...appState.feedFilters });
+  const [majorPicker, setMajorPicker] = useState(false);
 
-const ZONE_OPTIONS = [
-  { label: { th: "ประตู 1", en: "Gate 1" }, active: true },
-  { label: { th: "ประตู 4", en: "Gate 4" }, active: false },
-  { label: { th: "ในมหาวิทยาลัย", en: "On Campus" }, active: false },
-  { label: { th: "ทุกโซน", en: "Any Zone" }, active: false },
-];
+  // The sheet stays mounted behind the feed, so its draft has to be re-seeded
+  // each time it opens — otherwise edits abandoned last time (or a "Reset all"
+  // that was never applied) would still be showing.
+  useEffect(() => {
+    if (visible) setDraft({ ...appState.feedFilters });
+  }, [visible]);
 
-export function Filters({ go }: { go: (x: Screen) => void }) {
-  const { language } = useI18n();
-  const locale = language === "th" ? "th" : "en";
+  const patch = (changes: Partial<FeedFilters>) =>
+    setDraft((current) => ({ ...current, ...changes }));
 
-  const renderPills = (
-    options: { label: { th: string; en: string }; active: boolean }[],
-  ) => (
-    <View style={filterStyles.pillsRow}>
-      {options.map((item, idx) => (
-        <Pressable
-          key={idx}
-          style={[filterStyles.pill, item.active && filterStyles.pillActive]}
-        >
-          <Text
-            style={[
-              filterStyles.pillText,
-              item.active && filterStyles.pillTextActive,
-            ]}
-          >
-            {item.label[locale]}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
+  const toggleMustMatch = (value: string) =>
+    patch({
+      mustMatch: draft.mustMatch.includes(value)
+        ? draft.mustMatch.filter((v) => v !== value)
+        : [...draft.mustMatch, value],
+    });
 
   return (
-    <SafeAreaView style={feedStyles.safeArea}>
-      <View style={feedStyles.container}>
-        <View style={feedStyles.topBar}>
-          <Text style={feedStyles.appTitle}>
-            {language === "th" ? "ตัวกรองค้นหา" : "Search Filters"}
-          </Text>
-          <Pressable onPress={() => go("feed")}>
-            <X size={24} color="#7F232D" strokeWidth={2.5} />
-          </Pressable>
+    <>
+      <Sheet visible={visible} onClose={onClose} height={0.86}>
+        <View style={s.rowBetween}>
+          <Txt role="h1" style={{ fontSize: 24 }}>
+            {t("filters")}
+          </Txt>
+          <MotionPressable
+            onPress={() => setDraft({ ...DEFAULTS })}
+            hitSlop={10}
+          >
+            <Txt role="link" style={{ fontSize: 15 }}>
+              {t("resetAll")}
+            </Txt>
+          </MotionPressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-          <View style={filterStyles.sectionCard}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 12,
-              }}
-            >
-              <Users size={18} color="#463826" />
-              <Text style={filterStyles.sectionTitle}>
-                {language === "th" ? "เพศของรูมเมท" : "Roommate Gender"}
-              </Text>
-            </View>
-            {renderPills(GENDER_OPTIONS)}
-          </View>
+        <SectionLabel>{t("showMe")}</SectionLabel>
+        <Segmented
+          size="sm"
+          options={YEAR_BANDS.map((band) => ({
+            value: band.value,
+            label: t(band.key),
+          }))}
+          value={draft.yearBand}
+          onChange={(value) => patch({ yearBand: value })}
+        />
 
-          <View style={filterStyles.sectionCard}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 12,
-              }}
-            >
-              <MapPin size={18} color="#463826" />
-              <Text style={filterStyles.sectionTitle}>
-                {language === "th" ? "โซนหอพักที่ต้องการ" : "Preferred Zone"}
-              </Text>
-            </View>
-            {renderPills(ZONE_OPTIONS)}
-          </View>
+        <SectionLabel>{t("major")}</SectionLabel>
+        <Field
+          value={
+            draft.major ? labelFor(MAJOR_OPTIONS, draft.major, language) : t("anyOption")
+          }
+          onPress={() => setMajorPicker(true)}
+          right={<Chevron direction="down" size={8} />}
+        />
 
-          <View style={filterStyles.sectionCard}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 12,
-              }}
-            >
-              <Flame size={18} color="#C64338" />
-              <Text style={filterStyles.sectionTitle}>
-                {language === "th"
-                  ? "คะแนนความเข้ากันได้ขั้นต่ำ"
-                  : "Minimum Match Score"}
-              </Text>
-            </View>
-            <View style={filterStyles.scoreRow}>
-              <Text style={filterStyles.scoreValueText}>70%+ Match</Text>
-            </View>
+        <View style={[s.card, { gap: 0 }]}>
+          <View style={s.rowBetween}>
+            <Txt role="h3" style={{ fontSize: 15 }}>
+              {t("budget")}{" "}
+              <Txt role="tiny">({t("perMonth")})</Txt>
+            </Txt>
+            <Txt style={{ fontFamily: F.bold, fontSize: 14, color: C.ink }}>
+              {money(draft.budgetMin)} - {money(draft.budgetMax)}
+            </Txt>
           </View>
+          <RangeSlider
+            min={BUDGET_MIN}
+            max={BUDGET_MAX}
+            step={BUDGET_STEP}
+            low={draft.budgetMin}
+            high={draft.budgetMax}
+            onChange={(low, high) => patch({ budgetMin: low, budgetMax: high })}
+            labels={[money(BUDGET_MIN), money(BUDGET_MAX)]}
+          />
+        </View>
 
-          <Pressable style={feedStyles.refreshBtn} onPress={() => go("feed")}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+        <SectionLabel>{t("mustMatchOn")}</SectionLabel>
+        <View style={[s.wrap, { rowGap: 12 }]}>
+          {MUST_MATCH.map((item) => (
+            <Chip
+              key={item.value}
+              active={draft.mustMatch.includes(item.value)}
+              onPress={() => toggleMustMatch(item.value)}
             >
-              <Text style={feedStyles.refreshBtnText}>
-                {language === "th" ? "บันทึกตัวกรอง" : "Apply Filters"}
-              </Text>
-              <ArrowRight size={16} color="#FFFFFF" />
-            </View>
-          </Pressable>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+              {t(item.key)}
+            </Chip>
+          ))}
+        </View>
+
+        <View style={[s.card, { gap: 0 }]}>
+          <View style={s.rowBetween}>
+            <Txt role="h3" style={{ fontSize: 15 }}>
+              {t("minMatchScore")}
+            </Txt>
+            <Txt style={{ fontFamily: F.bold, fontSize: 14, color: C.ink }}>
+              {draft.minScore}%
+            </Txt>
+          </View>
+          <Slider
+            min={25}
+            max={95}
+            step={5}
+            value={draft.minScore}
+            onChange={(value) => patch({ minScore: value })}
+            labels={["25%", "50%", "75%", "95%"]}
+          />
+        </View>
+
+        <Button
+          style={{ marginTop: 8 }}
+          onPress={() => {
+            appState.feedFilters = draft;
+            onApply(draft);
+            onClose();
+          }}
+        >
+          {t("apply")}
+        </Button>
+      </Sheet>
+
+      <OptionPicker
+        visible={majorPicker}
+        title={t("major")}
+        value={draft.major}
+        options={[
+          { value: "", label: t("anyOption") },
+          ...MAJOR_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label[language],
+          })),
+        ]}
+        onSelect={(value) => patch({ major: value })}
+        onClose={() => setMajorPicker(false)}
+      />
+    </>
   );
 }

@@ -1,79 +1,172 @@
-import { MessageCircle, Sparkles } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import { Heart } from "lucide-react-native";
+import { Avatar } from "../../components/Avatar";
+import { ScoreRing } from "../../components/ScoreRing";
+import { Button, Txt } from "../../components/ui";
 import { useI18n } from "../../i18n";
+import { appState } from "../../services/api";
+import { C, G } from "../../theme/colors";
+import { GUTTER, MAX_WIDTH, s } from "../../theme/styles";
+import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
-import { feedStyles, matchStyles } from "./discovery.styles";
+import { openChatWith } from "./open-chat";
 
 /**
- * The "it's a match" celebration shown after a mutual like.
- *
- * The score and initials are still placeholder copy — the screen does not read
- * the match it is celebrating.
+ * Mutual-like celebration. Shown once, straight after the swipe that created
+ * the match, and reads the pair off `appState.activeProfile` so the names and
+ * score are the real ones rather than placeholders.
  */
 export function Match({ go }: { go: (x: Screen) => void }) {
-  const { language } = useI18n();
+  const { t } = useI18n();
+  const other = appState.activeProfile;
+  const me = appState.profileDraft;
+
+  const pop = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(pop, {
+      toValue: 1,
+      stiffness: 160,
+      damping: 14,
+      mass: 0.9,
+      useNativeDriver: true,
+    }).start();
+  }, [pop]);
+
+  const entrance = {
+    opacity: pop,
+    transform: [
+      { scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
+    ],
+  };
+
+  const fade = {
+    opacity: pop,
+    transform: [
+      {
+        translateY: pop.interpolate({
+          inputRange: [0, 1],
+          outputRange: [16, 0],
+        }),
+      },
+    ],
+  };
 
   return (
-    <SafeAreaView style={matchStyles.page}>
-      <View style={matchStyles.container}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 8,
-          }}
-        >
-          <Sparkles size={20} color="#C64338" />
-          <Text style={matchStyles.eyebrow}>
-            {language === "th" ? "ถูกใจกันทั้งคู่!" : "It's a Match!"}
-          </Text>
-        </View>
-        <Text style={matchStyles.title}>
-          {language === "th" ? "จับคู่สำเร็จ!" : "Match Successful!"}
-        </Text>
-
-        <View style={matchStyles.avatarsRow}>
-          <View style={matchStyles.avatarCircle}>
-            <Text style={matchStyles.avatarText}>YOU</Text>
-          </View>
-          <View style={matchStyles.scoreChip}>
-            <Text style={matchStyles.scoreChipText}>92% Match</Text>
-          </View>
-          <View
-            style={[
-              matchStyles.avatarCircle,
-              { backgroundColor: "#FFF0BB", borderColor: "#FFD477" },
-            ]}
+    <LinearGradient
+      colors={[...G.hero]}
+      start={{ x: 0.2, y: 0 }}
+      end={{ x: 0.8, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <StatusBar style="light" />
+      <SafeAreaView
+        style={{
+          flex: 1,
+          paddingHorizontal: GUTTER,
+          width: "100%",
+          maxWidth: MAX_WIDTH,
+          alignSelf: "center",
+          justifyContent: "center",
+          gap: 26,
+        }}
+      >
+        <Animated.View style={[{ alignItems: "center", gap: 10 }, fade]}>
+          <Heart size={38} color={C.amberLight} fill={C.amberLight} />
+          <Txt
+            style={{
+              fontFamily: F.semibold,
+              fontSize: 13,
+              letterSpacing: 3,
+              color: C.amberLight,
+            }}
           >
-            <Text style={[matchStyles.avatarText, { color: "#7F232D" }]}>
-              SUT
-            </Text>
-          </View>
-        </View>
+            IT'S A MATCH
+          </Txt>
+        </Animated.View>
 
-        <Text style={matchStyles.copyText}>
-          {language === "th"
-            ? "คุณและคู่แมตช์มีความเข้ากันได้สูงถึง 92% ทั้งเรื่องเวลานอน ความสะอาด และระดับความสงบ!"
-            : "You both liked each other — 92% compatible on sleep, cleanliness & quiet hours!"}
-        </Text>
+        <Animated.View
+          style={[
+            {
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+            },
+            entrance,
+          ]}
+        >
+          <Avatar
+            name={me.displayName || "You"}
+            uri={me.photos?.[0]}
+            size={96}
+            ring="rgba(255,255,255,.45)"
+          />
+          <ScoreRing
+            score={other?.score}
+            size={64}
+            thickness={6}
+            style={{ marginHorizontal: -16, zIndex: 2 }}
+          />
+          <Avatar
+            name={other?.displayName}
+            uri={other?.profile?.photos?.[0]}
+            size={96}
+            ring="rgba(255,255,255,.45)"
+          />
+        </Animated.View>
 
-        <Pressable style={feedStyles.refreshBtn} onPress={() => go("messages")}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <MessageCircle size={18} color="#FFFFFF" />
-            <Text style={feedStyles.refreshBtnText}>
-              {language === "th" ? "เริ่มแชทเลย" : "Start Chatting"}
-            </Text>
-          </View>
-        </Pressable>
+        <Animated.View style={[{ gap: 12 }, fade]}>
+          <Txt
+            style={{
+              fontFamily: F.bold,
+              fontSize: 34,
+              lineHeight: 44,
+              textAlign: "center",
+              color: C.white,
+            }}
+          >
+            {me.displayName?.split(" ")[0] || "You"} ×{" "}
+            {other?.displayName?.split(" ")[0] || "—"}
+          </Txt>
+          <Txt
+            style={{
+              textAlign: "center",
+              color: "rgba(255,255,255,.82)",
+              fontFamily: F.regular,
+              fontSize: 15,
+              lineHeight: 23,
+            }}
+          >
+            {t("likeBackNote")}
+          </Txt>
+        </Animated.View>
 
-        <Pressable style={matchStyles.secondaryBtn} onPress={() => go("feed")}>
-          <Text style={matchStyles.secondaryBtnText}>
-            {language === "th" ? "ค้นหาต่อ ➔" : "Keep Swiping ➔"}
-          </Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+        <Animated.View style={[{ gap: 12, marginTop: 12 }, fade]}>
+          <Button
+            onPress={() =>
+              openChatWith(
+                {
+                  userId: other?.id,
+                  name: other?.displayName,
+                  conversationId: other?.conversationId,
+                },
+                go,
+              )
+            }
+          >
+            {`${t("messagePrefix")} ${other?.displayName?.split(" ")[0] ?? ""}`.trim()}
+          </Button>
+          <Button tone="outline" onPress={() => go("feed")}>
+            {t("discover")}
+          </Button>
+        </Animated.View>
+
+        <View style={s.spacer} />
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
