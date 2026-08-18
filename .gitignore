@@ -41,3 +41,9 @@ client_secret_*.json
 # generated native folders
 /ios
 /android
+
+# Built APKs
+/build
+
+# Signing keys - never commit these
+/credentials

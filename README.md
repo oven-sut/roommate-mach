@@ -82,12 +82,33 @@ EXPO_PUBLIC_API_URL="http://<LAN-IP>:18888" npm start
 
 **แอดมิน** (หน้า login เดียวกัน) — แดชบอร์ดสถิติ, จัดการสมาชิก, ตั้งค่าระบบ
 
-## Build APK (EAS)
+## Build APK
+
+### บนเครื่อง (เร็วกว่า ไม่ต้องรอคิว)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scriptsuild-apk.ps1
+```
+
+ได้ไฟล์ที่ `build/roommate-match-v<version>.apk` ติดตั้งด้วย `adb install -r <ไฟล์>`
+หรือส่งไฟล์ให้ผู้ใช้กดติดตั้งเอง (ต้องเปิด "ติดตั้งจากแหล่งที่ไม่รู้จัก")
+
+ต้องมี **JDK 17+** (Android Studio มีมาให้ที่ `jbr`) และ **Android SDK**
+
+> สคริปต์ build จากโฟลเดอร์ชั่วคราว `C:m` เพราะขั้นตอน build C++ เขียนชื่อไฟล์
+> ที่มี path เต็มอยู่ข้างใน แล้วยาวเกิน 260 ตัวอักษรของ Windows — build ในที่เดิมจะพัง
+> ที่ `ninja: Filename longer than 260 characters` (ใช้ `subst` แทนไม่ได้ เพราะ
+> autolinking ของ Expo หา `package.json` ผ่าน subst drive ไม่เจอ)
+
+**Keystore** อยู่ที่ `credentials/release.keystore` (ไม่ขึ้น git) — สร้างครั้งแรกด้วย
+`scripts\make-keystore.ps1` **สำรองไฟล์นี้ไว้ให้ดี** ถ้าหายจะอัปเดตแอปที่ติดตั้งไปแล้วไม่ได้อีก
+เพราะ Android ใช้ลายเซ็นระบุตัวแอป
+
+### ผ่าน EAS (cloud)
 
 ```bash
-# ตั้ง EXPO_PUBLIC_API_URL เป็น production ก่อน
 npx eas-cli build --platform android --profile preview      # APK สำหรับแจกทดสอบ
-npx eas-cli build --platform android --profile production
+npx eas-cli build --platform android --profile production   # AAB สำหรับขึ้น Play Store
 npx eas-cli build --platform ios
 ```
 
