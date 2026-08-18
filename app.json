@@ -35,8 +35,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Roommate Match needs access to your photos so you can upload your student ID and profile pictures.",
-          "cameraPermission": "Roommate Match needs access to your camera so you can take student ID and profile pictures.",
+          "photosPermission": "Roommate Match needs access to your photos so you can add profile pictures and, if you choose, verify your student ID.",
+          "cameraPermission": "Roommate Match needs access to your camera so you can take profile pictures and, if you choose, verify your student ID.",
           "microphonePermission": false
         }
       ],

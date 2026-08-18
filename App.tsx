@@ -45,6 +45,7 @@ import {
   resetAppState,
   saveToken,
   setHasSeenOnboarding,
+  setSessionExpiredHandler,
 } from "./src/services/api";
 import { getPushNotificationToken } from "./src/services/notifications";
 import { C } from "./src/theme/colors";
@@ -80,6 +81,14 @@ function AppContent() {
     return landingFor(me);
   };
 
+  // A token can expire while a screen is polling. `api()` clears the session
+  // and calls this once, so the user lands back on sign-in instead of watching
+  // the same error alert repeat every few seconds.
+  useEffect(() => {
+    setSessionExpiredHandler(() => setScreen("authChoice"));
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
       reduceMotion.current = enabled;
@@ -105,6 +114,9 @@ function AppContent() {
     }
 
     bootstrap();
+    // Mount only: this decides the first screen. `adoptSession` is rebuilt on
+    // every render, so listing it here would restart the app on each one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -149,8 +161,12 @@ function AppContent() {
     setScreen(next);
   };
 
-  const onAuth = (token: string, user: AuthenticatedUser) => {
-    saveToken(token);
+  const onAuth = (
+    token: string,
+    user: AuthenticatedUser,
+    remember = true,
+  ) => {
+    saveToken(token, remember);
     setHasSeenOnboarding(true);
     appState.currentUserId = user.id;
     populateProfileDraft(user);
@@ -201,7 +217,7 @@ function AppContent() {
 function renderScreen(
   screen: Screen,
   go: (next: Screen) => void,
-  onAuth: (token: string, user: AuthenticatedUser) => void,
+  onAuth: (token: string, user: AuthenticatedUser, remember?: boolean) => void,
 ): React.ReactNode {
   switch (screen) {
     case "welcome1":

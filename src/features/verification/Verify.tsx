@@ -16,6 +16,7 @@ import { toImageDataUri } from "../../services/media";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
 import { F } from "../../theme/typography";
+import type { Me } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 
 /** How often the server is asked whether an admin has reviewed the upload. */
@@ -84,9 +85,9 @@ export function Verify({ go }: { go: (screen: Screen) => void }) {
 
   const refresh = useCallback(async () => {
     try {
-      const me = await api<any>("/api/me");
+      const me = await api<Me>("/api/me");
       const status = me?.verification?.status;
-      if (status === "APPROVED" || status === "VERIFIED") setPhase("approved");
+      if (status === "VERIFIED") setPhase("approved");
       else if (status === "PENDING") setPhase("pending");
     } catch {
       // Leave the local phase alone if the check fails.

@@ -1,7 +1,17 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { C } from "./theme/colors";
 import { F } from "./theme/typography";
+
+const LANGUAGE_KEY = "roomie_language";
 
 export type Language = "en" | "th";
 
@@ -65,6 +75,11 @@ const dict: Dict = {
   },
   verifyTitle: { en: "Verify your student ID", th: "ยืนยันบัตรนักศึกษา" },
   verifyRequired: { en: "Required before you can match", th: "ต้องยืนยันก่อนเริ่มจับคู่" },
+  verifyRow: { en: "Verify your student status", th: "ยืนยันสถานะนักศึกษา" },
+  verifyRowSub: {
+    en: "Optional. Verified profiles get a badge and more matches",
+    th: "ไม่บังคับ ผู้ที่ยืนยันแล้วจะได้รับตราสัญลักษณ์และจับคู่ได้มากขึ้น",
+  },
   uploadId: { en: "Upload your SUT ID card", th: "อัปโหลดบัตรนักศึกษา SUT" },
   adminReviewPassed: { en: "Admin review passed", th: "ผู้ดูแลตรวจผ่านแล้ว" },
   verifiedPassed: { en: "Verified passed", th: "ยืนยันสำเร็จ" },
@@ -130,8 +145,8 @@ const dict: Dict = {
   },
   w3Title: { en: "Connect & chat safely", th: "เชื่อมต่อและแชทอย่างปลอดภัย" },
   w3Sub: {
-    en: "Every account is verified with an SUT student ID before anyone can chat.",
-    th: "ทุกบัญชียืนยันด้วยรหัสนักศึกษา SUT ก่อนเริ่มแชทได้",
+    en: "Only SUT students can join, and you can verify your student ID for a badge.",
+    th: "เฉพาะนักศึกษา SUT เท่านั้นที่สมัครได้ และยืนยันบัตรนักศึกษาเพื่อรับตราสัญลักษณ์ได้",
   },
 
   /* ---------------------------------------------------------------- auth */
@@ -386,15 +401,37 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>("th");
+  const [language, setLanguageState] = useState<Language>("th");
+
+  // Restore the last choice. Thai stays the default until we know otherwise,
+  // so the first frame never flashes the wrong language.
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(LANGUAGE_KEY)
+      .then((stored) => {
+        if (active && (stored === "en" || stored === "th")) {
+          setLanguageState(stored);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const setLanguage = useCallback((next: Language) => {
+    setLanguageState(next);
+    AsyncStorage.setItem(LANGUAGE_KEY, next).catch(() => undefined);
+  }, []);
+
   const value = useMemo(
     () => ({
       language,
       setLanguage,
-      toggleLanguage: () => setLanguage((current) => (current === "en" ? "th" : "en")),
+      toggleLanguage: () => setLanguage(language === "en" ? "th" : "en"),
       t: (key: string) => dict[key]?.[language] ?? key,
     }),
-    [language],
+    [language, setLanguage],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

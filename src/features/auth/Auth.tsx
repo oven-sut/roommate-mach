@@ -108,7 +108,11 @@ export function Auth({
 }: {
   mode: "login" | "signup";
   go: (x: Screen) => void;
-  onAuth: (token: string, user: AuthenticatedUser) => void;
+  onAuth: (
+    token: string,
+    user: AuthenticatedUser,
+    remember?: boolean,
+  ) => void;
 }) {
   const { t } = useI18n();
   const login = mode === "login";
@@ -185,7 +189,7 @@ export function Auth({
       method: "POST",
       body: JSON.stringify({ idToken }),
     })
-      .then((result) => onAuth(result.access_token, result.user))
+      .then((result) => onAuth(result.access_token, result.user, true))
       .catch((reason) =>
         setError(
           reason instanceof Error
@@ -278,7 +282,8 @@ export function Auth({
               },
         ),
       });
-      onAuth(result.access_token, result.user);
+      // Signing up always persists; only the login form offers the choice.
+      onAuth(result.access_token, result.user, login ? remember : true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to continue");
     } finally {

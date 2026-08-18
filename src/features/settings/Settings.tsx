@@ -16,6 +16,7 @@ import { LanguageToggle, useI18n } from "../../i18n";
 import { api } from "../../services/api";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
+import type { Me } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 
 type Prefs = {
@@ -108,7 +109,7 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<any>("/api/me")
+    api<Me>("/api/me")
       .then((me) => {
         const p = me?.notificationPrefs ?? {};
         setEmail(me?.email ?? "");

@@ -13,14 +13,16 @@
 | Framework | Expo SDK 54 · React Native 0.81 · React 19 |
 | Routing | state machine เขียนเองใน [`App.tsx`](./App.tsx) (ไม่ได้ใช้ expo-router / react-navigation) |
 | UI | `StyleSheet` เอง ([`src/theme/`](./src/theme)) · ไอคอน `lucide-react-native` · `expo-linear-gradient` |
-| ฟอนต์ | `@expo-google-fonts/noto-sans-thai` (ตั้งเป็น default ให้ `Text`/`TextInput` ใน `App.tsx`) |
+| ฟอนต์ | `@expo-google-fonts/noto-serif-thai` — กำหนดผ่านคอมโพเนนต์ `<Txt>` ไม่ได้ใช้ `defaultProps` (React 19 เลิกรองรับแล้ว) |
 | ภาษา | i18n TH/EN เขียนเอง ([`src/i18n.tsx`](./src/i18n.tsx)) |
 | State/Data | REST (`fetch`) · `appState` object กลางใน [`src/services/api.ts`](./src/services/api.ts) |
-| Auth | JWT เก็บใน `AsyncStorage` (key `roomie_token`) · Google login ผ่าน `expo-auth-session` |
+| Auth | JWT เก็บใน Keychain/Keystore ผ่าน `expo-secure-store` (key `roomie_token`) · Google login ผ่าน `expo-auth-session` |
 | Media/Push | `expo-image-picker` · `expo-notifications` (Expo push token) |
+| คุณภาพ | `npm run typecheck` · `npm run lint` (eslint-config-expo) · `npm test` (jest-expo, 53 เทสต์) |
 
-> ⚠️ **แชทยังไม่ใช่ realtime** — [`src/screens/messaging.tsx`](./src/screens/messaging.tsx) ดึงข้อความใหม่ด้วย
-> `setInterval` ทุก 4 วินาที ยังไม่มี Socket.IO ทั้งฝั่ง client และ server
+> ⚠️ **แชทยังไม่ใช่ realtime** — [`src/features/messaging/Chat.tsx`](./src/features/messaging/Chat.tsx)
+> ดึงข้อความใหม่ด้วย `setInterval` ทุก 4 วินาที (หยุดเมื่อแอปลงพื้นหลัง) ยังไม่มี WebSocket ทั้งสองฝั่ง
+> — แต่สถานะอ่านแล้วและตัวนับข้อความใหม่ทำงานจริงแล้ว
 
 ## เริ่มต้นใช้งาน
 
@@ -41,7 +43,9 @@ npm start
 base URL อ่านจาก [`src/services/api.ts`](./src/services/api.ts) ตามลำดับ:
 
 1. `EXPO_PUBLIC_API_URL` (จาก `.env`) — ทางที่ควรใช้
-2. ถ้าไม่ตั้ง จะ fallback เป็นค่า hardcode ในไฟล์ — Android → `http://192.168.1.237:18888`, อื่น ๆ → `http://localhost:18888`
+2. ถ้าไม่ตั้ง จะเดาจาก Expo dev server ที่โหลดแอปมา (`Constants.expoConfig.hostUri`) แล้วต่อพอร์ต `18888`
+   — มือถือจริงจึงหา backend บนเครื่อง dev เจอเองโดยไม่ต้อง hardcode IP
+3. สุดท้ายจริง ๆ ถึงจะ fallback เป็น `http://localhost:18888`
 
 **ทดสอบบนมือถือจริง** ต้องใช้ LAN IP ของเครื่อง dev (ไม่ใช่ `localhost`):
 
@@ -69,9 +73,12 @@ EXPO_PUBLIC_API_URL="http://<LAN-IP>:18888" npm start
 - **auto-login**: มี token ค้างอยู่ → เรียก `GET /api/me` ตอนเปิดแอปแล้วเข้า feed/basics เลย
 - Splash + Welcome 1–3 แสดง **ครั้งแรกครั้งเดียว** (flag `has_seen_onboarding` ใน AsyncStorage)
 - ตั้งค่าโปรไฟล์ (ข้อมูลพื้นฐาน + หอพัก/การศึกษา) · อัปโหลดรูปโปรไฟล์จริง
-- แบบสอบถามไลฟ์สไตล์ 6 หมวด (`q1`–`q6`) → คะแนนความเข้ากันได้
+- แบบสอบถามไลฟ์สไตล์ 4 หมวด (`q1`–`q4`) → คะแนนความเข้ากันได้ที่คำนวณจากคำตอบจริง
+  พร้อมรายละเอียดรายหมวด ("ทำไมถึง X%") · ยังไม่ได้ทำแบบสอบถาม = ไม่มีคะแนน (ไม่ใช่ตัวเลขมั่ว)
 - ค้นหาแบบปัดการ์ด (swipe) + ตัวกรอง · จับคู่เมื่อสนใจกันทั้งคู่
-- แชท (polling), การแจ้งเตือน, ค้นหาผู้ใช้, บล็อก/รายงาน, ลบบัญชีถาวร
+- แชท (polling) พร้อมสถานะอ่านแล้วและตัวนับข้อความใหม่ · การแจ้งเตือน (in-app + push)
+- ค้นหาผู้ใช้, บล็อก/รายงาน (บล็อกแล้วยกเลิก match และซ่อนห้องแชทให้ทันที), ลบบัญชีถาวร
+- ยืนยันบัตรนักศึกษา (ไม่บังคับ — ยืนยันแล้วได้ตราสัญลักษณ์บนการ์ด)
 
 **แอดมิน** (หน้า login เดียวกัน) — แดชบอร์ดสถิติ, จัดการสมาชิก, ตั้งค่าระบบ
 
@@ -104,7 +111,8 @@ src/
     auth/                 # Auth (login/signup/forgot) + password-strength.ts
                           # + components/AuthField, AuthButton
     profile/              # Basics (ตั้งค่าโปรไฟล์), MyProfile, Profile, Notifications, Report
-    questionnaire/        # Intro, Question (q1–q6), Summary + questionnaire.content.ts (คำแปล)
+    questionnaire/        # Intro, Question (q1–q4), Summary + questionnaire.content.ts
+                          # (ตัวเลือก + การแปลงคำตอบไป-กลับกับ API — ลำดับกลุ่มคือสัญญากับ backend)
     discovery/            # Feed, Filters, Matches, Match, Requests
     messaging/            # Messages, Chat
     settings/             # Settings, SearchUsers, BlockedUsers
@@ -133,7 +141,10 @@ npm run android          # Android (expo run:android)
 npm run ios              # iOS ผ่าน Expo Go บน LAN
 npm run ios:tunnel       # iOS ผ่าน tunnel (เมื่อ LAN ใช้ไม่ได้)
 npx expo start --clear   # ล้าง Metro cache (เมื่อเพิ่ม dependency ใหม่)
-npx tsc --noEmit         # typecheck
+
+npm run typecheck        # tsc --noEmit (ให้ stack ใหญ่พอ ไม่งั้น tsc crash บนโปรเจกต์นี้)
+npm run lint             # eslint
+npm test                 # jest
 ```
 
 > เอกสาร Expo ของเวอร์ชันนี้: <https://docs.expo.dev/versions/v54.0.0/>

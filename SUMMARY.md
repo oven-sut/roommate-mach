@@ -1,5 +1,10 @@
 # 🚀 Roommate Match - Summary of Development & Improvements
 
+> **บันทึกของรอบพัฒนา 28 ก.ค. 2026 — ไม่ใช่สถานะปัจจุบัน**
+> ตั้งแต่นั้นมาโครงสร้างเปลี่ยนไปพอสมควร (แยกไฟล์ตาม feature, ออกแบบ UI ใหม่,
+> แบบสอบถามเหลือ 4 หมวด, token ย้ายไปเก็บใน Keychain) ดูสถานะล่าสุดที่
+> [`TASKS.md`](./TASKS.md) และ [`README.md`](./README.md)
+
 **Project Name**: Roommate Match (`roommate-mach`)  
 **Developer**: Sitthisak Phaisanphiphak (`b6824310@g.sut.ac.th`)  
 **Date**: July 28, 2026  
