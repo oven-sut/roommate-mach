@@ -87,7 +87,7 @@ EXPO_PUBLIC_API_URL="http://<LAN-IP>:18888" npm start
 ### บนเครื่อง (เร็วกว่า ไม่ต้องรอคิว)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scriptsuild-apk.ps1
+powershell -ExecutionPolicy Bypass -File scripts\build-apk.ps1
 ```
 
 ได้ไฟล์ที่ `build/roommate-match-v<version>.apk` ติดตั้งด้วย `adb install -r <ไฟล์>`
@@ -95,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File scriptsuild-apk.ps1
 
 ต้องมี **JDK 17+** (Android Studio มีมาให้ที่ `jbr`) และ **Android SDK**
 
-> สคริปต์ build จากโฟลเดอร์ชั่วคราว `C:m` เพราะขั้นตอน build C++ เขียนชื่อไฟล์
+> สคริปต์ build จากโฟลเดอร์ชั่วคราว `C:\rm` เพราะขั้นตอน build C++ เขียนชื่อไฟล์
 > ที่มี path เต็มอยู่ข้างใน แล้วยาวเกิน 260 ตัวอักษรของ Windows — build ในที่เดิมจะพัง
 > ที่ `ninja: Filename longer than 260 characters` (ใช้ `subst` แทนไม่ได้ เพราะ
 > autolinking ของ Expo หา `package.json` ผ่าน subst drive ไม่เจอ)
