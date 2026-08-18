@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-import type { MatchProfile, ProfileDraft } from "../types/models";
+import type { ApiProfile, MatchProfile, ProfileDraft } from "../types/models";
 import { secureStorage } from "./secureStorage";
 
 /** Port the backend listens on in development (see roommate-mach-be/.env). */
@@ -57,6 +57,8 @@ export function formatImageUri(uri?: string): string {
 }
 
 let accessToken: string | null = null;
+/** Set once per expired session so the sign-out only happens once. */
+let sessionExpiredFired = false;
 
 export async function initAuthToken(): Promise<string | null> {
   accessToken = await secureStorage.get(TOKEN_KEY);
@@ -75,10 +77,22 @@ export async function initAuthToken(): Promise<string | null> {
   return accessToken;
 }
 
-export function saveToken(token: string | null) {
+/**
+ * Stores the bearer token for this session.
+ *
+ * `persist` is what the "Remember me" checkbox controls: with it off the token
+ * lives in memory only, so closing the app signs the student out - which is the
+ * point of the checkbox on a shared or borrowed phone.
+ */
+export function saveToken(token: string | null, persist = true) {
   accessToken = token;
-  if (token) void secureStorage.set(TOKEN_KEY, token);
-  else void secureStorage.remove(TOKEN_KEY);
+  if (token) {
+    sessionExpiredFired = false;
+    if (persist) void secureStorage.set(TOKEN_KEY, token);
+    else void secureStorage.remove(TOKEN_KEY);
+  } else {
+    void secureStorage.remove(TOKEN_KEY);
+  }
 }
 
 export async function hasSeenOnboarding(): Promise<boolean> {
@@ -98,6 +112,30 @@ export async function setHasSeenOnboarding(seen = true): Promise<void> {
   }
 }
 
+type SessionExpiredHandler = () => void;
+
+let onSessionExpired: SessionExpiredHandler | null = null;
+
+/**
+ * Registers what to do when the server rejects our token.
+ *
+ * Screens poll (chat every few seconds), so an expired token would otherwise
+ * produce a stream of identical error alerts and no way back to the login
+ * screen. The handler runs once per expiry; the guard below re-arms only after
+ * a new token is stored.
+ */
+export function setSessionExpiredHandler(handler: SessionExpiredHandler | null) {
+  onSessionExpired = handler;
+}
+
+function handleUnauthorized() {
+  if (sessionExpiredFired) return;
+  sessionExpiredFired = true;
+  saveToken(null);
+  resetAppState();
+  onSessionExpired?.();
+}
+
 /**
  * Calls the API with the stored bearer token attached.
  *
@@ -105,7 +143,7 @@ export async function setHasSeenOnboarding(seen = true): Promise<void> {
  * gives up after `REQUEST_TIMEOUT_MS` rather than leaving a spinner running
  * forever on a flaky connection.
  */
-export async function api<T = any>(
+export async function api<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -134,6 +172,10 @@ export async function api<T = any>(
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    // Anything but the sign-in call itself: a 401 means the session is over.
+    if (response.status === 401 && !path.startsWith("/auth/")) {
+      handleUnauthorized();
+    }
     throw new Error(
       Array.isArray(data.message)
         ? data.message[0]
@@ -208,9 +250,15 @@ export function resetAppState() {
   };
 }
 
-export function populateProfileDraft(me: any) {
+/** The fields of `/api/me` that seed the local profile draft. */
+type ProfileSource = {
+  displayName?: string;
+  profile?: ApiProfile | null;
+};
+
+export function populateProfileDraft(me: ProfileSource | null | undefined) {
   if (!me) return;
-  const p = me.profile || {};
+  const p = me.profile ?? {};
   const draft = appState.profileDraft;
 
   appState.profileDraft = {

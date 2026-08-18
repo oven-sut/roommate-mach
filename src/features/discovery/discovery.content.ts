@@ -71,7 +71,7 @@ export function cardTags(person: MatchProfile | null | undefined): string[] {
 }
 
 export function isVerified(person: MatchProfile | null | undefined): boolean {
-  return person?.verification?.status === "APPROVED";
+  return person?.verification?.status === "VERIFIED";
 }
 
 /** "matched 2 h ago" — coarse on purpose; exact times add no value here. */

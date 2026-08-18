@@ -18,6 +18,7 @@ import { api, appState, populateProfileDraft } from "../../services/api";
 import { C, G } from "../../theme/colors";
 import { GUTTER, MAX_WIDTH, NAV_HEIGHT, s } from "../../theme/styles";
 import { F } from "../../theme/typography";
+import type { Me } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 import { fromApiAnswers } from "../questionnaire/questionnaire.content";
 import { MAJOR_OPTIONS, labelFor } from "./profile.content";
@@ -78,11 +79,12 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
 
   const load = useCallback(async () => {
     try {
-      const me = await api<any>("/api/me");
+      const me = await api<Me>("/api/me");
       populateProfileDraft(me);
-      setVerified(me?.verification?.status === "APPROVED");
-      if (typeof me?.profile?.discoverable === "boolean") {
-        setDiscoverable(me.profile.discoverable);
+      setVerified(me?.verification?.status === "VERIFIED");
+      // `discoverable` lives on the account, not inside the profile.
+      if (typeof me?.discoverable === "boolean") {
+        setDiscoverable(me.discoverable);
       }
       rerender((x) => x + 1);
     } catch {
@@ -240,6 +242,13 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
               subtitle={t("basicsBioSub")}
               onPress={() => go("basics")}
             />
+            {verified ? null : (
+              <NavRow
+                title={t("verifyRow")}
+                subtitle={t("verifyRowSub")}
+                onPress={() => go("verify")}
+              />
+            )}
 
             {/* Questionnaire */}
             <View

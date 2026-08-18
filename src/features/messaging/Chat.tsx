@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AppState,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -102,6 +103,17 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
         `/api/conversations/${conversationId}/messages`,
       );
       setMessages(data ?? []);
+
+      // Looking at the thread is what "read" means; clearing the badge here
+      // keeps the inbox count honest and gives the sender their read tick.
+      const hasUnread = (data ?? []).some(
+        (message) => message.senderId !== appState.currentUserId && !message.readAt,
+      );
+      if (hasUnread) {
+        await api(`/api/conversations/${conversationId}/read`, {
+          method: "PATCH",
+        }).catch(() => undefined);
+      }
     } catch {
       // A dropped poll is not worth interrupting the thread for.
     }
@@ -109,8 +121,22 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
+    let timer = setInterval(load, POLL_INTERVAL_MS);
+
+    // Polling a thread nobody is looking at wastes the phone's battery and the
+    // server's time, so it stops while the app is backgrounded.
+    const subscription = AppState.addEventListener("change", (state) => {
+      clearInterval(timer);
+      if (state === "active") {
+        load();
+        timer = setInterval(load, POLL_INTERVAL_MS);
+      }
+    });
+
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
   }, [load]);
 
   const send = async () => {
