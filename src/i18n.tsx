@@ -169,6 +169,17 @@ const dict: Dict = {
   perfect: { en: "Perfect", th: "ยอดเยี่ยม" },
   sutIdHint: { en: "B67xxxxx", th: "B67xxxxx" },
   otpVerified: { en: "Code verified", th: "ยืนยันรหัสแล้ว" },
+  addPhoto: { en: "Add photo", th: "เพิ่มรูปภาพ" },
+  addPhotoHow: {
+    en: "Take a new photo or choose one you already have",
+    th: "ถ่ายรูปใหม่ หรือเลือกจากรูปที่มีอยู่",
+  },
+  takePhoto: { en: "Take photo", th: "ถ่ายรูป" },
+  chooseFromLibrary: { en: "Choose from library", th: "เลือกจากคลังรูป" },
+  cameraDenied: {
+    en: "Camera access is off. Turn it on in Settings to take a photo.",
+    th: "ยังไม่ได้อนุญาตให้ใช้กล้อง เปิดสิทธิ์ในการตั้งค่าเพื่อถ่ายรูป",
+  },
   otpLabel: { en: "Verification code", th: "รหัสยืนยัน" },
   otpPlaceholder: { en: "Code from your email", th: "รหัสจากอีเมล" },
   otpSentTo: { en: "We sent a code to", th: "ส่งรหัสไปที่" },

@@ -7,11 +7,9 @@ import { useI18n } from "../../i18n";
 import { api, appState, formatImageUri, populateProfileDraft } from "../../services/api";
 import { toImageDataUri } from "../../services/media";
 import { OptionPicker } from "../../components/OptionPicker";
-import { Segmented } from "../../components/Segmented";
 import {
   Button,
   Chevron,
-  Chip,
   Field,
   MotionPressable,
   ScreenShell,
@@ -134,7 +132,9 @@ function PhotoSlot({
 export function Basics({ go }: { go: (x: Screen) => void }) {
   const { t, language } = useI18n();
   const [, rerender] = useState(0);
-  const [picker, setPicker] = useState<"gender" | "major" | null>(null);
+  const [picker, setPicker] = useState<
+    "gender" | "major" | "roomType" | "propertyType" | "roommateGender" | null
+  >(null);
   const [saving, setSaving] = useState(false);
 
   const draft = appState.profileDraft;
@@ -153,19 +153,59 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
     };
   }, []);
 
+  /** Pairs a stored value list with its translation keys for a picker. */
+  const optionsOf = (values: readonly string[], keys: readonly string[]) =>
+    values.map((value, i) => ({ value, label: t(keys[i]) }));
+
+  /** The translated label for a stored value, or "" so the placeholder shows. */
+  const labelOf = (
+    values: readonly string[],
+    keys: readonly string[],
+    current?: string,
+  ) => {
+    const index = values.indexOf(current ?? "");
+    return index === -1 ? "" : t(keys[index]);
+  };
+
   const set = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
     appState.profileDraft[key] = value;
     rerender((x) => x + 1);
   };
 
-  const changePhoto = async (index: number) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
+  /** Ask first, because a photo can come from the camera or the library. */
+  const changePhoto = (index: number) => {
+    Alert.alert(t("addPhoto"), t("addPhotoHow"), [
+      { text: t("takePhoto"), onPress: () => void pickPhoto(index, "camera") },
+      {
+        text: t("chooseFromLibrary"),
+        onPress: () => void pickPhoto(index, "library"),
+      },
+      { text: t("cancel"), style: "cancel" },
+    ]);
+  };
+
+  const pickPhoto = async (index: number, source: "camera" | "library") => {
+    const options: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
       quality: 0.6,
       base64: true,
       allowsEditing: true,
       aspect: [1, 1],
-    });
+    };
+
+    // The library uses the system picker and needs no grant; the camera does.
+    if (source === "camera") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(t("addPhoto"), t("cameraDenied"));
+        return;
+      }
+    }
+
+    const result =
+      source === "camera"
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
     if (result.canceled || !result.assets?.[0]) return;
 
     const picked = toImageDataUri(result.assets[0]);
@@ -295,45 +335,33 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
             multiline
           />
 
-          <View style={{ gap: 10 }}>
-            <Txt role="label">{t("roomType")}</Txt>
-            <Segmented
-              options={ROOM_TYPES.map((value, i) => ({
-                value,
-                label: t(ROOM_TYPE_KEYS[i]),
-              }))}
-              value={draft.roomType}
-              onChange={(v) => set("roomType", v)}
-            />
-          </View>
+          <Field
+            label={t("roomType")}
+            placeholder={t("roomType")}
+            value={labelOf(ROOM_TYPES, ROOM_TYPE_KEYS, draft.roomType)}
+            onPress={() => setPicker("roomType")}
+            right={<Chevron direction="down" size={8} />}
+          />
 
-          <View style={{ gap: 10 }}>
-            <Txt role="label">{t("propertyType")}</Txt>
-            <Segmented
-              size="sm"
-              options={PROPERTY_TYPES.map((value, i) => ({
-                value,
-                label: t(PROPERTY_TYPE_KEYS[i]),
-              }))}
-              value={draft.propertyType}
-              onChange={(v) => set("propertyType", v)}
-            />
-          </View>
+          <Field
+            label={t("propertyType")}
+            placeholder={t("propertyType")}
+            value={labelOf(PROPERTY_TYPES, PROPERTY_TYPE_KEYS, draft.propertyType)}
+            onPress={() => setPicker("propertyType")}
+            right={<Chevron direction="down" size={8} />}
+          />
 
-          <View style={{ gap: 12 }}>
-            <Txt role="label">{t("roommateGenderPref")}</Txt>
-            <View style={s.wrap}>
-              {ROOMMATE_GENDERS.map((value, i) => (
-                <Chip
-                  key={value}
-                  active={draft.roommateGender === value}
-                  onPress={() => set("roommateGender", value)}
-                >
-                  {t(ROOMMATE_GENDER_KEYS[i])}
-                </Chip>
-              ))}
-            </View>
-          </View>
+          <Field
+            label={t("roommateGenderPref")}
+            placeholder={t("roommateGenderPref")}
+            value={labelOf(
+              ROOMMATE_GENDERS,
+              ROOMMATE_GENDER_KEYS,
+              draft.roommateGender,
+            )}
+            onPress={() => setPicker("roommateGender")}
+            right={<Chevron direction="down" size={8} />}
+          />
 
           <Button onPress={save} loading={saving} style={{ marginTop: 14 }}>
             {t("continue")}
@@ -370,6 +398,30 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
         }))}
         value={draft.gender}
         onSelect={(v) => set("gender", v)}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPicker
+        visible={picker === "roomType"}
+        title={t("roomType")}
+        options={optionsOf(ROOM_TYPES, ROOM_TYPE_KEYS)}
+        value={draft.roomType}
+        onSelect={(v) => set("roomType", v)}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPicker
+        visible={picker === "propertyType"}
+        title={t("propertyType")}
+        options={optionsOf(PROPERTY_TYPES, PROPERTY_TYPE_KEYS)}
+        value={draft.propertyType}
+        onSelect={(v) => set("propertyType", v)}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPicker
+        visible={picker === "roommateGender"}
+        title={t("roommateGenderPref")}
+        options={optionsOf(ROOMMATE_GENDERS, ROOMMATE_GENDER_KEYS)}
+        value={draft.roommateGender}
+        onSelect={(v) => set("roommateGender", v)}
         onClose={() => setPicker(null)}
       />
     </>
