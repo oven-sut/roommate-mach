@@ -170,7 +170,7 @@ const dict: Dict = {
   sutIdHint: { en: "B67xxxxx", th: "B67xxxxx" },
   otpVerified: { en: "Code verified", th: "ยืนยันรหัสแล้ว" },
   otpLabel: { en: "Verification code", th: "รหัสยืนยัน" },
-  otpPlaceholder: { en: "6-digit code", th: "รหัส 6 หลัก" },
+  otpPlaceholder: { en: "Code from your email", th: "รหัสจากอีเมล" },
   otpSentTo: { en: "We sent a code to", th: "ส่งรหัสไปที่" },
   sendCode: { en: "Send verification code", th: "ส่งรหัสยืนยัน" },
   verifyAndRegister: { en: "Verify and create account", th: "ยืนยันและสร้างบัญชี" },

@@ -103,6 +103,8 @@ function StrengthMeter({
  */
 /** Seconds before another code can be requested; matches the server. */
 const RESEND_SECONDS = 60;
+/** Longest verification code Supabase can be configured to send. */
+const OTP_MAX_LENGTH = 10;
 
 export function Auth({
   mode,
@@ -486,7 +488,9 @@ export function Auth({
                   onChangeText={setOtp}
                   keyboardType="number-pad"
                   autoCapitalize="none"
-                  maxLength={6}
+                  // Supabase's OTP length is configurable from 6 to 10 digits,
+                  // so the field caps at the maximum rather than assuming one.
+                  maxLength={OTP_MAX_LENGTH}
                 />
                 <Txt role="small" style={{ color: C.muted }}>
                   {t("otpSentTo")} {email}
