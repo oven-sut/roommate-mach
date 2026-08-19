@@ -65,3 +65,28 @@ export const ROOMMATE_GENDER_KEYS = [
 export function labelFor(options: Option[], value: string, language: Language) {
   return options.find((o) => o.value === value)?.label[language] ?? value;
 }
+
+/** Years a student can be in. The API accepts 1-8. */
+export const YEARS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+
+/**
+ * Where on or around campus someone wants to live.
+ *
+ * Values are stored as written, so they must stay stable once students have
+ * saved them - the discover card and any future zone filter compare on these.
+ */
+export const ZONES = [
+  "Gate 1",
+  "Gate 2",
+  "Gate 3",
+  "Gate 4",
+  "Off-campus",
+] as const;
+
+export const ZONE_KEYS = [
+  "zoneGate1",
+  "zoneGate2",
+  "zoneGate3",
+  "zoneGate4",
+  "zoneOffCampus",
+] as const;

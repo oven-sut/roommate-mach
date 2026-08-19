@@ -21,7 +21,18 @@ import { F } from "../../theme/typography";
 import type { Me } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 import { fromApiAnswers } from "../questionnaire/questionnaire.content";
-import { MAJOR_OPTIONS, labelFor } from "./profile.content";
+import {
+  MAJOR_OPTIONS,
+  PROPERTY_TYPES,
+  PROPERTY_TYPE_KEYS,
+  ROOMMATE_GENDERS,
+  ROOMMATE_GENDER_KEYS,
+  ROOM_TYPES,
+  ROOM_TYPE_KEYS,
+  ZONES,
+  ZONE_KEYS,
+  labelFor,
+} from "./profile.content";
 
 /** Tappable settings-style row with a title, subtitle and chevron. */
 function NavRow({
@@ -76,6 +87,36 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
   const [verified, setVerified] = useState(false);
 
   const draft = appState.profileDraft;
+
+  /** The translated label for a stored value, or "" when it is unset. */
+  const labelOf = (
+    values: readonly string[],
+    keys: readonly string[],
+    current?: string,
+  ) => {
+    const index = values.indexOf(current ?? "");
+    return index === -1 ? "" : t(keys[index]);
+  };
+
+  const budget =
+    draft.budgetMin && draft.budgetMax
+      ? `${draft.budgetMin.toLocaleString("en-US")} - ${draft.budgetMax.toLocaleString("en-US")}`
+      : "";
+
+  const HOUSING_ROWS = [
+    { key: "roomType", value: labelOf(ROOM_TYPES, ROOM_TYPE_KEYS, draft.roomType) },
+    {
+      key: "propertyType",
+      value: labelOf(PROPERTY_TYPES, PROPERTY_TYPE_KEYS, draft.propertyType),
+    },
+    {
+      key: "roommateGenderPref",
+      value: labelOf(ROOMMATE_GENDERS, ROOMMATE_GENDER_KEYS, draft.roommateGender),
+    },
+    { key: "preferredZone", value: labelOf(ZONES, ZONE_KEYS, draft.zone) },
+    { key: "monthlyBudget", value: budget },
+  ];
+
 
   const load = useCallback(async () => {
     try {
@@ -249,6 +290,33 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
                 onPress={() => go("verify")}
               />
             )}
+
+            {/* Housing preferences: filled in on "About you", shown here so
+                the answers are visible without reopening the form. */}
+            <View style={s.card}>
+              <View style={s.rowBetween}>
+                <Txt role="h3" style={{ fontSize: 17 }}>
+                  {t("housingPrefs")}
+                </Txt>
+                <MotionPressable onPress={() => go("basics")} hitSlop={10}>
+                  <Txt role="link" style={{ fontSize: 14 }}>
+                    {t("edit")}
+                  </Txt>
+                </MotionPressable>
+              </View>
+              {HOUSING_ROWS.map(({ key, value }) => (
+                <View key={key} style={s.rowBetween}>
+                  <Txt role="small">{t(key)}</Txt>
+                  <Txt
+                    role="body"
+                    style={{ fontSize: 14, maxWidth: "60%" }}
+                    numberOfLines={1}
+                  >
+                    {value || "—"}
+                  </Txt>
+                </View>
+              ))}
+            </View>
 
             {/* Questionnaire */}
             <View

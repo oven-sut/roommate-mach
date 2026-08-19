@@ -79,6 +79,8 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
       : null,
     person.profile?.year ? `${t("year")} ${person.profile.year}` : null,
     person.profile?.roomType ? `${person.profile.roomType} room` : null,
+    person.profile?.propertyType,
+    person.profile?.zone,
     person.profile?.budgetMin && person.profile?.budgetMax
       ? `THB${person.profile.budgetMin.toLocaleString()} - ${person.profile.budgetMax.toLocaleString()}`
       : null,

@@ -7,6 +7,7 @@ import { useI18n } from "../../i18n";
 import { api, appState, formatImageUri, populateProfileDraft } from "../../services/api";
 import { toImageDataUri } from "../../services/media";
 import { OptionPicker } from "../../components/OptionPicker";
+import { RangeSlider } from "../../components/Slider";
 import {
   Button,
   Chevron,
@@ -21,8 +22,16 @@ import { F } from "../../theme/typography";
 import type { ProfileDraft } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 import {
+  BUDGET_MAX,
+  BUDGET_MIN,
+  BUDGET_STEP,
+} from "../discovery/discovery.content";
+import {
   GENDER_OPTIONS,
   MAJOR_OPTIONS,
+  YEARS,
+  ZONES,
+  ZONE_KEYS,
   PROPERTY_TYPES,
   PROPERTY_TYPE_KEYS,
   ROOMMATE_GENDERS,
@@ -133,7 +142,14 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
   const { t, language } = useI18n();
   const [, rerender] = useState(0);
   const [picker, setPicker] = useState<
-    "gender" | "major" | "roomType" | "propertyType" | "roommateGender" | null
+    | "gender"
+    | "major"
+    | "roomType"
+    | "propertyType"
+    | "roommateGender"
+    | "year"
+    | "zone"
+    | null
   >(null);
   const [saving, setSaving] = useState(false);
 
@@ -336,6 +352,14 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
           />
 
           <Field
+            label={t("studyYear")}
+            placeholder={t("chooseYear")}
+            value={draft.year ? `${t("year")} ${draft.year}` : ""}
+            onPress={() => setPicker("year")}
+            right={<Chevron direction="down" size={8} />}
+          />
+
+          <Field
             label={t("roomType")}
             placeholder={t("roomType")}
             value={labelOf(ROOM_TYPES, ROOM_TYPE_KEYS, draft.roomType)}
@@ -362,6 +386,43 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
             onPress={() => setPicker("roommateGender")}
             right={<Chevron direction="down" size={8} />}
           />
+
+          <Field
+            label={t("preferredZone")}
+            placeholder={t("chooseZone")}
+            value={labelOf(ZONES, ZONE_KEYS, draft.zone)}
+            onPress={() => setPicker("zone")}
+            right={<Chevron direction="down" size={8} />}
+          />
+
+          <View style={[s.card, { gap: 0 }]}>
+            <View style={s.rowBetween}>
+              <Txt role="h3" style={{ fontSize: 15 }}>
+                {t("monthlyBudget")}
+              </Txt>
+              <Txt style={{ fontFamily: F.bold, fontSize: 14, color: C.ink }}>
+                {draft.budgetMin.toLocaleString("en-US")} -{" "}
+                {draft.budgetMax.toLocaleString("en-US")}
+              </Txt>
+            </View>
+            <RangeSlider
+              min={BUDGET_MIN}
+              max={BUDGET_MAX}
+              step={BUDGET_STEP}
+              low={draft.budgetMin}
+              high={draft.budgetMax}
+              onChange={(low, high) => {
+                appState.profileDraft.budgetMin = low;
+                appState.profileDraft.budgetMax = high;
+                rerender((x) => x + 1);
+              }}
+              labels={[
+                BUDGET_MIN.toLocaleString("en-US"),
+                BUDGET_MAX.toLocaleString("en-US"),
+              ]}
+            />
+            <Txt role="small">{t("budgetHint")}</Txt>
+          </View>
 
           <Button onPress={save} loading={saving} style={{ marginTop: 14 }}>
             {t("continue")}
@@ -414,6 +475,25 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
         options={optionsOf(PROPERTY_TYPES, PROPERTY_TYPE_KEYS)}
         value={draft.propertyType}
         onSelect={(v) => set("propertyType", v)}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPicker
+        visible={picker === "year"}
+        title={t("studyYear")}
+        options={YEARS.map((y) => ({
+          value: String(y),
+          label: `${t("year")} ${y}`,
+        }))}
+        value={String(draft.year ?? "")}
+        onSelect={(v) => set("year", Number(v))}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPicker
+        visible={picker === "zone"}
+        title={t("preferredZone")}
+        options={optionsOf(ZONES, ZONE_KEYS)}
+        value={draft.zone}
+        onSelect={(v) => set("zone", v)}
         onClose={() => setPicker(null)}
       />
       <OptionPicker
