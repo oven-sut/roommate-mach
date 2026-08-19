@@ -192,6 +192,7 @@ export function Field({
   keyboardType,
   autoCapitalize,
   multiline,
+  maxLength,
   editable = true,
   right,
   error,
@@ -206,6 +207,8 @@ export function Field({
   keyboardType?: React.ComponentProps<typeof TextInput>["keyboardType"];
   autoCapitalize?: React.ComponentProps<typeof TextInput>["autoCapitalize"];
   multiline?: boolean;
+  /** Caps the input length, e.g. a fixed-length verification code. */
+  maxLength?: number;
   editable?: boolean;
   /** Trailing adornment rendered inside the input frame. */
   right?: React.ReactNode;
@@ -236,6 +239,7 @@ export function Field({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         multiline={multiline}
+        maxLength={maxLength}
         editable={editable && !onPress}
         pointerEvents={onPress ? "none" : "auto"}
         onFocus={() => setFocused(true)}

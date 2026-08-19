@@ -101,6 +101,9 @@ function StrengthMeter({
  * `<id>@g.sut.ac.th` before it leaves the screen (a full address typed in is
  * passed through untouched).
  */
+/** Seconds before another code can be requested; matches the server. */
+const RESEND_SECONDS = 60;
+
 export function Auth({
   mode,
   go,
@@ -125,6 +128,11 @@ export function Auth({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  /** Sign-up only: the address must pass an emailed code before the account
+   *  can be created, so the form gains a second step once the code is sent. */
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [countdown, setCountdown] = useState(0);
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -200,6 +208,17 @@ export function Auth({
       .finally(() => setGoogleBusy(false));
   }, [googleResponse, onAuth]);
 
+  // Counts down the wait before another code can be asked for. The server
+  // enforces this too; showing it stops people tapping into a refusal.
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(
+      () => setCountdown((seconds) => Math.max(0, seconds - 1)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [countdown]);
+
   /** Debounced availability check so the user is not told at submit time. */
   useEffect(() => {
     if (mode !== "signup" || !sutId.trim()) {
@@ -266,6 +285,26 @@ export function Auth({
           throw new Error("Please accept the Terms and Privacy Policy");
       }
 
+      // Registering is two steps: the address has to prove it belongs to the
+      // person signing up before an account exists for it.
+      if (!login && !otpSent) {
+        await api("/auth/send-otp", {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        });
+        setOtpSent(true);
+        setCountdown(RESEND_SECONDS);
+        return;
+      }
+
+      if (!login) {
+        if (!otp.trim()) throw new Error("Please enter the code sent to your email");
+        await api("/auth/verify-otp", {
+          method: "POST",
+          body: JSON.stringify({ email, otp: otp.trim() }),
+        });
+      }
+
       const result = await api<{
         access_token: string;
         user: AuthenticatedUser;
@@ -286,6 +325,22 @@ export function Auth({
       onAuth(result.access_token, result.user, login ? remember : true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to continue");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    try {
+      setBusy(true);
+      setError("");
+      await api("/auth/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setCountdown(RESEND_SECONDS);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to send the code");
     } finally {
       setBusy(false);
     }
@@ -422,6 +477,35 @@ export function Auth({
                   <Txt role="link">{t("forgotPassword")}</Txt>
                 </MotionPressable>
               </View>
+            ) : otpSent ? (
+              <View style={{ gap: 10 }}>
+                <Field
+                  label={t("otpLabel")}
+                  placeholder={t("otpPlaceholder")}
+                  value={otp}
+                  onChangeText={setOtp}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                  maxLength={6}
+                />
+                <Txt role="small" style={{ color: C.muted }}>
+                  {t("otpSentTo")} {email}
+                </Txt>
+                <MotionPressable
+                  onPress={resendOtp}
+                  disabled={countdown > 0 || busy}
+                  hitSlop={10}
+                >
+                  <Txt
+                    role="link"
+                    style={countdown > 0 ? { color: C.muted } : undefined}
+                  >
+                    {countdown > 0
+                      ? `${t("resendIn")} ${countdown}s`
+                      : t("resendCode")}
+                  </Txt>
+                </MotionPressable>
+              </View>
             ) : (
               <View style={[s.row, { gap: 12, alignItems: "flex-start" }]}>
                 <Checkbox value={accepted} onChange={setAccepted} />
@@ -462,7 +546,13 @@ export function Auth({
             ) : null}
 
             <Button onPress={submit} loading={busy} style={{ marginTop: 8 }}>
-              {busy ? t("pleaseWait") : t("continue")}
+              {busy
+                ? t("pleaseWait")
+                : !login && !otpSent
+                  ? t("sendCode")
+                  : !login
+                    ? t("verifyAndRegister")
+                    : t("continue")}
             </Button>
 
             {login ? (

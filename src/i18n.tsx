@@ -169,6 +169,13 @@ const dict: Dict = {
   perfect: { en: "Perfect", th: "ยอดเยี่ยม" },
   sutIdHint: { en: "B67xxxxx", th: "B67xxxxx" },
   otpVerified: { en: "Code verified", th: "ยืนยันรหัสแล้ว" },
+  otpLabel: { en: "Verification code", th: "รหัสยืนยัน" },
+  otpPlaceholder: { en: "6-digit code", th: "รหัส 6 หลัก" },
+  otpSentTo: { en: "We sent a code to", th: "ส่งรหัสไปที่" },
+  sendCode: { en: "Send verification code", th: "ส่งรหัสยืนยัน" },
+  verifyAndRegister: { en: "Verify and create account", th: "ยืนยันและสร้างบัญชี" },
+  resendCode: { en: "Resend code", th: "ส่งรหัสอีกครั้ง" },
+  resendIn: { en: "Resend in", th: "ส่งใหม่ได้ใน" },
 
   /* -------------------------------------------------------------- basics */
   aboutYou: { en: "About you", th: "เกี่ยวกับคุณ" },
