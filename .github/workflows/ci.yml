@@ -1,0 +1,143 @@
+name: CI
+
+# The mobile app's continuous integration pipeline. Lint, types, tests and a
+# real Metro bundle - the four ways this project has actually broken - run on
+# every push to main and every pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22.x'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # A warning left to pile up is a warning nobody reads, so CI treats them
+      # as failures even though the local `npm run lint` does not.
+      - run: npm run lint -- --max-warnings=0
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Run Jest with coverage
+        run: npm run test:cov -- --ci
+      - name: Publish coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-coverage
+          path: coverage/
+          retention-days: 14
+
+  bundle:
+    name: Bundle (expo export)
+    runs-on: ubuntu-latest
+    # Type checking does not catch a broken import path or a missing asset -
+    # only running Metro over the whole graph does.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Export the Android bundle
+        run: npx expo export --platform android --output-dir dist
+      - name: Publish the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-bundle
+          path: dist/
+          retention-days: 7
+
+  eas-build:
+    name: EAS build (manual)
+    # Opt-in: only on a manual run, and only once an EXPO_TOKEN secret exists.
+    # The `secrets` context is not readable from a job-level `if`, so the token
+    # check happens in the first step and the rest of the job skips without it.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [lint, typecheck, unit-tests, bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look for an Expo token
+        id: token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -n "$EXPO_TOKEN" ]; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+            echo 'No EXPO_TOKEN secret is set - skipping the EAS build.'
+          fi
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.token.outputs.present == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        if: steps.token.outputs.present == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - if: steps.token.outputs.present == 'true'
+        run: npm ci
+      - name: Build the Android preview APK
+        if: steps.token.outputs.present == 'true'
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+
+  ci:
+    name: CI passed
+    # The single check to require in branch protection.
+    if: always()
+    needs: [lint, typecheck, unit-tests, bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any upstream job did not succeed
+        run: |
+          echo "lint:       ${{ needs.lint.result }}"
+          echo "typecheck:  ${{ needs.typecheck.result }}"
+          echo "unit-tests: ${{ needs.unit-tests.result }}"
+          echo "bundle:     ${{ needs.bundle.result }}"
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            exit 1
+          fi

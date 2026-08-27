@@ -1,5 +1,7 @@
 # Roommate Match — แอปมือถือ 🏠
 
+[![CI](https://github.com/oven-sut/roommate-mach/actions/workflows/ci.yml/badge.svg)](https://github.com/oven-sut/roommate-mach/actions/workflows/ci.yml)
+
 แอปหาเพื่อนร่วมห้องสำหรับนักศึกษา จับคู่จากไลฟ์สไตล์/งบประมาณ/หอพัก พร้อมแชทในแอป
 สร้างด้วย **Expo SDK 54 · React Native 0.81 · React 19 · TypeScript** — UI ภาษาไทย/อังกฤษ ฟอนต์ Noto Sans Thai ใช้ไอคอน Lucide ทั้งแอป
 
@@ -169,3 +171,10 @@ npm test                 # jest
 ```
 
 > เอกสาร Expo ของเวอร์ชันนี้: <https://docs.expo.dev/versions/v54.0.0/>
+
+---
+
+## CI
+
+ทุก push และทุก PR ผ่าน GitHub Actions: lint → typecheck → unit tests → bundle ด้วย `expo export`
+รายละเอียดทั้งหมด (รวมวิธีเปิด EAS build) อยู่ใน [`docs/ci-pipeline.md`](./docs/ci-pipeline.md)

@@ -47,3 +47,6 @@ client_secret_*.json
 
 # Signing keys - never commit these
 /credentials
+
+# Jest coverage reports
+/coverage

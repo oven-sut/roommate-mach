@@ -35,7 +35,8 @@
     "ios:simulator": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "test:cov": "jest --coverage"
   },
   "private": true,
   "devDependencies": {
