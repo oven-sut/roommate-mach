@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUT Roommate Match - Admin</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <form class="login-card" id="loginForm">
+    <div class="brand-icon-lg">🏠</div>
+    <h2>SUT Roommate Match</h2>
+    <p class="muted">Admin Console</p>
+    <label for="loginEmail">Email</label>
+    <input id="loginEmail" type="email" required value="admin@sut.ac.th">
+    <label for="loginPassword">Password</label>
+    <input id="loginPassword" type="password" required>
+    <div class="login-error" id="loginError"></div>
+    <button type="submit" class="login-btn">Login</button>
+  </form>
+</div>
+
+<!-- APP -->
+<div class="app hidden" id="app-root">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">🏠</div>
+      <div class="brand-text">SUT <span>Roommate Match</span></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-page="dashboard"><span class="ic">▦</span> Dashboard</button>
+      <button class="nav-item" data-page="analytics"><span class="ic">📈</span> Analytics</button>
+      <button class="nav-item" data-page="users"><span class="ic">👥</span> Users</button>
+      <button class="nav-item" data-page="verification"><span class="ic">🛡️</span> Verification</button>
+      <button class="nav-item" data-page="report"><span class="ic">📝</span> Report</button>
+      <button class="nav-item" data-page="setting"><span class="ic">⚙️</span> Setting</button>
+    </nav>
+    <button class="logout">Logout</button>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <h1 id="pageTitle">Admin</h1>
+      <div class="avatar">👤</div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="page" id="page-dashboard">
+      <div class="grid-top">
+        <div class="stat-card stat-primary">
+          <div class="stat-label">Pending Verifications</div>
+          <div class="stat-value" id="statPending">-</div>
+          <div class="bar"><div class="bar-fill" id="pendingBarFill" style="width:0%"></div></div>
+          <div class="bar-labels"><span>0%</span><span>100%</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Matches</div>
+          <div class="stat-value dark" id="statMatched">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Unmatched</div>
+          <div class="stat-value dark" id="statUnmatched">-</div>
+        </div>
+        <div class="calendar-card">
+          <div class="cal-title" id="calTitle">-</div>
+          <div class="cal-row">
+            <span class="cal-arrow">‹</span>
+            <div class="cal-days" id="calDays"></div>
+            <span class="cal-arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-mid">
+        <div class="panel">
+          <h3>Overview</h3>
+          <canvas id="safetyChart" height="140"></canvas>
+        </div>
+        <div class="side-stack">
+          <div class="users-card">
+            <div class="users-count"><span id="usersTotal">-</span> <small>USERS</small></div>
+          </div>
+          <div class="users-icon-card">👥</div>
+        </div>
+      </div>
+
+      <div class="grid-bottom">
+        <div class="panel dark-panel">
+          <h3>Swipe → Match → Talk</h3>
+          <canvas id="swipeChart" height="140"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Funnel Trend</h3>
+          <canvas id="peakChart" height="160"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="page hidden" id="page-analytics">
+      <div class="an-grid">
+        <div class="calendar-card">
+          <div class="cal-title">Overview</div>
+          <p class="muted" style="color:#f3e4e0">Live data from the matching pipeline.</p>
+        </div>
+        <div class="panel radio-panel">
+          <h3>Swipe Funnel</h3>
+          <div class="radio-flex">
+            <canvas id="matchedPie" height="180"></canvas>
+            <canvas id="matchedBar" height="180"></canvas>
+          </div>
+        </div>
+
+        <div class="panel list-panel">
+          <h3>Year Distribution</h3>
+          <ul class="dist-list" id="yearList"></ul>
+        </div>
+        <div class="panel list-panel">
+          <h3>Faculty Distribution</h3>
+          <ul class="dist-list" id="facultyList"></ul>
+        </div>
+
+        <div class="panel wide2">
+          <h3>Lifestyle Match Weights</h3>
+          <div class="lifestyle-flex">
+            <canvas id="lifestyleDonut" height="200"></canvas>
+            <ul class="legend-list">
+              <li><b>A</b> Sleep & Wake</li>
+              <li><b>B</b> Guest</li>
+              <li><b>C</b> Cleanliness</li>
+              <li><b>D</b> Temp & Study</li>
+            </ul>
+            <canvas id="lifestyleBar" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section class="page hidden" id="page-users">
+      <div class="search-bar">
+        <input type="text" id="usersSearch" placeholder="Search with Student ID or name">
+        <button class="filter-btn">☰</button>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Verification</th><th>Faculty & Year</th><th>Email</th><th>Action</th></tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VERIFICATION -->
+    <section class="page hidden" id="page-verification">
+      <div class="search-bar">
+        <input type="text" id="verifySearch" placeholder="Search with Student ID or name">
+        <button class="filter-btn">☰</button>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Verification</th><th>Faculty & Year</th><th>Email</th><th>Action</th></tr>
+          </thead>
+          <tbody id="verifyBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="page hidden" id="page-report">
+      <div class="report-cards">
+        <div class="rcard rcard-red">
+          <div class="rcard-title">-</div>
+          <div class="rcard-sub">Top reason</div>
+          <div class="rcard-bottom"><span>Case <b class="rcard-case-count">0</b></span><span class="rcard-arrow">↗</span></div>
+        </div>
+        <div class="rcard rcard-yellow">
+          <div class="rcard-title">-</div>
+          <div class="rcard-sub">2nd reason</div>
+          <div class="rcard-bottom"><span>Case <b class="rcard-case-count">0</b></span><span class="rcard-arrow">↗</span></div>
+        </div>
+        <div class="rcard rcard-blue">
+          <div class="rcard-title">-</div>
+          <div class="rcard-sub">3rd reason</div>
+          <div class="rcard-bottom"><span>Case <b class="rcard-case-count">0</b></span><span class="rcard-arrow">↗</span></div>
+        </div>
+        <div class="rcard-side">
+          <div class="rcard-allcase">
+            <span>📮 <b id="reportAllCase">0</b> Case</span>
+            <small>All case</small>
+          </div>
+          <div class="rcard-todo">
+            <div class="todo-pill">To Do</div>
+            <div class="todo-case"><b id="reportTodoCount">0</b> Case From <b id="reportTodoTotal">0</b> Case</div>
+            <div class="bar"><div class="bar-fill" id="reportTodoFill" style="width:0%"></div></div>
+            <div class="bar-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="reportSearch" placeholder="Search by reported user name">
+        <button class="filter-btn">☰</button>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Tags</th><th>Date/Time</th><th>Cause</th><th>Action</th></tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SETTING -->
+    <section class="page hidden" id="page-setting">
+      <div class="panel">
+        <h3>Setting</h3>
+        <p class="muted">การตั้งค่าระบบจะแสดงที่นี่</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
