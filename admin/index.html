@@ -4,23 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUT Roommate Match - Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="i18n.js"></script>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div class="login-screen" id="login-screen">
+  <button class="lang-switch lang-switch-login" id="langSwitchLogin" type="button">EN</button>
   <form class="login-card" id="loginForm">
-    <div class="brand-icon-lg">🏠</div>
+    <div class="brand-icon-lg"><i data-lucide="home"></i></div>
     <h2>SUT Roommate Match</h2>
-    <p class="muted">Admin Console</p>
-    <label for="loginEmail">Email</label>
+    <p class="muted" data-i18n="login.subtitle">Admin Console</p>
+    <label for="loginEmail" data-i18n="login.email">Email</label>
     <input id="loginEmail" type="email" required value="admin@sut.ac.th">
-    <label for="loginPassword">Password</label>
+    <label for="loginPassword" data-i18n="login.password">Password</label>
     <input id="loginPassword" type="password" required>
     <div class="login-error" id="loginError"></div>
-    <button type="submit" class="login-btn">Login</button>
+    <button type="submit" class="login-btn" data-i18n="login.submit">Login</button>
   </form>
 </div>
 
@@ -28,73 +34,76 @@
 <div class="app hidden" id="app-root">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-icon">🏠</div>
+      <div class="brand-icon"><i data-lucide="home"></i></div>
       <div class="brand-text">SUT <span>Roommate Match</span></div>
     </div>
     <nav class="nav">
-      <button class="nav-item active" data-page="dashboard"><span class="ic">▦</span> Dashboard</button>
-      <button class="nav-item" data-page="analytics"><span class="ic">📈</span> Analytics</button>
-      <button class="nav-item" data-page="users"><span class="ic">👥</span> Users</button>
-      <button class="nav-item" data-page="verification"><span class="ic">🛡️</span> Verification</button>
-      <button class="nav-item" data-page="report"><span class="ic">📝</span> Report</button>
-      <button class="nav-item" data-page="setting"><span class="ic">⚙️</span> Setting</button>
+      <button class="nav-item active" data-page="dashboard"><span class="ic"><i data-lucide="layout-dashboard"></i></span> <span data-i18n="nav.dashboard">Dashboard</span></button>
+      <button class="nav-item" data-page="analytics"><span class="ic"><i data-lucide="line-chart"></i></span> <span data-i18n="nav.analytics">Analytics</span></button>
+      <button class="nav-item" data-page="users"><span class="ic"><i data-lucide="users"></i></span> <span data-i18n="nav.users">Users</span></button>
+      <button class="nav-item" data-page="verification"><span class="ic"><i data-lucide="shield-check"></i></span> <span data-i18n="nav.verification">Verification</span></button>
+      <button class="nav-item" data-page="report"><span class="ic"><i data-lucide="flag"></i></span> <span data-i18n="nav.report">Report</span></button>
+      <button class="nav-item" data-page="setting"><span class="ic"><i data-lucide="settings"></i></span> <span data-i18n="nav.setting">Setting</span></button>
     </nav>
-    <button class="logout">Logout</button>
+    <button class="logout"><i data-lucide="log-out"></i> <span data-i18n="nav.logout">Logout</span></button>
   </aside>
 
   <main class="content">
     <header class="topbar">
       <h1 id="pageTitle">Admin</h1>
-      <div class="avatar">👤</div>
+      <div class="topbar-right">
+        <button class="lang-switch" id="langSwitch" type="button">EN</button>
+        <div class="avatar"><i data-lucide="user"></i></div>
+      </div>
     </header>
 
     <!-- DASHBOARD -->
     <section class="page" id="page-dashboard">
       <div class="grid-top">
         <div class="stat-card stat-primary">
-          <div class="stat-label">Pending Verifications</div>
+          <div class="stat-label" data-i18n="dashboard.pending">Pending Verifications</div>
           <div class="stat-value" id="statPending">-</div>
           <div class="bar"><div class="bar-fill" id="pendingBarFill" style="width:0%"></div></div>
           <div class="bar-labels"><span>0%</span><span>100%</span></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Active Matches</div>
+          <div class="stat-label" data-i18n="dashboard.activeMatches">Active Matches</div>
           <div class="stat-value dark" id="statMatched">-</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Unmatched</div>
+          <div class="stat-label" data-i18n="dashboard.unmatched">Unmatched</div>
           <div class="stat-value dark" id="statUnmatched">-</div>
         </div>
         <div class="calendar-card">
           <div class="cal-title" id="calTitle">-</div>
           <div class="cal-row">
-            <span class="cal-arrow">‹</span>
+            <span class="cal-arrow"><i data-lucide="chevron-left"></i></span>
             <div class="cal-days" id="calDays"></div>
-            <span class="cal-arrow">›</span>
+            <span class="cal-arrow"><i data-lucide="chevron-right"></i></span>
           </div>
         </div>
       </div>
 
       <div class="grid-mid">
         <div class="panel">
-          <h3>Overview</h3>
+          <h3 data-i18n="dashboard.overview">Overview</h3>
           <canvas id="safetyChart" height="140"></canvas>
         </div>
         <div class="side-stack">
           <div class="users-card">
-            <div class="users-count"><span id="usersTotal">-</span> <small>USERS</small></div>
+            <div class="users-count"><span id="usersTotal">-</span> <small data-i18n="dashboard.users">USERS</small></div>
           </div>
-          <div class="users-icon-card">👥</div>
+          <div class="users-icon-card"><i data-lucide="users"></i></div>
         </div>
       </div>
 
       <div class="grid-bottom">
         <div class="panel dark-panel">
-          <h3>Swipe → Match → Talk</h3>
+          <h3 data-i18n="dashboard.swipeMatchTalk">Swipe → Match → Talk</h3>
           <canvas id="swipeChart" height="140"></canvas>
         </div>
         <div class="panel">
-          <h3>Funnel Trend</h3>
+          <h3 data-i18n="dashboard.funnelTrend">Funnel Trend</h3>
           <canvas id="peakChart" height="160"></canvas>
         </div>
       </div>
@@ -102,40 +111,57 @@
 
     <!-- ANALYTICS -->
     <section class="page hidden" id="page-analytics">
-      <div class="an-grid">
-        <div class="calendar-card">
-          <div class="cal-title">Overview</div>
-          <p class="muted" style="color:#f3e4e0">Live data from the matching pipeline.</p>
+      <div class="an-stats">
+        <div class="an-stat">
+          <div class="an-stat-icon an-stat-icon-yellow"><i data-lucide="hand"></i></div>
+          <div>
+            <div class="an-stat-value" id="statSwiped">-</div>
+            <div class="an-stat-label" data-i18n="analytics.totalSwiped">Total Swiped</div>
+          </div>
         </div>
-        <div class="panel radio-panel">
-          <h3>Swipe Funnel</h3>
-          <div class="radio-flex">
-            <canvas id="matchedPie" height="180"></canvas>
-            <canvas id="matchedBar" height="180"></canvas>
+        <div class="an-stat">
+          <div class="an-stat-icon an-stat-icon-blue"><i data-lucide="heart-handshake"></i></div>
+          <div>
+            <div class="an-stat-value" id="statMatchedA">-</div>
+            <div class="an-stat-label" data-i18n="analytics.matched">Matched</div>
+          </div>
+        </div>
+        <div class="an-stat">
+          <div class="an-stat-icon an-stat-icon-green"><i data-lucide="message-circle"></i></div>
+          <div>
+            <div class="an-stat-value" id="statTalking">-</div>
+            <div class="an-stat-label" data-i18n="analytics.talking">Talking</div>
+          </div>
+        </div>
+        <div class="an-stat">
+          <div class="an-stat-icon an-stat-icon-red"><i data-lucide="percent"></i></div>
+          <div>
+            <div class="an-stat-value" id="statConvRate">-</div>
+            <div class="an-stat-label" data-i18n="analytics.conversionRate">Swipe → Match Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-grid">
+        <div class="panel">
+          <h3><i data-lucide="filter"></i> <span data-i18n="analytics.swipeFunnel">Swipe Funnel</span></h3>
+          <canvas id="matchedBar" height="220"></canvas>
+        </div>
+        <div class="panel">
+          <h3><i data-lucide="sliders"></i> <span data-i18n="analytics.lifestyleWeights">Lifestyle Match Weights</span></h3>
+          <div class="lifestyle-flex">
+            <canvas id="lifestyleDonut" height="220"></canvas>
+            <ul class="legend-list" id="lifestyleLegend"></ul>
           </div>
         </div>
 
-        <div class="panel list-panel">
-          <h3>Year Distribution</h3>
+        <div class="panel">
+          <h3><i data-lucide="graduation-cap"></i> <span data-i18n="analytics.yearDistribution">Year Distribution</span></h3>
           <ul class="dist-list" id="yearList"></ul>
         </div>
-        <div class="panel list-panel">
-          <h3>Faculty Distribution</h3>
+        <div class="panel">
+          <h3><i data-lucide="building-2"></i> <span data-i18n="analytics.facultyDistribution">Faculty Distribution</span></h3>
           <ul class="dist-list" id="facultyList"></ul>
-        </div>
-
-        <div class="panel wide2">
-          <h3>Lifestyle Match Weights</h3>
-          <div class="lifestyle-flex">
-            <canvas id="lifestyleDonut" height="200"></canvas>
-            <ul class="legend-list">
-              <li><b>A</b> Sleep & Wake</li>
-              <li><b>B</b> Guest</li>
-              <li><b>C</b> Cleanliness</li>
-              <li><b>D</b> Temp & Study</li>
-            </ul>
-            <canvas id="lifestyleBar" height="200"></canvas>
-          </div>
         </div>
       </div>
     </section>
@@ -143,33 +169,49 @@
     <!-- USERS -->
     <section class="page hidden" id="page-users">
       <div class="search-bar">
-        <input type="text" id="usersSearch" placeholder="Search with Student ID or name">
-        <button class="filter-btn">☰</button>
+        <input type="text" id="usersSearch" data-i18n-placeholder="common.searchStudent" placeholder="Search with Student ID or name">
+        <button class="filter-btn"><i data-lucide="sliders-horizontal"></i></button>
       </div>
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Verification</th><th>Faculty & Year</th><th>Email</th><th>Action</th></tr>
+            <tr>
+              <th data-i18n="table.id">ID</th>
+              <th data-i18n="table.name">Name</th>
+              <th data-i18n="table.verification">Verification</th>
+              <th data-i18n="table.facultyYear">Faculty & Year</th>
+              <th data-i18n="table.email">Email</th>
+              <th data-i18n="table.action">Action</th>
+            </tr>
           </thead>
           <tbody id="usersBody"></tbody>
         </table>
       </div>
+      <div class="pagination" id="usersPagination"></div>
     </section>
 
     <!-- VERIFICATION -->
     <section class="page hidden" id="page-verification">
       <div class="search-bar">
-        <input type="text" id="verifySearch" placeholder="Search with Student ID or name">
-        <button class="filter-btn">☰</button>
+        <input type="text" id="verifySearch" data-i18n-placeholder="common.searchStudent" placeholder="Search with Student ID or name">
+        <button class="filter-btn"><i data-lucide="sliders-horizontal"></i></button>
       </div>
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Verification</th><th>Faculty & Year</th><th>Email</th><th>Action</th></tr>
+            <tr>
+              <th data-i18n="table.id">ID</th>
+              <th data-i18n="table.name">Name</th>
+              <th data-i18n="table.verification">Verification</th>
+              <th data-i18n="table.facultyYear">Faculty & Year</th>
+              <th data-i18n="table.email">Email</th>
+              <th data-i18n="table.action">Action</th>
+            </tr>
           </thead>
           <tbody id="verifyBody"></tbody>
         </table>
       </div>
+      <div class="pagination" id="verifyPagination"></div>
     </section>
 
     <!-- REPORT -->
@@ -177,27 +219,27 @@
       <div class="report-cards">
         <div class="rcard rcard-red">
           <div class="rcard-title">-</div>
-          <div class="rcard-sub">Top reason</div>
-          <div class="rcard-bottom"><span>Case <b class="rcard-case-count">0</b></span><span class="rcard-arrow">↗</span></div>
+          <div class="rcard-sub" data-i18n="report.topReason">Top reason</div>
+          <div class="rcard-bottom"><span data-i18n="report.case">Case</span> <span><b class="rcard-case-count">0</b></span><span class="rcard-arrow"><i data-lucide="arrow-up-right"></i></span></div>
         </div>
         <div class="rcard rcard-yellow">
           <div class="rcard-title">-</div>
-          <div class="rcard-sub">2nd reason</div>
-          <div class="rcard-bottom"><span>Case <b class="rcard-case-count">0</b></span><span class="rcard-arrow">↗</span></div>
+          <div class="rcard-sub" data-i18n="report.secondReason">2nd reason</div>
+          <div class="rcard-bottom"><span data-i18n="report.case">Case</span> <span><b class="rcard-case-count">0</b></span><span class="rcard-arrow"><i data-lucide="arrow-up-right"></i></span></div>
         </div>
         <div class="rcard rcard-blue">
           <div class="rcard-title">-</div>
-          <div class="rcard-sub">3rd reason</div>
-          <div class="rcard-bottom"><span>Case <b class="rcard-case-count">0</b></span><span class="rcard-arrow">↗</span></div>
+          <div class="rcard-sub" data-i18n="report.thirdReason">3rd reason</div>
+          <div class="rcard-bottom"><span data-i18n="report.case">Case</span> <span><b class="rcard-case-count">0</b></span><span class="rcard-arrow"><i data-lucide="arrow-up-right"></i></span></div>
         </div>
         <div class="rcard-side">
           <div class="rcard-allcase">
-            <span>📮 <b id="reportAllCase">0</b> Case</span>
-            <small>All case</small>
+            <span><i data-lucide="mail"></i> <b id="reportAllCase">0</b> <span data-i18n="report.case">Case</span></span>
+            <small data-i18n="report.allCase">All case</small>
           </div>
           <div class="rcard-todo">
-            <div class="todo-pill">To Do</div>
-            <div class="todo-case"><b id="reportTodoCount">0</b> Case From <b id="reportTodoTotal">0</b> Case</div>
+            <div class="todo-pill" data-i18n="report.toDo">To Do</div>
+            <div class="todo-case"><b id="reportTodoCount">0</b> <span data-i18n="report.case">Case</span> <span data-i18n="report.from">From</span> <b id="reportTodoTotal">0</b> <span data-i18n="report.case">Case</span></div>
             <div class="bar"><div class="bar-fill" id="reportTodoFill" style="width:0%"></div></div>
             <div class="bar-labels"><span>0%</span><span>50%</span><span>100%</span></div>
           </div>
@@ -205,27 +247,77 @@
       </div>
 
       <div class="search-bar">
-        <input type="text" id="reportSearch" placeholder="Search by reported user name">
-        <button class="filter-btn">☰</button>
+        <input type="text" id="reportSearch" data-i18n-placeholder="report.searchPlaceholder" placeholder="Search by reported user name">
+        <button class="filter-btn"><i data-lucide="sliders-horizontal"></i></button>
       </div>
       <div class="table-card">
         <table>
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Tags</th><th>Date/Time</th><th>Cause</th><th>Action</th></tr>
+            <tr>
+              <th data-i18n="table.id">ID</th>
+              <th data-i18n="table.name">Name</th>
+              <th data-i18n="table.tags">Tags</th>
+              <th data-i18n="table.dateTime">Date/Time</th>
+              <th data-i18n="table.cause">Cause</th>
+              <th data-i18n="table.action">Action</th>
+            </tr>
           </thead>
           <tbody id="reportBody"></tbody>
         </table>
       </div>
+      <div class="pagination" id="reportPagination"></div>
     </section>
 
-    <!-- SETTING -->
+    <!-- SETTING / ADMIN PROFILE -->
     <section class="page hidden" id="page-setting">
-      <div class="panel">
-        <h3>Setting</h3>
-        <p class="muted">การตั้งค่าระบบจะแสดงที่นี่</p>
+      <div class="profile-grid">
+        <div class="panel profile-card">
+          <div class="profile-avatar"><i data-lucide="user-circle-2"></i></div>
+          <div class="profile-name" id="profileName">-</div>
+          <div class="profile-email muted" id="profileEmail">-</div>
+          <span class="badge badge-verified profile-role" id="profileRole">ADMIN</span>
+          <div class="profile-meta muted" id="profileSince">-</div>
+        </div>
+
+        <div class="panel">
+          <h3 data-i18n="profile.info">Profile Information</h3>
+          <form id="profileForm" class="settings-form">
+            <label for="profileDisplayName" data-i18n="profile.displayName">Display Name</label>
+            <input id="profileDisplayName" type="text" maxlength="60" required>
+            <div class="form-msg" id="profileMsg"></div>
+            <button type="submit" class="login-btn form-btn" data-i18n="profile.saveChanges">Save Changes</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3 data-i18n="profile.changePassword">Change Password</h3>
+          <form id="passwordForm" class="settings-form">
+            <label for="currentPassword" data-i18n="profile.currentPassword">Current Password</label>
+            <input id="currentPassword" type="password" required>
+            <label for="newPassword" data-i18n="profile.newPassword">New Password</label>
+            <input id="newPassword" type="password" minlength="8" required>
+            <label for="confirmPassword" data-i18n="profile.confirmPassword">Confirm New Password</label>
+            <input id="confirmPassword" type="password" minlength="8" required>
+            <div class="form-msg" id="passwordMsg"></div>
+            <button type="submit" class="login-btn form-btn" data-i18n="profile.changePasswordBtn">Change Password</button>
+          </form>
+        </div>
       </div>
     </section>
   </main>
+</div>
+
+<!-- LOGOUT CONFIRM -->
+<div class="modal-overlay hidden" id="logoutConfirm">
+  <div class="modal-card">
+    <div class="modal-icon"><i data-lucide="log-out"></i></div>
+    <h3 data-i18n="logoutModal.title">Log out?</h3>
+    <p class="muted" data-i18n="logoutModal.body">You'll need to sign in again to use the Admin Console.</p>
+    <div class="modal-actions">
+      <button class="modal-btn modal-cancel" id="logoutCancel" data-i18n="logoutModal.cancel">Cancel</button>
+      <button class="modal-btn modal-confirm" id="logoutOk" data-i18n="logoutModal.confirm">Log out</button>
+    </div>
+  </div>
 </div>
 
 <script src="app.js"></script>
