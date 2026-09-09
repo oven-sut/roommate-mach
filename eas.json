@@ -5,8 +5,19 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://roommate-mach-be.vercel.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "321662329412-3ushmghqqa4letiaj3aumnqb55i6tdb6.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "321662329412-9lrfu60emnuldcodqr01huro6097ulmb.apps.googleusercontent.com"
+      },
       "android": {
         "buildType": "apk"
+      }
+    },
+    "ios-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
       }
     },
     "production": {}
