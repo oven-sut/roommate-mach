@@ -274,13 +274,8 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
             </View>
 
             <NavRow
-              title={t("photosRow")}
-              subtitle={`${photoCount} of 3 ${t("uploadedCount")}`}
-              onPress={() => go("basics")}
-            />
-            <NavRow
-              title={t("basicsBio")}
-              subtitle={t("basicsBioSub")}
+              title={t("editProfile")}
+              subtitle={`${t("photosRow")} (${photoCount}/3) • ${t("basicsBioSub")}`}
               onPress={() => go("basics")}
             />
             {verified ? null : (

@@ -31,6 +31,7 @@ export const MAJOR_OPTIONS: Option[] = [
   { value: "เทคโนโลยีการเกษตร", label: { th: "เทคโนโลยีการเกษตร", en: "Agricultural Technology" } },
   { value: "เทคโนโลยีอาหาร", label: { th: "เทคโนโลยีอาหาร", en: "Food Technology" } },
   { value: "นิเทศศาสตร์ดิจิทัล", label: { th: "นิเทศศาสตร์ดิจิทัล", en: "Digital Communication" } },
+  { value: "เทคโนโลยีดิจิทัล", label: { th: "เทคโนโลยีดิจิทัล", en: "Digital Technology" } },
   { value: "บริหารธุรกิจ / บัญชี", label: { th: "บริหารธุรกิจ / บัญชี", en: "Business / Accounting" } },
 ];
 
@@ -45,7 +46,6 @@ export const PROPERTY_TYPES = [
 export const ROOMMATE_GENDERS = [
   "Same gender",
   "Any",
-  "Non-binary friendly",
 ] as const;
 
 /** i18n keys for the fixed option sets above, in the same order. */
@@ -59,7 +59,6 @@ export const PROPERTY_TYPE_KEYS = [
 export const ROOMMATE_GENDER_KEYS = [
   "sameGender",
   "anyGender",
-  "nonBinaryFriendly",
 ] as const;
 
 export function labelFor(options: Option[], value: string, language: Language) {

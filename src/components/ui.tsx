@@ -189,6 +189,7 @@ export function Field({
   onChangeText,
   placeholder,
   secureTextEntry,
+  isPassword,
   keyboardType,
   autoCapitalize,
   multiline,
@@ -204,6 +205,7 @@ export function Field({
   onChangeText?: (v: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
+  isPassword?: boolean;
   keyboardType?: React.ComponentProps<typeof TextInput>["keyboardType"];
   autoCapitalize?: React.ComponentProps<typeof TextInput>["autoCapitalize"];
   multiline?: boolean;
@@ -218,6 +220,28 @@ export function Field({
   onPress?: () => void;
 }) {
   const [focused, setFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const enablePasswordToggle = isPassword || secureTextEntry;
+  const isSecured = enablePasswordToggle ? !showPassword : false;
+
+  const rightNode =
+    right ??
+    (enablePasswordToggle ? (
+      <MotionPressable
+        onPress={() => setShowPassword((prev) => !prev)}
+        pressedScale={0.85}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+      >
+        {showPassword ? (
+          <EyeOff size={20} color={C.muted} strokeWidth={1.8} />
+        ) : (
+          <Eye size={20} color={C.muted} strokeWidth={1.8} />
+        )}
+      </MotionPressable>
+    ) : null);
 
   const frame = (
     <View
@@ -227,7 +251,7 @@ export function Field({
         multiline && s.inputMultiline,
         focused && s.inputFocused,
         error ? { borderColor: C.primary } : null,
-        { paddingRight: right ? 12 : 16 },
+        { paddingRight: rightNode ? 12 : 16 },
       ]}
     >
       <TextInput
@@ -235,7 +259,7 @@ export function Field({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={C.faint}
-        secureTextEntry={secureTextEntry}
+        secureTextEntry={isSecured}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         multiline={multiline}
@@ -257,7 +281,7 @@ export function Field({
           textAlignVertical: multiline ? "top" : "center",
         }}
       />
-      {right}
+      {rightNode}
     </View>
   );
 

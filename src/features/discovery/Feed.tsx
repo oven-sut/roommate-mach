@@ -105,6 +105,7 @@ function ActionButton({
  */
 export function Feed({ go }: { go: (x: Screen) => void }) {
   const { t } = useI18n();
+  const [meCard, setMeCard] = useState<MatchProfile | null>(null);
   const [people, setPeople] = useState<MatchProfile[]>([]);
   const [index, setIndex] = useState(0);
   const [page, setPage] = useState(1);
@@ -124,9 +125,20 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
       const nextPage = isInitial ? 1 : page + 1;
       try {
-        const data = await api<MatchProfile[]>(
-          `/api/discover?${toQuery(filters, nextPage)}`,
-        );
+        const [meData, data] = await Promise.all([
+          isInitial ? api<any>("/api/me").catch(() => null) : Promise.resolve(null),
+          api<MatchProfile[]>(`/api/discover?${toQuery(filters, nextPage)}`),
+        ]);
+
+        if (meData) {
+          setMeCard({
+            id: meData.id,
+            displayName: meData.displayName,
+            profile: meData.profile,
+            verification: meData.verification,
+          });
+        }
+
         setPage(nextPage);
         setPeople((prev) => {
           if (isInitial) {
@@ -157,7 +169,8 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const person = people[index];
+  const isShowingSelf = !started && !!meCard;
+  const person = isShowingSelf ? meCard! : people[index];
 
   const advance = () => {
     const nextIndex = index + 1;
@@ -202,8 +215,12 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
   const openProfile = () => {
     if (!person) return;
-    appState.activeProfile = person;
-    go("profile");
+    if (isShowingSelf) {
+      go("myprofile");
+    } else {
+      appState.activeProfile = person;
+      go("profile");
+    }
   };
 
   return (
@@ -246,6 +263,8 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 <DiscoverCard
                   person={person}
                   onPress={openProfile}
+                  showScore={!isShowingSelf}
+                  isSelf={isShowingSelf}
                   dimmed={liking}
                 />
               </Animated.View>
@@ -266,7 +285,16 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 ) : (
                   <SlideAction
                     label={t("slideToMatch")}
-                    onComplete={() => setStarted(true)}
+                    onComplete={() => {
+                      cardAnim.setValue(0.94);
+                      Animated.timing(cardAnim, {
+                        toValue: 1,
+                        duration: 260,
+                        easing: Easing.out(Easing.cubic),
+                        useNativeDriver: true,
+                      }).start();
+                      setStarted(true);
+                    }}
                   />
                 )}
               </View>
