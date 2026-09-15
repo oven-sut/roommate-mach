@@ -316,10 +316,10 @@ const dict: Dict = {
   mostlyStudy: { en: "I mostly study..", th: "ส่วนใหญ่ฉันอ่านหนังสือ.." },
   studyInRoom: { en: "In room", th: "ในห้อง" },
   studyLibrary: { en: "Library", th: "ห้องสมุด" },
-  studyCafe: { en: "Cafe / out", th: "คาเฟ่ / นอกห้อง" },
+  studyCafe: { en: "Cafe / out", th: "นอกห้อง" },
   finish: { en: "Finish", th: "เสร็จสิ้น" },
 
-  summaryTitle: { en: "looking good", th: "ดูดีมาก" },
+  summaryTitle: { en: "looking good", th: "ยินดีต้อนรับ" },
   summarySub: {
     en: "Here's the profile your match will see",
     th: "นี่คือโปรไฟล์ที่คู่แมตช์ของคุณจะเห็น",

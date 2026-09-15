@@ -22,9 +22,9 @@ export type ImagePickResult =
  * means nothing to the server — previously that path was uploaded verbatim and
  * stored as a broken photo, so it is now reported as a failure instead.
  */
-export function toImageDataUri(
+export async function toImageDataUriAsync(
   asset: ImagePicker.ImagePickerAsset,
-): ImagePickResult {
+): Promise<ImagePickResult> {
   if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
     return {
       ok: false,
@@ -39,12 +39,70 @@ export function toImageDataUri(
     return { ok: false, reason: "Please choose a JPEG, PNG, WebP or GIF image." };
   }
 
-  if (!asset.base64) {
+  if (asset.base64) {
+    return { ok: true, dataUri: `data:${mimeType};base64,${asset.base64}` };
+  }
+
+  if (asset.uri?.startsWith("data:")) {
+    return { ok: true, dataUri: asset.uri };
+  }
+
+  if (typeof fetch !== "undefined" && asset.uri) {
+    try {
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") {
+            resolve({ ok: true, dataUri: reader.result });
+          } else {
+            resolve({ ok: false, reason: "That image could not be read." });
+          }
+        };
+        reader.onerror = () =>
+          resolve({ ok: false, reason: "That image could not be read." });
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      // fallback
+    }
+  }
+
+  return {
+    ok: false,
+    reason: "That image could not be read. Please pick a different one.",
+  };
+}
+
+export function toImageDataUri(
+  asset: ImagePicker.ImagePickerAsset,
+): ImagePickResult {
+  if (asset.base64) {
+    return {
+      ok: true,
+      dataUri: `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`,
+    };
+  }
+  if (asset.uri?.startsWith("data:")) {
+    return { ok: true, dataUri: asset.uri };
+  }
+  if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
     return {
       ok: false,
-      reason: "That image could not be read. Please pick a different one.",
+      reason: `Please choose an image smaller than ${Math.round(
+        MAX_IMAGE_BYTES / (1024 * 1024),
+      )} MB.`,
     };
   }
 
-  return { ok: true, dataUri: `data:${mimeType};base64,${asset.base64}` };
+  const mimeType = asset.mimeType ?? "image/jpeg";
+  if (!ALLOWED_MIME.test(mimeType)) {
+    return { ok: false, reason: "Please choose a JPEG, PNG, WebP or GIF image." };
+  }
+
+  return {
+    ok: false,
+    reason: "That image could not be read. Please pick a different one.",
+  };
 }

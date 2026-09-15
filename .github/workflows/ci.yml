@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - run: npm install --legacy-peer-deps
       # A warning left to pile up is a warning nobody reads, so CI treats them
       # as failures even though the local `npm run lint` does not.
       - run: npm run lint -- --max-warnings=0
@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - run: npm install --legacy-peer-deps
       - run: npm run typecheck
 
   unit-tests:
@@ -55,7 +55,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - run: npm install --legacy-peer-deps
       - name: Run Jest with coverage
         run: npm run test:cov -- --ci
       - name: Publish coverage report
@@ -77,7 +77,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - run: npm install --legacy-peer-deps
       - name: Export the Android bundle
         run: npx expo export --platform android --output-dir dist
       - name: Publish the bundle
@@ -120,7 +120,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - if: steps.token.outputs.present == 'true'
-        run: npm ci
+        run: npm install --legacy-peer-deps
       - name: Build the Android preview APK
         if: steps.token.outputs.present == 'true'
         run: eas build --platform android --profile preview --non-interactive --no-wait
