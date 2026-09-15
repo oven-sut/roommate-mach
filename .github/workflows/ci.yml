@@ -28,7 +28,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
       - run: npm install --legacy-peer-deps
       # A warning left to pile up is a warning nobody reads, so CI treats them
       # as failures even though the local `npm run lint` does not.
@@ -42,7 +41,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
       - run: npm install --legacy-peer-deps
       - run: npm run typecheck
 
@@ -54,7 +52,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
       - run: npm install --legacy-peer-deps
       - name: Run Jest with coverage
         run: npm run test:cov -- --ci
@@ -76,7 +73,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
       - run: npm install --legacy-peer-deps
       - name: Export the Android bundle
         run: npx expo export --platform android --output-dir dist
