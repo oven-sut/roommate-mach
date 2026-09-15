@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import {
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -64,9 +66,28 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
   ];
 
   const handleLogout = () => {
-    saveToken(null);
-    resetAppState();
-    go("login");
+    const doLogout = () => {
+      saveToken(null);
+      resetAppState();
+      go("authChoice");
+    };
+
+    if (Platform.OS === "web") {
+      const ok = window.confirm("คุณต้องการออกจากระบบใช่หรือไม่?");
+      if (ok) {
+        doLogout();
+      }
+      return;
+    }
+
+    Alert.alert("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "ออกจากระบบ",
+        style: "destructive",
+        onPress: doLogout,
+      },
+    ]);
   };
 
   const renderSidebarContent = () => (

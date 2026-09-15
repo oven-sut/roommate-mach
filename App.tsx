@@ -161,7 +161,7 @@ function AppContent() {
       setHasSeenOnboarding(true);
     }
     // Leaving the app entirely means the previous user's data must go too.
-    if (next === "login" || next === "signup") {
+    if (next === "login" || next === "signup" || next === "authChoice") {
       saveToken(null);
       resetAppState();
     }

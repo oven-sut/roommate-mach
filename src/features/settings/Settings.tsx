@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert, Platform, View } from "react-native";
 import { LogOut } from "lucide-react-native";
 import { CenterModal } from "../../components/Sheet";
 import { Toggle } from "../../components/Toggle";
@@ -13,7 +13,7 @@ import {
   Txt,
 } from "../../components/ui";
 import { LanguageToggle, useI18n } from "../../i18n";
-import { api } from "../../services/api";
+import { api, resetAppState, saveToken } from "../../services/api";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
 import type { Me } from "../../types/models";
@@ -177,6 +177,24 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
   };
 
   const confirmLogout = () => {
+    const doLogout = () => {
+      saveToken(null);
+      resetAppState();
+      go("authChoice");
+    };
+
+    if (Platform.OS === "web") {
+      const ok = window.confirm(
+        language === "th"
+          ? "คุณต้องการออกจากระบบใช่หรือไม่?"
+          : "Are you sure you want to log out?"
+      );
+      if (ok) {
+        doLogout();
+      }
+      return;
+    }
+
     Alert.alert(
       t("logout"),
       language === "th"
@@ -187,7 +205,7 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
         {
           text: t("logout"),
           style: "destructive",
-          onPress: () => go("login"),
+          onPress: doLogout,
         },
       ],
     );
