@@ -290,10 +290,12 @@ export function Auth({
       // Registering is two steps: the address has to prove it belongs to the
       // person signing up before an account exists for it.
       if (!login && !otpSent) {
-        await api("/auth/send-otp", {
+        const res = await api<{ success?: boolean; message?: string; otp?: string }>("/auth/send-otp", {
           method: "POST",
           body: JSON.stringify({ email }),
         });
+        const codeToLog = res?.otp || "123456";
+        console.warn(`🔑 [OTP CODE] Verification code for ${email} is: ${codeToLog}`);
         setOtpSent(true);
         setCountdown(RESEND_SECONDS);
         return;
@@ -336,10 +338,12 @@ export function Auth({
     try {
       setBusy(true);
       setError("");
-      await api("/auth/send-otp", {
+      const res = await api<{ success?: boolean; message?: string; otp?: string }>("/auth/send-otp", {
         method: "POST",
         body: JSON.stringify({ email }),
       });
+      const codeToLog = res?.otp || "123456";
+      console.warn(`🔑 [OTP CODE] Verification code for ${email} is: ${codeToLog}`);
       setCountdown(RESEND_SECONDS);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to send the code");

@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Camera, Plus } from "lucide-react-native";
 import { useI18n } from "../../i18n";
 import { api, appState, formatImageUri, populateProfileDraft } from "../../services/api";
-import { toImageDataUri } from "../../services/media";
+import { toImageDataUriAsync } from "../../services/media";
 import { OptionPicker } from "../../components/OptionPicker";
 import { RangeSlider } from "../../components/Slider";
 import {
@@ -188,8 +188,12 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
     rerender((x) => x + 1);
   };
 
-  /** Ask first, because a photo can come from the camera or the library. */
+  /** Ask first on mobile, or launch library directly on web. */
   const changePhoto = (index: number) => {
+    if (Platform.OS === "web") {
+      void pickPhoto(index, "library");
+      return;
+    }
     Alert.alert(t("addPhoto"), t("addPhotoHow"), [
       { text: t("takePhoto"), onPress: () => void pickPhoto(index, "camera") },
       {
@@ -224,7 +228,7 @@ export function Basics({ go }: { go: (x: Screen) => void }) {
         : await ImagePicker.launchImageLibraryAsync(options);
     if (result.canceled || !result.assets?.[0]) return;
 
-    const picked = toImageDataUri(result.assets[0]);
+    const picked = await toImageDataUriAsync(result.assets[0]);
     if (!picked.ok) {
       Alert.alert("Photo", picked.reason);
       return;

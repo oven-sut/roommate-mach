@@ -39,7 +39,7 @@ function Thumb({ left }: { left: number }) {
 /** Evenly spaced captions rendered under a track ("never · monthly · weekly"). */
 function Ticks({ labels }: { labels: readonly string[] }) {
   return (
-    <View style={{ flexDirection: "row", marginTop: 12 }}>
+    <View style={{ flexDirection: "row", marginTop: 2, marginBottom: 6 }}>
       {labels.map((label, i) => (
         <Text
           key={`${label}-${i}`}
@@ -138,7 +138,7 @@ export function Slider({
             offsetRef.current = x;
           });
         }}
-        style={{ paddingVertical: 14, justifyContent: "center" }}
+        style={{ paddingTop: 10, paddingBottom: 6, justifyContent: "center" }}
       >
         <View
           style={{
@@ -265,7 +265,7 @@ export function RangeSlider({
             offsetRef.current = x;
           });
         }}
-        style={{ paddingVertical: 14, justifyContent: "center" }}
+        style={{ paddingTop: 10, paddingBottom: 6, justifyContent: "center" }}
       >
         <View
           style={{

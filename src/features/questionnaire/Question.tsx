@@ -319,26 +319,28 @@ export function Question({
               />
             </View>
 
-            <ControlCard
-              icon={<Users size={19} color={C.muted} strokeWidth={1.8} />}
-              title={t("preferredFrequency")}
-              value={t(FREQUENCY_KEYS[answers.guestFrequency])}
-            >
-              <Slider
-                min={0}
-                max={FREQUENCY_KEYS.length - 1}
-                value={answers.guestFrequency}
-                onChange={(v) => set("guestFrequency", v)}
-                labels={FREQUENCY_KEYS.map((key) => t(key))}
-              />
-              <Slider
-                min={0}
-                max={GUEST_TIMES_MAX}
-                value={answers.guestTimes}
-                onChange={(v) => set("guestTimes", v)}
-                labels={["0", `${GUEST_TIMES_MAX}`]}
-              />
-            </ControlCard>
+            {answers.overnight === "sometime" ? (
+              <ControlCard
+                icon={<Users size={19} color={C.muted} strokeWidth={1.8} />}
+                title={t("preferredFrequency")}
+                value={t(FREQUENCY_KEYS[answers.guestFrequency])}
+              >
+                <Slider
+                  min={0}
+                  max={FREQUENCY_KEYS.length - 1}
+                  value={answers.guestFrequency}
+                  onChange={(v) => set("guestFrequency", v)}
+                  labels={FREQUENCY_KEYS.map((key) => t(key))}
+                />
+                <Slider
+                  min={0}
+                  max={GUEST_TIMES_MAX}
+                  value={answers.guestTimes}
+                  onChange={(v) => set("guestTimes", v)}
+                  labels={["0", `${GUEST_TIMES_MAX}`]}
+                />
+              </ControlCard>
+            ) : null}
 
             <View style={{ gap: 12 }}>
               <Txt role="label">{t("guestsOkayWith")}</Txt>
