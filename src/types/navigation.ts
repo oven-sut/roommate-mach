@@ -43,7 +43,10 @@ export type Screen =
   | "search"
   // admin
   | "dashboard"
+  | "analytics"
   | "users"
+  | "verification"
+  | "adminReports"
   | "config";
 
 /** The four questionnaire steps, in order. */

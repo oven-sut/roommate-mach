@@ -19,7 +19,14 @@ import {
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "./src/i18n";
-import { Config, Dashboard, Users } from "./src/features/admin";
+import {
+  Analytics,
+  Config,
+  Dashboard,
+  Report as AdminReport,
+  Users,
+  Verification,
+} from "./src/features/admin";
 import { Feed, Match, Matches } from "./src/features/discovery";
 import { Legal } from "./src/features/legal";
 import {
@@ -279,8 +286,14 @@ function renderScreen(
 
     case "dashboard":
       return <Dashboard go={go} />;
+    case "analytics":
+      return <Analytics go={go} />;
     case "users":
       return <Users go={go} />;
+    case "verification":
+      return <Verification go={go} />;
+    case "adminReports":
+      return <AdminReport go={go} />;
     case "config":
       return <Config go={go} />;
 

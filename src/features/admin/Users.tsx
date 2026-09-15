@@ -1,19 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { Alert, TextInput, View } from "react-native";
-import { Search } from "lucide-react-native";
-import {
-  Button,
-  Chevron,
-  MotionPressable,
-  ScreenShell,
-  Tag,
-  Txt,
-} from "../../components/ui";
+import React, { useCallback, useEffect, useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Search, Users as UsersIcon } from "lucide-react-native";
 import { api } from "../../services/api";
-import { C } from "../../theme/colors";
-import { s } from "../../theme/styles";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
+import { AdminLayout } from "./AdminLayout";
 
 type AdminUser = {
   id: string;
@@ -25,7 +16,6 @@ type AdminUser = {
   _count?: { reportsReceived?: number };
 };
 
-/** User moderation: search, suspend, and approve student verifications. */
 export function Users({ go }: { go: (x: Screen) => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
@@ -70,85 +60,216 @@ export function Users({ go }: { go: (x: Screen) => void }) {
     : users;
 
   return (
-    <ScreenShell>
-      <View style={[s.row, { gap: 16, height: 60 }]}>
-        <MotionPressable
-          onPress={() => go("dashboard")}
-          pressedScale={0.9}
-          style={s.iconBtn}
-          accessibilityLabel="Back"
-        >
-          <Chevron direction="left" />
-        </MotionPressable>
-        <Txt role="h1" style={{ fontSize: 22 }}>
-          Users & reports
-        </Txt>
-      </View>
+    <AdminLayout currentScreen="users" go={go}>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <UsersIcon size={20} color="#8B1E1E" />
+          <Text style={styles.cardTitle}>User Management & Moderation</Text>
+        </View>
 
-      <View style={[s.input, s.row, { gap: 10 }]}>
-        <Search size={18} color={C.faint} strokeWidth={1.8} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search name or email…"
-          placeholderTextColor={C.faint}
-          autoCapitalize="none"
-          style={{
-            flex: 1,
-            fontFamily: F.regular,
-            fontSize: 15,
-            color: C.ink,
-            padding: 0,
-          }}
-        />
-      </View>
+        {/* Search Input */}
+        <View style={styles.searchBar}>
+          <Search size={18} color="#9CA3AF" />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search name or email…"
+            placeholderTextColor="#9CA3AF"
+            style={styles.searchInput}
+          />
+        </View>
 
-      {visible.map((user) => {
-        const reports = user._count?.reportsReceived ?? 0;
-        return (
-          <View
-            key={user.id}
-            style={[
-              s.card,
-              reports > 0
-                ? { backgroundColor: C.pink, borderColor: C.pinkBorder }
-                : null,
-            ]}
-          >
-            <View style={s.rowBetween}>
-              <Txt role="h3" style={{ flex: 1 }}>
-                {user.displayName ?? "—"}
-              </Txt>
-              {user.suspended ? <Tag>Suspended</Tag> : null}
+        {/* Table View */}
+        <View style={styles.tableHeader}>
+          <Text style={[styles.th, { flex: 1.5 }]}>Student</Text>
+          <Text style={[styles.th, { flex: 1.5 }]}>Email</Text>
+          <Text style={[styles.th, { flex: 0.8 }]}>Role</Text>
+          <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+          <Text style={[styles.th, { flex: 1.2, textAlign: "right" }]}>Actions</Text>
+        </View>
+
+        {visible.map((user) => {
+          const reports = user._count?.reportsReceived ?? 0;
+          return (
+            <View key={user.id} style={styles.tableRow}>
+              <View style={[styles.td, { flex: 1.5 }]}>
+                <Text style={styles.userName}>{user.displayName ?? "—"}</Text>
+                {reports > 0 ? (
+                  <Text style={styles.reportBadge}>{reports} reports</Text>
+                ) : null}
+              </View>
+
+              <View style={[styles.td, { flex: 1.5 }]}>
+                <Text style={styles.userEmail}>{user.email}</Text>
+              </View>
+
+              <View style={[styles.td, { flex: 0.8 }]}>
+                <Text style={styles.roleText}>{user.role}</Text>
+              </View>
+
+              <View style={[styles.td, { flex: 1 }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    user.suspended ? styles.badgeSuspended : styles.badgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      user.suspended ? styles.textSuspended : styles.textActive,
+                    ]}
+                  >
+                    {user.suspended ? "Suspended" : "Active"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.tdActions, { flex: 1.2, justifyContent: "flex-end" }]}>
+                <Pressable
+                  style={[
+                    styles.btnAction,
+                    user.suspended ? styles.btnUnsuspend : styles.btnSuspend,
+                  ]}
+                  onPress={() => suspend(user.id, !user.suspended)}
+                >
+                  <Text style={styles.btnActionText}>
+                    {user.suspended ? "Unsuspend" : "Suspend"}
+                  </Text>
+                </Pressable>
+
+                {user.verification?.status === "PENDING" ? (
+                  <Pressable
+                    style={[styles.btnAction, styles.btnVerify]}
+                    onPress={() => verify(user.id)}
+                  >
+                    <Text style={styles.btnActionText}>Verify</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
-            <Txt role="small">
-              {user.email} · {user.role}
-            </Txt>
-            {reports > 0 ? (
-              <Txt role="small" style={{ color: C.primary }}>
-                {reports} report{reports === 1 ? "" : "s"}
-              </Txt>
-            ) : null}
-
-            <Button
-              tone="outline"
-              style={{ height: 48 }}
-              onPress={() => suspend(user.id, !user.suspended)}
-            >
-              {user.suspended ? "Unsuspend account" : "Suspend account"}
-            </Button>
-            {user.verification?.status === "PENDING" ? (
-              <Button
-                tone="ghost"
-                style={{ height: 48 }}
-                onPress={() => verify(user.id)}
-              >
-                Verify student
-              </Button>
-            ) : null}
-          </View>
-        );
-      })}
-    </ScreenShell>
+          );
+        })}
+      </View>
+    </AdminLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontFamily: F.bold,
+    fontSize: 16,
+    color: "#111827",
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 44,
+    marginBottom: 16,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: F.regular,
+    fontSize: 14,
+    color: "#111827",
+  },
+
+  tableHeader: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  th: {
+    fontFamily: F.bold,
+    fontSize: 13,
+    color: "#4B5563",
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  td: {
+    justifyContent: "center",
+  },
+  tdActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  userName: {
+    fontFamily: F.bold,
+    fontSize: 14,
+    color: "#111827",
+  },
+  userEmail: {
+    fontFamily: F.regular,
+    fontSize: 13,
+    color: "#4B5563",
+  },
+  roleText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  reportBadge: {
+    fontFamily: F.bold,
+    fontSize: 11,
+    color: "#DC2626",
+  },
+
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  badgeActive: { backgroundColor: "#D1FAE5" },
+  badgeSuspended: { backgroundColor: "#FEE2E2" },
+  statusBadgeText: { fontFamily: F.bold, fontSize: 11 },
+  textActive: { color: "#059669" },
+  textSuspended: { color: "#DC2626" },
+
+  btnAction: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  btnSuspend: { backgroundColor: "#EF4444" },
+  btnUnsuspend: { backgroundColor: "#10B981" },
+  btnVerify: { backgroundColor: "#3B82F6" },
+  btnActionText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "#FFFFFF",
+  },
+});

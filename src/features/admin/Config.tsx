@@ -1,22 +1,14 @@
-import { useEffect, useState } from "react";
-import { Alert, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, View } from "react-native";
+import { Settings } from "lucide-react-native";
 import { Slider } from "../../components/Slider";
-import {
-  Button,
-  Chevron,
-  Field,
-  MotionPressable,
-  ScreenShell,
-  Txt,
-} from "../../components/ui";
+import { Button, Field } from "../../components/ui";
 import { api } from "../../services/api";
-import { C } from "../../theme/colors";
-import { s } from "../../theme/styles";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
+import { AdminLayout } from "./AdminLayout";
 
 type AdminConfig = {
-  /** Comma-separated email domains accounts may register from. */
   emailDomains: string;
   weights: {
     cleanliness: number;
@@ -38,7 +30,6 @@ const WEIGHT_ROWS = [
   { key: "temperature" as const, label: "Temp & study" },
 ];
 
-/** System configuration: allowed email domains and match-score weighting. */
 export function Config({ go }: { go: (x: Screen) => void }) {
   const [config, setConfig] = useState<AdminConfig>(DEFAULTS);
   const [saving, setSaving] = useState(false);
@@ -70,7 +61,7 @@ export function Config({ go }: { go: (x: Screen) => void }) {
         method: "PUT",
         body: JSON.stringify(config),
       });
-      go("dashboard");
+      Alert.alert("Success", "Configuration saved successfully.");
     } catch (reason) {
       Alert.alert(
         "Configuration",
@@ -82,73 +73,125 @@ export function Config({ go }: { go: (x: Screen) => void }) {
   };
 
   return (
-    <ScreenShell>
-      <View style={[s.row, { gap: 16, height: 60 }]}>
-        <MotionPressable
-          onPress={() => go("dashboard")}
-          pressedScale={0.9}
-          style={s.iconBtn}
-          accessibilityLabel="Back"
-        >
-          <Chevron direction="left" />
-        </MotionPressable>
-        <Txt role="h1" style={{ fontSize: 22 }}>
-          Configuration
-        </Txt>
-      </View>
-
-      <Txt role="h3">Allowed email domains</Txt>
-      <Field
-        value={config.emailDomains}
-        onChangeText={(value) =>
-          setConfig((current) => ({ ...current, emailDomains: value }))
-        }
-        placeholder="g.sut.ac.th, sut.ac.th"
-        autoCapitalize="none"
-      />
-
-      <View style={s.rowBetween}>
-        <Txt role="h3">Match weights</Txt>
-        <Txt
-          style={{
-            fontFamily: F.bold,
-            fontSize: 15,
-            color: total === 100 ? C.green : C.primary,
-          }}
-        >
-          {total}%
-        </Txt>
-      </View>
-
-      {WEIGHT_ROWS.map((row) => (
-        <View key={row.key} style={[s.card, { gap: 0 }]}>
-          <View style={s.rowBetween}>
-            <Txt role="h3" style={{ fontSize: 15 }}>
-              {row.label}
-            </Txt>
-            <Txt style={{ fontFamily: F.bold, fontSize: 14, color: C.ink }}>
-              {config.weights[row.key]}%
-            </Txt>
-          </View>
-          <Slider
-            min={0}
-            max={60}
-            step={5}
-            value={config.weights[row.key]}
-            onChange={(value) =>
-              setConfig((current) => ({
-                ...current,
-                weights: { ...current.weights, [row.key]: value },
-              }))
-            }
-            labels={["0%", "60%"]}
-          />
+    <AdminLayout currentScreen="config" go={go}>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Settings size={20} color="#8B1E1E" />
+          <Text style={styles.cardTitle}>System Configuration</Text>
         </View>
-      ))}
 
-      <Button onPress={save} loading={saving} style={{ marginTop: 8 }}>
-        Save configuration
-      </Button>
-    </ScreenShell>
+        <Text style={styles.sectionLabel}>Allowed Email Domains</Text>
+        <Field
+          value={config.emailDomains}
+          onChangeText={(value) =>
+            setConfig((current) => ({ ...current, emailDomains: value }))
+          }
+          placeholder="g.sut.ac.th, sut.ac.th"
+          autoCapitalize="none"
+        />
+
+        <View style={styles.weightHeaderRow}>
+          <Text style={styles.sectionLabel}>Match Score Algorithm Weights</Text>
+          <Text
+            style={[
+              styles.totalWeightText,
+              { color: total === 100 ? "#10B981" : "#EF4444" },
+            ]}
+          >
+            {total}% / 100%
+          </Text>
+        </View>
+
+        {WEIGHT_ROWS.map((row) => (
+          <View key={row.key} style={styles.weightBox}>
+            <View style={styles.weightRowBetween}>
+              <Text style={styles.weightLabel}>{row.label}</Text>
+              <Text style={styles.weightValueText}>{config.weights[row.key]}%</Text>
+            </View>
+            <Slider
+              min={0}
+              max={60}
+              step={5}
+              value={config.weights[row.key]}
+              onChange={(value) =>
+                setConfig((current) => ({
+                  ...current,
+                  weights: { ...current.weights, [row.key]: value },
+                }))
+              }
+              labels={["0%", "60%"]}
+            />
+          </View>
+        ))}
+
+        <Button onPress={save} loading={saving} style={{ marginTop: 16 }}>
+          Save Configuration
+        </Button>
+      </View>
+    </AdminLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontFamily: F.bold,
+    fontSize: 16,
+    color: "#111827",
+  },
+  sectionLabel: {
+    fontFamily: F.bold,
+    fontSize: 14,
+    color: "#374151",
+    marginBottom: 8,
+    marginTop: 10,
+  },
+  weightHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
+  },
+  totalWeightText: {
+    fontFamily: F.bold,
+    fontSize: 15,
+  },
+  weightBox: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+  },
+  weightRowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  weightLabel: {
+    fontFamily: F.medium,
+    fontSize: 14,
+    color: "#111827",
+  },
+  weightValueText: {
+    fontFamily: F.bold,
+    fontSize: 14,
+    color: "#8B1E1E",
+  },
+});
