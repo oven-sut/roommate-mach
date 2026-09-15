@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   Flag,
+  User,
   Users as UsersIcon,
   X,
 } from "lucide-react-native";
@@ -171,7 +172,7 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
 
           <View style={styles.headerRight}>
             <View style={styles.adminAvatar}>
-              <Text style={styles.adminAvatarInitial}>A</Text>
+              <User size={20} color="#9CA3AF" strokeWidth={1.8} />
             </View>
           </View>
         </View>
@@ -334,14 +335,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#8B1E1E",
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  adminAvatarInitial: {
-    fontFamily: F.bold,
-    fontSize: 16,
-    color: "#FFFFFF",
   },
 
   bodyScroll: {
