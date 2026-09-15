@@ -7,6 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Grid,
   LogOut,
@@ -38,18 +39,27 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+function useSafeInsets() {
+  try {
+    return useSafeAreaInsets();
+  } catch {
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  }
+}
+
 export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const insets = useSafeInsets();
 
   const navItems: { id: AdminTab; label: string; icon: any }[] = [
-    { id: "dashboard", label: "Dashboard", icon: Grid },
-    { id: "analytics", label: "Analytics", icon: PieChart },
-    { id: "users", label: "Users", icon: UsersIcon },
-    { id: "verification", label: "Verification", icon: ShieldCheck },
-    { id: "adminReports", label: "Report", icon: Flag },
-    { id: "config", label: "Setting", icon: Settings },
+    { id: "dashboard", label: "แดชบอร์ดหน้าหลัก", icon: Grid },
+    { id: "analytics", label: "การวิเคราะห์สถิติ", icon: PieChart },
+    { id: "users", label: "จัดการผู้ใช้งาน", icon: UsersIcon },
+    { id: "verification", label: "ตรวจสอบยืนยันตัวตน", icon: ShieldCheck },
+    { id: "adminReports", label: "รายงานปัญหา & บล็อก", icon: Flag },
+    { id: "config", label: "ตั้งค่าระบบ & น้ำหนัก", icon: Settings },
   ];
 
   const handleLogout = () => {
@@ -65,7 +75,7 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
         <LogoTile size={36} />
         <View style={{ flex: 1 }}>
           <Text style={styles.brandTitle}>SUT Roommate</Text>
-          <Text style={styles.brandSub}>Match Admin</Text>
+          <Text style={styles.brandSub}>ผู้ดูแลระบบ (Admin)</Text>
         </View>
       </View>
 
@@ -99,7 +109,7 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
       {/* Logout Footer Button */}
       <Pressable style={styles.logoutBtn} onPress={handleLogout}>
         <LogOut size={18} color="rgba(255,255,255,0.8)" />
-        <Text style={styles.logoutText}>Logout</Text>
+        <Text style={styles.logoutText}>ออกจากระบบ</Text>
       </Pressable>
     </View>
   );
@@ -115,8 +125,13 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
       {!isDesktop && mobileMenuOpen ? (
         <View style={styles.mobileDrawerOverlay}>
           <View style={styles.mobileDrawerContent}>
-            <View style={styles.mobileDrawerHeader}>
-              <Text style={styles.mobileDrawerTitle}>Menu</Text>
+            <View
+              style={[
+                styles.mobileDrawerHeader,
+                { paddingTop: Math.max(insets.top, 16) },
+              ]}
+            >
+              <Text style={styles.mobileDrawerTitle}>เมนูหลัก</Text>
               <Pressable onPress={() => setMobileMenuOpen(false)}>
                 <X size={24} color="#FFFFFF" />
               </Pressable>
@@ -129,7 +144,17 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
       {/* Main Content View Area */}
       <View style={styles.mainContent}>
         {/* Top Header Bar */}
-        <View style={styles.topHeader}>
+        <View
+          style={[
+            styles.topHeader,
+            {
+              paddingTop: !isDesktop ? Math.max(insets.top, 12) : 0,
+              paddingBottom: !isDesktop ? 12 : 0,
+              height: isDesktop ? 64 : undefined,
+              paddingHorizontal: isDesktop ? 24 : 16,
+            },
+          ]}
+        >
           {!isDesktop ? (
             <Pressable
               onPress={() => setMobileMenuOpen(true)}
@@ -139,21 +164,24 @@ export function AdminLayout({ currentScreen, go, children }: AdminLayoutProps) {
             </Pressable>
           ) : null}
 
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerAdminName}>JEDWADAD JADWADED</Text>
+          <View style={{ flex: 1, justifyContent: "center" }}>
+            <Text style={styles.headerAdminName}>ผู้ดูแลระบบ SUT</Text>
             <Text style={styles.headerAdminRole}>System Administrator</Text>
           </View>
 
           <View style={styles.headerRight}>
             <View style={styles.adminAvatar}>
-              <Text style={styles.adminAvatarInitial}>J</Text>
+              <Text style={styles.adminAvatarInitial}>A</Text>
             </View>
           </View>
         </View>
 
         {/* Dynamic Screen Body */}
         <ScrollView
-          contentContainerStyle={styles.bodyScroll}
+          contentContainerStyle={[
+            styles.bodyScroll,
+            { paddingHorizontal: isDesktop ? 24 : 16, paddingTop: isDesktop ? 24 : 16 },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {children}

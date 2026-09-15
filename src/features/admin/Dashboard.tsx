@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import {
   Activity,
   AlertCircle,
@@ -40,6 +40,8 @@ const EMPTY_STATS: Stats = {
 
 export function Dashboard({ go }: { go: (x: Screen) => void }) {
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   useEffect(() => {
     api<Stats>("/api/admin/dashboard")
@@ -50,116 +52,211 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
   return (
     <AdminLayout currentScreen="dashboard" go={go}>
       {/* Top Stat Cards & Calendar Section */}
-      <View style={styles.topRow}>
-        {/* Card 1: Pending */}
-        <View style={[styles.statCard, { borderTopColor: "#F59E0B" }]}>
-          <View style={styles.statCardHeader}>
-            <Text style={styles.statLabel}>Pending</Text>
-            <Clock size={20} color="#F59E0B" />
-          </View>
-          <Text style={[styles.statNumber, { color: "#D97706" }]}>
-            {stats.pendingVerifications ?? 12}
-          </Text>
-          <Text style={styles.statSub}>Awaiting admin review</Text>
-        </View>
-
-        {/* Card 2: Verified */}
-        <View style={[styles.statCard, { borderTopColor: "#E11D48" }]}>
-          <View style={styles.statCardHeader}>
-            <Text style={styles.statLabel}>Verified</Text>
-            <CheckCircle2 size={20} color="#E11D48" />
-          </View>
-          <Text style={[styles.statNumber, { color: "#BE123C" }]}>
-            {stats.verifiedVerifications ?? 321}
-          </Text>
-          <Text style={styles.statSub}>SUT Student Badge</Text>
-        </View>
-
-        {/* Card 3: Unverified */}
-        <View style={[styles.statCard, { borderTopColor: "#8B5CF6" }]}>
-          <View style={styles.statCardHeader}>
-            <Text style={styles.statLabel}>Unverified</Text>
-            <AlertCircle size={20} color="#8B5CF6" />
-          </View>
-          <Text style={[styles.statNumber, { color: "#6D28D9" }]}>
-            {stats.unverifiedVerifications ?? 12}
-          </Text>
-          <Text style={styles.statSub}>Standard Members</Text>
-        </View>
-
-        {/* Card 4: September 2026 Calendar & Users Widget */}
-        <View style={styles.calendarWidget}>
-          <View style={styles.calendarHeader}>
-            <CalendarIcon size={18} color="#FFFFFF" />
-            <Text style={styles.calendarTitle}>September 2026</Text>
-          </View>
-          <View style={styles.calendarBadge}>
-            <UsersIcon size={14} color="#FFFFFF" />
-            <Text style={styles.calendarBadgeText}>
-              {stats.members.toLocaleString()} users
+      {isDesktop ? (
+        /* Desktop Layout: 4 Cards Side-by-Side in 1 Row */
+        <View style={styles.topRow}>
+          {/* Card 1: Pending */}
+          <View style={[styles.statCard, { borderTopColor: "#F59E0B" }]}>
+            <View style={styles.statCardHeader}>
+              <Text style={styles.statLabel}>รออนุมัติสิทธิ์</Text>
+              <Clock size={20} color="#F59E0B" />
+            </View>
+            <Text style={[styles.statNumber, { color: "#D97706" }]}>
+              {stats.pendingVerifications ?? 12}
             </Text>
+            <Text style={styles.statSub}>รอแอดมินอนุมัติ</Text>
           </View>
-          <Text style={styles.calendarDaysLabel}>M  T  W  T  F  S  S</Text>
-          <Text style={styles.calendarDatesLabel}>1  2  3  4  5  6  7</Text>
+
+          {/* Card 2: Verified */}
+          <View style={[styles.statCard, { borderTopColor: "#10B981" }]}>
+            <View style={styles.statCardHeader}>
+              <Text style={styles.statLabel}>ยืนยันตัวตนแล้ว</Text>
+              <CheckCircle2 size={20} color="#10B981" />
+            </View>
+            <Text style={[styles.statNumber, { color: "#059669" }]}>
+              {stats.verifiedVerifications ?? 321}
+            </Text>
+            <Text style={styles.statSub}>ตรานักศึกษา มทส.</Text>
+          </View>
+
+          {/* Card 3: Unverified */}
+          <View style={[styles.statCard, { borderTopColor: "#8B5CF6" }]}>
+            <View style={styles.statCardHeader}>
+              <Text style={styles.statLabel}>ยังไม่ยืนยันตัวตน</Text>
+              <AlertCircle size={20} color="#8B5CF6" />
+            </View>
+            <Text style={[styles.statNumber, { color: "#6D28D9" }]}>
+              {stats.unverifiedVerifications ?? 12}
+            </Text>
+            <Text style={styles.statSub}>สมาชิกทั่วไป</Text>
+          </View>
+
+          {/* Card 4: Calendar Widget */}
+          <View style={styles.calendarWidget}>
+            <View style={styles.calendarHeader}>
+              <CalendarIcon size={18} color="#FFFFFF" />
+              <Text style={styles.calendarTitle}>กันยายน 2569</Text>
+            </View>
+            <View style={styles.calendarBadge}>
+              <UsersIcon size={14} color="#FFFFFF" />
+              <Text style={styles.calendarBadgeText}>
+                {stats.members.toLocaleString()} สมาชิก
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12 }}>
+              {["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"].map((day) => (
+                <Text key={day} style={styles.calendarDaysLabel}>{day}</Text>
+              ))}
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+              {["1", "2", "3", "4", "5", "6", "7"].map((date) => (
+                <Text key={date} style={styles.calendarDatesLabel}>{date}</Text>
+              ))}
+            </View>
+          </View>
         </View>
-      </View>
+      ) : (
+        /* Mobile Layout: Responsive Full-Width Centered Cards */
+        <View style={{ gap: 12, marginBottom: 16, width: "100%" }}>
+          {/* Row 1: Pending Card (Full Width) */}
+          <View style={[styles.statCard, { width: "100%", borderTopColor: "#F59E0B" }]}>
+            <View style={styles.statCardHeader}>
+              <Text style={styles.statLabel}>รออนุมัติสิทธิ์</Text>
+              <Clock size={18} color="#F59E0B" />
+            </View>
+            <Text style={[styles.statNumber, { color: "#D97706" }]}>
+              {stats.pendingVerifications ?? 12}
+            </Text>
+            <Text style={styles.statSub}>รอแอดมินอนุมัติ</Text>
+          </View>
+
+          {/* Row 2: Verified & Unverified Cards (Side-by-Side Pair) */}
+          <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+            {/* Card 2: Verified */}
+            <View style={[styles.statCard, { flex: 1, borderTopColor: "#10B981" }]}>
+              <View style={styles.statCardHeader}>
+                <Text style={styles.statLabel}>ยืนยันตัวตนแล้ว</Text>
+                <CheckCircle2 size={18} color="#10B981" />
+              </View>
+              <Text style={[styles.statNumber, { color: "#059669" }]}>
+                {stats.verifiedVerifications ?? 321}
+              </Text>
+              <Text style={styles.statSub}>ตรา มทส.</Text>
+            </View>
+
+            {/* Card 3: Unverified */}
+            <View style={[styles.statCard, { flex: 1, borderTopColor: "#8B5CF6" }]}>
+              <View style={styles.statCardHeader}>
+                <Text style={styles.statLabel}>ยังไม่ยืนยันตัวตน</Text>
+                <AlertCircle size={18} color="#8B5CF6" />
+              </View>
+              <Text style={[styles.statNumber, { color: "#6D28D9" }]}>
+                {stats.unverifiedVerifications ?? 12}
+              </Text>
+              <Text style={styles.statSub}>สมาชิกทั่วไป</Text>
+            </View>
+          </View>
+
+          {/* Row 3: Calendar Widget (Full Width) */}
+          <View style={[styles.calendarWidget, { width: "100%" }]}>
+            <View style={styles.calendarHeader}>
+              <CalendarIcon size={16} color="#FFFFFF" />
+              <Text style={styles.calendarTitle}>กันยายน 2569</Text>
+            </View>
+            <View style={styles.calendarBadge}>
+              <UsersIcon size={12} color="#FFFFFF" />
+              <Text style={styles.calendarBadgeText}>
+                {stats.members.toLocaleString()} สมาชิก
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
+              {["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"].map((day) => (
+                <Text key={day} style={styles.calendarDaysLabel}>{day}</Text>
+              ))}
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+              {["1", "2", "3", "4", "5", "6", "7"].map((date) => (
+                <Text key={date} style={styles.calendarDatesLabel}>{date}</Text>
+              ))}
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Middle Section: Safety Report & Peak Time Charts */}
-      <View style={styles.middleRow}>
+      <View style={[styles.middleRow, { flexDirection: isDesktop ? "row" : "column", marginTop: isDesktop ? 0 : 4, width: "100%" }]}>
         {/* Safety & Verification Report */}
-        <View style={[styles.chartCard, { flex: 2 }]}>
+        <View style={[styles.chartCard, { flex: isDesktop ? 2 : undefined, width: "100%" }]}>
           <View style={styles.chartHeader}>
             <ShieldCheck size={20} color="#8B1E1E" />
-            <Text style={styles.chartTitle}>Safety Report & Verification Analytics</Text>
+            <Text style={styles.chartTitle}>รายงานความปลอดภัย</Text>
           </View>
           <View style={styles.barChartContainer}>
             {[
-              { month: "May", verified: 65, pending: 20 },
-              { month: "Jun", verified: 85, pending: 35 },
-              { month: "Jul", verified: 120, pending: 45 },
-              { month: "Aug", verified: 190, pending: 50 },
-              { month: "Sep", verified: 321, pending: 12 },
+              { month: "พ.ค.", profile: 15, harassment: 8, spam: 12 },
+              { month: "มิ.ย.", profile: 22, harassment: 14, spam: 18 },
+              { month: "ก.ค.", profile: 30, harassment: 18, spam: 25 },
+              { month: "ส.ค.", profile: 42, harassment: 25, spam: 32 },
+              { month: "ก.ย.", profile: 55, harassment: 30, spam: 38 },
             ].map((item) => (
               <View key={item.month} style={styles.barGroup}>
                 <View style={styles.barTrack}>
+                  {/* Blue: Profile */}
                   <View
-                    style={[
-                      styles.barFillVerified,
-                      { height: `${(item.verified / 350) * 100}%` },
-                    ]}
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#3B82F6",
+                      height: `${(item.profile / 130) * 100}%`,
+                      borderTopLeftRadius: 4,
+                      borderTopRightRadius: 4,
+                    }}
                   />
+                  {/* Red: Harassment */}
                   <View
-                    style={[
-                      styles.barFillPending,
-                      { height: `${(item.pending / 350) * 100}%` },
-                    ]}
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#EF4444",
+                      height: `${(item.harassment / 130) * 100}%`,
+                    }}
+                  />
+                  {/* Yellow: Spam/Scam */}
+                  <View
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#F59E0B",
+                      height: `${(item.spam / 130) * 100}%`,
+                    }}
                   />
                 </View>
                 <Text style={styles.barLabel}>{item.month}</Text>
               </View>
             ))}
           </View>
-          <View style={styles.chartLegend}>
+          <View style={[styles.chartLegend, { flexWrap: "wrap", gap: 12, justifyContent: "center" }]}>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: "#8B1E1E" }]} />
-              <Text style={styles.legendText}>Verified</Text>
+              <View style={[styles.legendDot, { backgroundColor: "#3B82F6" }]} />
+              <Text style={styles.legendText}>รายงานโปรไฟล์</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
+              <Text style={styles.legendText}>รายงานแชทคุกคาม</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: "#F59E0B" }]} />
-              <Text style={styles.legendText}>Pending Review</Text>
+              <Text style={styles.legendText}>รายงานแชทสแปม/สแกมเมอร์</Text>
             </View>
           </View>
         </View>
 
         {/* Peak Time Activity Chart */}
-        <View style={[styles.chartCard, { flex: 1 }]}>
+        <View style={[styles.chartCard, { flex: isDesktop ? 1 : undefined, width: "100%" }]}>
           <View style={styles.chartHeader}>
             <Activity size={20} color="#3B82F6" />
-            <Text style={styles.chartTitle}>Peak Time Activity</Text>
+            <Text style={styles.chartTitle}>ช่วงเวลาหนาแน่นที่สุด</Text>
           </View>
           <View style={styles.peakContainer}>
-            <Text style={styles.peakValue}>21:00 - 23:30</Text>
-            <Text style={styles.peakSub}>Highest Active Hours</Text>
+            <Text style={styles.peakValue}>21:00 - 23:30 น.</Text>
+            <Text style={styles.peakSub}>ช่วงเวลาที่มีการใช้งานสูงสุด</Text>
 
             {/* Wave Line Visualization */}
             <View style={styles.waveVisual}>
@@ -173,31 +270,31 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
 
             <View style={styles.peakFooter}>
               <TrendingUp size={16} color="#10B981" />
-              <Text style={styles.peakFooterText}>+24.5% activity at night</Text>
+              <Text style={styles.peakFooterText}>+24.5% ใช้งานคึกคักช่วงค่ำ</Text>
             </View>
           </View>
         </View>
       </View>
 
       {/* Bottom Section: Swipes & Matched Chart */}
-      <View style={styles.bottomRow}>
-        <View style={styles.chartCard}>
+      <View style={[styles.bottomRow, { marginTop: 16, width: "100%" }]}>
+        <View style={[styles.chartCard, { width: "100%" }]}>
           <View style={styles.chartHeader}>
             <BarChart2 size={20} color="#8B1E1E" />
-            <Text style={styles.chartTitle}>Swipes & Matched Ratio</Text>
+            <Text style={styles.chartTitle}>สถิติการปัดเลือก & อัตราจับคู่</Text>
           </View>
           <View style={styles.swipeMetricsRow}>
             <View style={styles.metricPill}>
               <Text style={styles.metricPillVal}>4,890</Text>
-              <Text style={styles.metricPillLab}>Total Swipes</Text>
+              <Text style={styles.metricPillLab}>ปัดเลือกทั้งหมด</Text>
             </View>
             <View style={styles.metricPill}>
               <Text style={styles.metricPillVal}>1,420</Text>
-              <Text style={styles.metricPillLab}>Interested Likes</Text>
+              <Text style={styles.metricPillLab}>กดถูกใจสนใจ</Text>
             </View>
             <View style={styles.metricPill}>
               <Text style={styles.metricPillVal}>142</Text>
-              <Text style={styles.metricPillLab}>Active Matches</Text>
+              <Text style={styles.metricPillLab}>จับคู่สำเร็จ</Text>
             </View>
           </View>
         </View>
@@ -305,6 +402,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 20,
+    width: "100%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -346,7 +444,7 @@ const styles = StyleSheet.create({
   },
   barFillVerified: {
     width: "100%",
-    backgroundColor: "#8B1E1E",
+    backgroundColor: "#10B981",
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
   },

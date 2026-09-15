@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Search, Users as UsersIcon } from "lucide-react-native";
 import { api } from "../../services/api";
 import { F } from "../../theme/typography";
@@ -19,11 +19,14 @@ type AdminUser = {
 export function Users({ go }: { go: (x: Screen) => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const load = useCallback(async () => {
     try {
-      const data = await api<AdminUser[]>("/api/admin/users");
-      setUsers(data ?? []);
+      const data = await api<any>("/api/admin/users");
+      const list = Array.isArray(data) ? data : (data?.items ?? []);
+      setUsers(Array.isArray(list) ? list : []);
     } catch (reason) {
       Alert.alert(
         "Users",
@@ -52,12 +55,13 @@ export function Users({ go }: { go: (x: Screen) => void }) {
     load();
   };
 
+  const userList = Array.isArray(users) ? users : [];
   const needle = query.trim().toLowerCase();
   const visible = needle
-    ? users.filter((u) =>
+    ? userList.filter((u) =>
         `${u.displayName ?? ""}${u.email ?? ""}`.toLowerCase().includes(needle),
       )
-    : users;
+    : userList;
 
   return (
     <AdminLayout currentScreen="users" go={go}>
@@ -79,17 +83,79 @@ export function Users({ go }: { go: (x: Screen) => void }) {
           />
         </View>
 
-        {/* Table View */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.th, { flex: 1.5 }]}>Student</Text>
-          <Text style={[styles.th, { flex: 1.5 }]}>Email</Text>
-          <Text style={[styles.th, { flex: 0.8 }]}>Role</Text>
-          <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-          <Text style={[styles.th, { flex: 1.2, textAlign: "right" }]}>Actions</Text>
-        </View>
+        {/* Table View (Desktop) / Card View (Mobile) */}
+        {isDesktop ? (
+          <View style={styles.tableHeader}>
+            <Text style={[styles.th, { flex: 1.5 }]}>Student</Text>
+            <Text style={[styles.th, { flex: 1.5 }]}>Email</Text>
+            <Text style={[styles.th, { flex: 0.8 }]}>Role</Text>
+            <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+            <Text style={[styles.th, { flex: 1.2, textAlign: "right" }]}>Actions</Text>
+          </View>
+        ) : null}
 
-        {visible.map((user) => {
+        {(Array.isArray(visible) ? visible : []).map((user) => {
           const reports = user._count?.reportsReceived ?? 0;
+          if (!isDesktop) {
+            {/* Mobile Responsive Card */}
+            return (
+              <View key={user.id} style={styles.mobileUserCard}>
+                <View style={styles.mobileUserHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.userName}>{user.displayName ?? "—"}</Text>
+                    <Text style={styles.userEmail}>{user.email}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      user.suspended ? styles.badgeSuspended : styles.badgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        user.suspended ? styles.textSuspended : styles.textActive,
+                      ]}
+                    >
+                      {user.suspended ? "Suspended" : "Active"}
+                    </Text>
+                  </View>
+                </View>
+
+                {reports > 0 ? (
+                  <Text style={styles.reportBadge}>⚠️ Reported {reports} times</Text>
+                ) : null}
+
+                <View style={styles.mobileActionsRow}>
+                  <Text style={styles.roleText}>Role: {user.role ?? "USER"}</Text>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <Pressable
+                      style={[
+                        styles.btnAction,
+                        user.suspended ? styles.btnUnsuspend : styles.btnSuspend,
+                      ]}
+                      onPress={() => suspend(user.id, !user.suspended)}
+                    >
+                      <Text style={styles.btnActionText}>
+                        {user.suspended ? "Unsuspend" : "Suspend"}
+                      </Text>
+                    </Pressable>
+
+                    {user.verification?.status === "PENDING" ? (
+                      <Pressable
+                        style={[styles.btnAction, styles.btnVerify]}
+                        onPress={() => verify(user.id)}
+                      >
+                        <Text style={styles.btnActionText}>Verify</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            );
+          }
+
+          {/* Desktop Table Row */}
           return (
             <View key={user.id} style={styles.tableRow}>
               <View style={[styles.td, { flex: 1.5 }]}>
@@ -194,6 +260,26 @@ const styles = StyleSheet.create({
     fontFamily: F.regular,
     fontSize: 14,
     color: "#111827",
+  },
+
+  mobileUserCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    gap: 8,
+  },
+  mobileUserHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  mobileActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
   },
 
   tableHeader: {

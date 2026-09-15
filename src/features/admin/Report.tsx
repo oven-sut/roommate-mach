@@ -27,8 +27,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
   const loadReports = useCallback(async () => {
     try {
-      const data = await api<ReportItem[]>("/api/admin/reports");
-      setReports(data ?? []);
+      const data = await api<any>("/api/admin/reports");
+      const list = Array.isArray(data) ? data : (data?.items ?? []);
+      setReports(Array.isArray(list) ? list : []);
     } catch {
       // Demo mock reports
       setReports([
@@ -52,6 +53,8 @@ export function Report({ go }: { go: (x: Screen) => void }) {
   useEffect(() => {
     loadReports();
   }, [loadReports]);
+
+  const reportList = Array.isArray(reports) ? reports : [];
 
   const handleAction = async (id: string, action: "resolve" | "dismiss") => {
     try {
@@ -89,7 +92,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
             <Text style={styles.metricTitle}>Pending Reviews</Text>
             <Clock size={18} color="#F59E0B" />
           </View>
-          <Text style={[styles.metricVal, { color: "#D97706" }]}>5</Text>
+          <Text style={[styles.metricVal, { color: "#D97706" }]}>
+            {reportList.filter((r) => r.status === "PENDING").length}
+          </Text>
         </View>
 
         <View style={[styles.metricCard, { borderLeftColor: "#10B981" }]}>
@@ -97,7 +102,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
             <Text style={styles.metricTitle}>Resolved</Text>
             <CheckCircle size={18} color="#10B981" />
           </View>
-          <Text style={[styles.metricVal, { color: "#059669" }]}>28</Text>
+          <Text style={[styles.metricVal, { color: "#059669" }]}>
+            {reportList.filter((r) => r.status === "RESOLVED").length}
+          </Text>
         </View>
 
         <View style={[styles.metricCard, { borderLeftColor: "#6B7280" }]}>
@@ -105,7 +112,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
             <Text style={styles.metricTitle}>Dismissed</Text>
             <XCircle size={18} color="#6B7280" />
           </View>
-          <Text style={[styles.metricVal, { color: "#4B5563" }]}>3</Text>
+          <Text style={[styles.metricVal, { color: "#4B5563" }]}>
+            {reportList.filter((r) => r.status === "DISMISSED").length}
+          </Text>
         </View>
       </View>
 
@@ -124,7 +133,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           <Text style={[styles.th, { flex: 1.2, textAlign: "right" }]}>Actions</Text>
         </View>
 
-        {reports.map((item) => (
+        {reportList.map((item) => (
           <View key={item.id} style={styles.tableRow}>
             <View style={[styles.td, { flex: 1.2 }]}>
               <Text style={styles.reportedName}>
