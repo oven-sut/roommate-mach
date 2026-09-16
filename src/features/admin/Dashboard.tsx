@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   // text/label above and below it so a 100%-tall bar never crowds them out.
   funnelBarTrack: {
     width: 40,
-    height: 96,
+    height: 90,
     justifyContent: "flex-end",
   },
   funnelBar: {
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   },
   funnelValue: {
     fontFamily: F.bold,
-    fontSize: 12,
+    fontSize: 18,
     color: C.white,
   },
   funnelLabel: {
