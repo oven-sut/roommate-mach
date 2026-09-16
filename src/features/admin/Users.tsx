@@ -43,17 +43,42 @@ type UserActivity = {
   recentReportsReceived: { reason: string; status: string; createdAt: string }[];
 };
 
+type PageSizeOption = 10 | 30 | 50 | "all";
+/** Admin/users caps pageSize at 100, so "load everything" fetches in batches of this size. */
+const FETCH_BATCH_SIZE = 100;
+
 export function Users({ go }: { go: (x: Screen) => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(10);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
   const load = useCallback(async () => {
     try {
-      const data = await api<any>("/api/admin/users");
-      const list = Array.isArray(data) ? data : (data?.items ?? []);
-      setUsers(Array.isArray(list) ? list : []);
+      const first = await api<any>(
+        `/api/admin/users?page=1&pageSize=${FETCH_BATCH_SIZE}`,
+      );
+      const items: AdminUser[] = Array.isArray(first)
+        ? [...first]
+        : Array.isArray(first?.items)
+          ? [...first.items]
+          : [];
+      const total: number = Array.isArray(first) ? items.length : (first?.total ?? items.length);
+
+      let nextPage = 2;
+      while (items.length < total) {
+        const more = await api<any>(
+          `/api/admin/users?page=${nextPage}&pageSize=${FETCH_BATCH_SIZE}`,
+        );
+        const batch: AdminUser[] = Array.isArray(more?.items) ? more.items : [];
+        if (batch.length === 0) break;
+        items.push(...batch);
+        nextPage += 1;
+      }
+
+      setUsers(items);
     } catch (reason) {
       Alert.alert(
         "Users",
@@ -65,6 +90,11 @@ export function Users({ go }: { go: (x: Screen) => void }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // A new search or page-size change should always land back on page 1.
+  useEffect(() => {
+    setPage(1);
+  }, [query, pageSize]);
 
   const suspend = async (id: string, value: boolean) => {
     await api(`/api/admin/users/${id}/suspend`, {
@@ -157,11 +187,20 @@ export function Users({ go }: { go: (x: Screen) => void }) {
 
   const userList = Array.isArray(users) ? users : [];
   const needle = query.trim().toLowerCase();
-  const visible = needle
+  const filtered = needle
     ? userList.filter((u) =>
         `${u.displayName ?? ""}${u.email ?? ""}`.toLowerCase().includes(needle),
       )
     : userList;
+
+  const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visible =
+    pageSize === "all"
+      ? filtered
+      : filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * (pageSize === "all" ? filtered.length : pageSize) + 1;
+  const rangeEnd = pageSize === "all" ? filtered.length : Math.min(currentPage * pageSize, filtered.length);
 
   return (
     <AdminLayout currentScreen="users" go={go}>
@@ -363,6 +402,71 @@ export function Users({ go }: { go: (x: Screen) => void }) {
             </View>
           );
         })}
+
+        {/* Pagination */}
+        <View style={styles.paginationBar}>
+          <Text style={styles.paginationInfo}>
+            {filtered.length === 0
+              ? "ไม่พบผู้ใช้"
+              : `แสดง ${rangeStart}-${rangeEnd} จาก ${filtered.length} คน`}
+          </Text>
+
+          <View style={styles.pageSizeGroup}>
+            <Text style={styles.pageSizeLabel}>แสดงต่อหน้า</Text>
+            {([10, 30, 50, "all"] as PageSizeOption[]).map((opt) => (
+              <Pressable
+                key={String(opt)}
+                style={[styles.pageSizeBtn, pageSize === opt && styles.pageSizeBtnActive]}
+                onPress={() => setPageSize(opt)}
+              >
+                <Text
+                  style={[
+                    styles.pageSizeBtnText,
+                    pageSize === opt && styles.pageSizeBtnTextActive,
+                  ]}
+                >
+                  {opt === "all" ? "ทั้งหมด" : opt}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {pageSize !== "all" && pageCount > 1 ? (
+            <View style={styles.pageNavGroup}>
+              <Pressable
+                disabled={currentPage <= 1}
+                onPress={() => setPage((p) => Math.max(1, p - 1))}
+                style={[styles.pageNavBtn, currentPage <= 1 && styles.pageNavBtnDisabled]}
+              >
+                <Text
+                  style={[
+                    styles.pageNavBtnText,
+                    currentPage <= 1 && styles.pageNavBtnTextDisabled,
+                  ]}
+                >
+                  ก่อนหน้า
+                </Text>
+              </Pressable>
+              <Text style={styles.pageIndicator}>
+                หน้า {currentPage} / {pageCount}
+              </Text>
+              <Pressable
+                disabled={currentPage >= pageCount}
+                onPress={() => setPage((p) => Math.min(pageCount, p + 1))}
+                style={[styles.pageNavBtn, currentPage >= pageCount && styles.pageNavBtnDisabled]}
+              >
+                <Text
+                  style={[
+                    styles.pageNavBtnText,
+                    currentPage >= pageCount && styles.pageNavBtnTextDisabled,
+                  ]}
+                >
+                  ถัดไป
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       {/* User Activity / History Modal */}
@@ -645,5 +749,77 @@ const styles = StyleSheet.create({
     fontFamily: F.regular,
     fontSize: 11,
     color: "#9CA3AF",
+  },
+
+  paginationBar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  paginationInfo: {
+    fontFamily: F.regular,
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  pageSizeGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  pageSizeLabel: {
+    fontFamily: F.medium,
+    fontSize: 12,
+    color: "#6B7280",
+    marginRight: 2,
+  },
+  pageSizeBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: "#F3F4F6",
+  },
+  pageSizeBtnActive: {
+    backgroundColor: "#8B1E1E",
+  },
+  pageSizeBtnText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "#4B5563",
+  },
+  pageSizeBtnTextActive: {
+    color: "#FFFFFF",
+  },
+  pageNavGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  pageNavBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: "#111827",
+  },
+  pageNavBtnDisabled: {
+    backgroundColor: "#E5E7EB",
+  },
+  pageNavBtnText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "#FFFFFF",
+  },
+  pageNavBtnTextDisabled: {
+    color: "#9CA3AF",
+  },
+  pageIndicator: {
+    fontFamily: F.medium,
+    fontSize: 12,
+    color: "#4B5563",
   },
 });
