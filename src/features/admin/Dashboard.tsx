@@ -282,12 +282,14 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
           {swipeStages.map((s) => (
             <View key={s.label} style={styles.funnelBarGroup}>
               <Text style={styles.funnelValue}>{s.value.toLocaleString()}</Text>
-              <View
-                style={[
-                  styles.funnelBar,
-                  { height: `${Math.min(100, Math.max(6, (s.value / swipeBase) * 100))}%` },
-                ]}
-              />
+              <View style={styles.funnelBarTrack}>
+                <View
+                  style={[
+                    styles.funnelBar,
+                    { height: `${Math.min(100, Math.max(6, (s.value / swipeBase) * 100))}%` },
+                  ]}
+                />
+              </View>
               <Text style={styles.funnelLabel}>{s.label}</Text>
             </View>
           ))}
@@ -642,8 +644,15 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "flex-end",
   },
-  funnelBar: {
+  // Fixed pixel height the bar scales within, kept separate from the value
+  // text/label above and below it so a 100%-tall bar never crowds them out.
+  funnelBarTrack: {
     width: 40,
+    height: 96,
+    justifyContent: "flex-end",
+  },
+  funnelBar: {
+    width: "100%",
     backgroundColor: C.amberLight,
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
