@@ -166,7 +166,9 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     { label: "กดถูกใจ", value: stats.likes ?? 1420 },
     { label: "จับคู่สำเร็จ", value: stats.matches ?? 142 },
   ];
-  const swipeBase = Math.max(swipeStages[0].value, 1);
+  // Base on the largest stage (not just the first) so a data anomaly where a
+  // later stage exceeds an earlier one can never push a bar past 100%.
+  const swipeBase = Math.max(...swipeStages.map((s) => s.value), 1);
 
   const reportTrend = useMemo(() => {
     if (!stats.reportTrend || stats.reportTrend.length === 0) return FALLBACK_REPORT_TREND;
@@ -283,7 +285,7 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
               <View
                 style={[
                   styles.funnelBar,
-                  { height: `${Math.max(6, (s.value / swipeBase) * 100)}%` },
+                  { height: `${Math.min(100, Math.max(6, (s.value / swipeBase) * 100))}%` },
                 ]}
               />
               <Text style={styles.funnelLabel}>{s.label}</Text>
@@ -630,6 +632,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "flex-end",
     height: 140,
+    overflow: "hidden",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.25)",
   },
