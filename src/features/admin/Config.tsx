@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { AlertTriangle, Calculator, CheckCircle, HelpCircle, Settings } from "lucide-react-native";
 import { Slider } from "../../components/Slider";
 import { Button, Field, Txt } from "../../components/ui";
@@ -55,6 +55,8 @@ const WEIGHT_ROWS = [
 
 export function Config({ go }: { go: (x: Screen) => void }) {
   const { language } = useI18n();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const [config, setConfig] = useState<AdminConfig>(DEFAULTS);
   const [saving, setSaving] = useState(false);
 
@@ -139,7 +141,7 @@ export function Config({ go }: { go: (x: Screen) => void }) {
 
   return (
     <AdminLayout currentScreen="config" go={go}>
-      <View style={styles.card}>
+      <View style={[styles.card, !isDesktop && { padding: 14 }]}>
         <View style={styles.cardHeader}>
           <Settings size={20} color="#8B1E1E" />
           <Text style={styles.cardTitle}>ตั้งค่าระบบ (System Configuration)</Text>
@@ -155,12 +157,14 @@ export function Config({ go }: { go: (x: Screen) => void }) {
           autoCapitalize="none"
         />
 
-        <View style={styles.weightHeaderRow}>
-          <Text style={styles.sectionLabel}>ค่าน้ำหนักอัลกอริทึมคะแนนจับคู่ (Match Score Weights)</Text>
+        <View style={[styles.weightHeaderRow, !isDesktop && { flexWrap: "wrap", alignItems: "flex-start", gap: 6 }]}>
+          <Text style={[styles.sectionLabel, { flex: 1, flexShrink: 1, marginBottom: 0, marginTop: 0 }]}>
+            ค่าน้ำหนักอัลกอริทึมคะแนนจับคู่ (Match Score Weights)
+          </Text>
           <Text
             style={[
               styles.totalWeightText,
-              { color: total === 100 ? "#10B981" : "#EF4444" },
+              { color: total === 100 ? "#10B981" : "#EF4444", flexShrink: 0 },
             ]}
           >
             {total}% / 100%
@@ -170,9 +174,9 @@ export function Config({ go }: { go: (x: Screen) => void }) {
         {WEIGHT_ROWS.map((row) => (
           <View key={row.key} style={styles.weightBox}>
             <View style={styles.weightRowBetween}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1, flexShrink: 1, marginRight: 8 }}>
                 <Text style={{ fontSize: 16 }}>{row.icon}</Text>
-                <Text style={styles.weightLabel}>{row.label}</Text>
+                <Text style={[styles.weightLabel, { flex: 1, flexShrink: 1 }]}>{row.label}</Text>
               </View>
               <Text style={styles.weightValueText}>{config.weights[row.key]}%</Text>
             </View>

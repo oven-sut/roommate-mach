@@ -78,6 +78,46 @@ const FACULTY_COLORS = [
   "#8B5CF6",
 ];
 
+const MAJOR_THAI_MAP: Record<string, string> = {
+  "Computer Engineering": "วิศวกรรมคอมพิวเตอร์",
+  "Chemical Engineering": "วิศวกรรมเคมี",
+  "Civil Engineering": "วิศวกรรมโยธา",
+  "Electrical Engineering": "วิศวกรรมไฟฟ้า",
+  "Mechanical Engineering": "วิศวกรรมเครื่องกล",
+  "Industrial Engineering": "วิศวกรรมอุตสาหการ",
+  "Environmental Engineering": "วิศวกรรมสิ่งแวดล้อม",
+  "Telecommunication Engineering": "วิศวกรรมโทรคมนาคม",
+  "Logistics Engineering": "วิศวกรรมขนส่งและโลจิสติกส์",
+  "Agricultural & Food Eng.": "วิศวกรรมเกษตรและอาหาร",
+  "Agricultural and Food Engineering": "วิศวกรรมเกษตรและอาหาร",
+  "Information Technology": "เทคโนโลยีสารสนเทศ",
+  "Management Technology": "เทคโนโลยีการจัดการ",
+  "Information Technology Management": "เทคโนโลยีการจัดการ",
+  "การจัดการเทคโนโลยีสารสนเทศ": "เทคโนโลยีการจัดการ",
+  "Computer Science": "วิทยาการคอมพิวเตอร์",
+  "Medicine": "แพทยศาสตร์",
+  "Nursing": "พยาบาลศาสตร์",
+  "Dentistry": "ทันตแพทยศาสตร์",
+  "Public Health": "สาธารณสุขศาสตร์",
+  "Agricultural Technology": "เทคโนโลยีการเกษตร",
+  "Food Technology": "เทคโนโลยีอาหาร",
+  "Digital Communication": "นิเทศศาสตร์ดิจิทัล",
+  "Digital Technology": "เทคโนโลยีดิจิทัล",
+  "Business Administration": "บริหารธุรกิจ / บัญชี",
+  "Business / Accounting": "บริหารธุรกิจ / บัญชี",
+  "Business": "บริหารธุรกิจ / บัญชี",
+  "Architecture": "สถาปัตยกรรมศาสตร์",
+  "Physical Therapy": "กายภาพบำบัด",
+  "Metallurgical Engineering": "วิศวกรรมโลหการ",
+  "Biotechnology": "เทคโนโลยีชีวภาพ",
+};
+
+function normalizeMajorToThai(major: string): string {
+  if (!major) return "ไม่ระบุสาขา";
+  const trimmed = major.trim();
+  return MAJOR_THAI_MAP[trimmed] ?? trimmed;
+}
+
 export function Analytics({ go }: { go: (x: Screen) => void }) {
   const [data, setData] = useState<AnalyticsData>(EMPTY_ANALYTICS);
 
@@ -90,10 +130,8 @@ export function Analytics({ go }: { go: (x: Screen) => void }) {
   const { matchedRatio, yearDistribution, facultyDistribution, lifestyleTags } = data;
   const maxYearPercent = Math.max(...yearDistribution.map((y) => y.percent), 1);
   const years = yearDistribution.map((y, i) => ({
-    label: `Year ${y.year}`,
+    label: `ชั้นปีที่ ${y.year}`,
     percent: y.percent,
-    // Bar height is relative to the largest year so the tallest bar always
-    // reaches the top of the track, regardless of how many years there are.
     barHeightPercent: (y.percent / maxYearPercent) * 100,
     count: y.count,
     color: YEAR_COLORS[i % YEAR_COLORS.length],
@@ -102,11 +140,21 @@ export function Analytics({ go }: { go: (x: Screen) => void }) {
     ...t,
     color: TAG_COLORS[t.tag] ?? "#8B1E1E",
   }));
-  const faculties = facultyDistribution.map((f, i) => ({
-    name: f.major,
-    count: f.count,
-    color: FACULTY_COLORS[i % FACULTY_COLORS.length],
-  }));
+
+  const faculties = React.useMemo(() => {
+    const map = new Map<string, number>();
+    for (const f of facultyDistribution) {
+      const thaiName = normalizeMajorToThai(f.major);
+      map.set(thaiName, (map.get(thaiName) ?? 0) + f.count);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count], i) => ({
+        name,
+        count,
+        color: FACULTY_COLORS[i % FACULTY_COLORS.length],
+      }));
+  }, [facultyDistribution]);
 
   return (
     <AdminLayout currentScreen="analytics" go={go}>
@@ -201,7 +249,7 @@ export function Analytics({ go }: { go: (x: Screen) => void }) {
               <View key={f.name} style={styles.facultyRow}>
                 <View style={[styles.facultyDot, { backgroundColor: f.color }]} />
                 <Text style={styles.facultyName}>{f.name}</Text>
-                <Text style={styles.facultyCount}>{f.count} students</Text>
+                <Text style={styles.facultyCount}>{f.count} คน</Text>
               </View>
             ))}
           </View>

@@ -98,7 +98,7 @@ function PeakTimeChart({ data }: { data?: number[] }) {
   const areaPath = `${linePath} L ${W},${H} L 0,${H} Z`;
 
   return (
-    <View>
+    <View style={{ flex: 1, justifyContent: "center" }}>
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
         <Defs>
           <SvgLinearGradient id="peakFill" x1="0" y1="0" x2="0" y2="1">
@@ -166,8 +166,6 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     { label: "กดถูกใจ", value: stats.likes ?? 1420 },
     { label: "จับคู่สำเร็จ", value: stats.matches ?? 142 },
   ];
-  // Base on the largest stage (not just the first) so a data anomaly where a
-  // later stage exceeds an earlier one can never push a bar past 100%.
   const swipeBase = Math.max(...swipeStages.map((s) => s.value), 1);
 
   const reportTrend = useMemo(() => {
@@ -184,8 +182,8 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     ...reportTrend.map((m) => m.profile + m.harassment + m.spam),
   );
 
-  /* ---- Left column blocks ---- */
-  const statsBlock = (
+  /* ---- KPI Cards Row (4 cards in full width row on Desktop) ---- */
+  const statsRowBlock = (
     <View style={styles.statsRow}>
       <LinearGradient colors={[...G.hero]} style={[styles.statCard, styles.statCardActive]}>
         <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
@@ -204,11 +202,63 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
         <Text style={styles.statLabelMuted}>ยังไม่ยืนยันตัวตน</Text>
         <Text style={styles.statNumberMuted}>{stats.unverifiedVerifications ?? 12}</Text>
       </View>
+
+      <Pressable style={styles.statCardPressable} onPress={() => go("users")}>
+        <LinearGradient colors={[...G.primary]} style={styles.usersCard}>
+          <View style={styles.usersCardHeader}>
+            <Text style={styles.usersCardValue}>{stats.members.toLocaleString()}</Text>
+            <View style={styles.usersIconBadge}>
+              <UsersIcon size={18} color={C.primary} />
+            </View>
+          </View>
+          <Text style={styles.usersCardLabel}>ผู้ใช้งานทั้งหมด (USERS)</Text>
+        </LinearGradient>
+      </Pressable>
     </View>
   );
 
+  /* ---- KPI Cards 2x2 Grid (Mobile Layout Fix) ---- */
+  const statsRowBlockMobile = (
+    <View style={styles.statsMobileGrid}>
+      <View style={styles.statsMobileRow}>
+        <LinearGradient colors={[...G.hero]} style={[styles.statCardMobile, styles.statCardActive]}>
+          <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
+          <Text style={styles.statNumberActive}>{stats.pendingVerifications ?? 12}</Text>
+          <View style={styles.statProgressTrack}>
+            <View style={[styles.statProgressFill, { width: `${pendingPct}%` }]} />
+          </View>
+        </LinearGradient>
+
+        <View style={[styles.statCardMobile, styles.statCardMuted]}>
+          <Text style={styles.statLabelMuted}>จับคู่สำเร็จ</Text>
+          <Text style={styles.statNumberMuted}>{stats.matches ?? 321}</Text>
+        </View>
+      </View>
+
+      <View style={styles.statsMobileRow}>
+        <View style={[styles.statCardMobile, styles.statCardMuted]}>
+          <Text style={styles.statLabelMuted}>ยังไม่ยืนยันตัวตน</Text>
+          <Text style={styles.statNumberMuted}>{stats.unverifiedVerifications ?? 12}</Text>
+        </View>
+
+        <Pressable style={styles.statCardPressableMobile} onPress={() => go("users")}>
+          <LinearGradient colors={[...G.primary]} style={styles.usersCardMobile}>
+            <View style={styles.usersCardHeader}>
+              <Text style={styles.usersCardValue}>{stats.members.toLocaleString()}</Text>
+              <View style={styles.usersIconBadge}>
+                <UsersIcon size={18} color={C.primary} />
+              </View>
+            </View>
+            <Text style={styles.usersCardLabel}>ผู้ใช้งานทั้งหมด (USERS)</Text>
+          </LinearGradient>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  /* ---- Safety Report Card ---- */
   const safetyBlock = (
-    <LinearGradient colors={[C.cardWarm, C.card]} style={styles.chartCard}>
+    <LinearGradient colors={[C.cardWarm, C.card]} style={[styles.chartCard, { flex: 1.4 }]}>
       <View style={styles.chartHeaderRow}>
         <View style={styles.chartHeaderLeft}>
           <ShieldCheck size={20} color={C.primary} />
@@ -264,43 +314,50 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     </LinearGradient>
   );
 
+  /* ---- Swipe & Match Funnel Card ---- */
   const swipeBlock = (
-    <LinearGradient colors={[...G.hero]} style={styles.chartCard}>
+    <LinearGradient colors={[...G.hero]} style={[styles.chartCard, { flex: 1.4 }]}>
       <View style={styles.chartHeaderRow}>
         <View style={styles.chartHeaderLeft}>
           <BarChart2 size={20} color={C.white} />
           <Text style={[styles.chartTitle, { color: C.white }]}>ปัดเลือก & จับคู่</Text>
         </View>
       </View>
-      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 12, flex: 1 }}>
         <View style={styles.funnelAxis}>
           {["100%", "75%", "50%", "25%", "0%"].map((l) => (
             <Text key={l} style={styles.funnelAxisLabel}>{l}</Text>
           ))}
         </View>
-        <View style={styles.funnelTrack}>
-          {swipeStages.map((s) => (
-            <View key={s.label} style={styles.funnelBarGroup}>
-              <Text style={styles.funnelValue}>{s.value.toLocaleString()}</Text>
-              <View style={styles.funnelBarTrack}>
-                <View
-                  style={[
-                    styles.funnelBar,
-                    { height: `${Math.min(100, Math.max(6, (s.value / swipeBase) * 100))}%` },
-                  ]}
-                />
+        <View style={styles.funnelContainer}>
+          <View style={styles.funnelTrack}>
+            {swipeStages.map((s) => (
+              <View key={s.label} style={styles.funnelBarGroup}>
+                <Text style={styles.funnelValue}>{s.value.toLocaleString()}</Text>
+                <View style={styles.funnelBarTrack}>
+                  <View
+                    style={[
+                      styles.funnelBar,
+                      { height: `${Math.min(100, Math.max(6, (s.value / swipeBase) * 100))}%` },
+                    ]}
+                  />
+                </View>
               </View>
-              <Text style={styles.funnelLabel}>{s.label}</Text>
-            </View>
-          ))}
+            ))}
+          </View>
+          <View style={styles.funnelLabelsRow}>
+            {swipeStages.map((s) => (
+              <Text key={s.label} style={styles.funnelLabel}>{s.label}</Text>
+            ))}
+          </View>
         </View>
       </View>
     </LinearGradient>
   );
 
-  /* ---- Right column blocks ---- */
+  /* ---- Calendar Card ---- */
   const calendarBlock = (
-    <View style={styles.calendarWidget}>
+    <View style={[styles.calendarWidget, { flex: 1 }]}>
       <View style={styles.calendarHeader}>
         <Pressable onPress={() => setWeekOffset((o) => o - 1)} hitSlop={8}>
           <ChevronLeft size={18} color={C.white} />
@@ -336,20 +393,9 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     </View>
   );
 
-  const usersBlock = (
-    <View style={{ flexDirection: "row", gap: 12 }}>
-      <LinearGradient colors={[...G.primary]} style={styles.usersCard}>
-        <Text style={styles.usersCardValue}>{stats.members.toLocaleString()}</Text>
-        <Text style={styles.usersCardLabel}>USERS</Text>
-      </LinearGradient>
-      <Pressable style={styles.usersIconBtn} onPress={() => go("users")}>
-        <UsersIcon size={22} color={C.primary} />
-      </Pressable>
-    </View>
-  );
-
+  /* ---- Peak Activity Time Card ---- */
   const peakBlock = (
-    <View style={styles.chartCard}>
+    <View style={[styles.chartCard, { flex: 1 }]}>
       <View style={styles.chartHeaderRow}>
         <View style={styles.chartHeaderLeft}>
           <Activity size={20} color={C.primary} />
@@ -362,65 +408,75 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
 
   return (
     <AdminLayout currentScreen="dashboard" go={go}>
-      {isDesktop ? (
-        <View style={styles.gridRow}>
-          <View style={styles.leftCol}>
-            {statsBlock}
-            {safetyBlock}
-            {swipeBlock}
+      <View style={styles.dashboardContainer}>
+        {/* Top KPI Cards Bar */}
+        {isDesktop ? statsRowBlock : statsRowBlockMobile}
+
+        {/* Charts & Widgets Rows */}
+        {isDesktop ? (
+          <View style={styles.flexRowsContainer}>
+            {/* Row 2: Safety Chart + Calendar */}
+            <View style={styles.gridRowSection}>
+              {safetyBlock}
+              {calendarBlock}
+            </View>
+
+            {/* Row 3: Swipe Funnel + Peak Activity */}
+            <View style={styles.gridRowSection}>
+              {swipeBlock}
+              {peakBlock}
+            </View>
           </View>
-          <View style={styles.rightCol}>
+        ) : (
+          <View style={{ gap: 16, width: "100%" }}>
+            {safetyBlock}
             {calendarBlock}
-            {usersBlock}
+            {swipeBlock}
             {peakBlock}
           </View>
-        </View>
-      ) : (
-        <View style={{ gap: 16, width: "100%" }}>
-          {statsBlock}
-          {calendarBlock}
-          {usersBlock}
-          {safetyBlock}
-          {peakBlock}
-          {swipeBlock}
-        </View>
-      )}
+        )}
+      </View>
     </AdminLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  gridRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 20,
+  dashboardContainer: {
     width: "100%",
-  },
-  leftCol: {
-    flex: 2.2,
     gap: 16,
   },
-  rightCol: {
-    flex: 1,
-    minWidth: 260,
+  flexRowsContainer: {
+    width: "100%",
     gap: 16,
+  },
+  gridRowSection: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 16,
+    width: "100%",
   },
 
   statsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 16,
+    width: "100%",
   },
   statCard: {
     flex: 1,
-    minWidth: 120,
+    minWidth: 160,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
+    justifyContent: "center",
+  },
+  statCardPressable: {
+    flex: 1,
+    minWidth: 160,
   },
   statCardActive: {
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 3,
   },
@@ -467,7 +523,8 @@ const styles = StyleSheet.create({
   calendarWidget: {
     backgroundColor: C.wine,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
+    justifyContent: "space-between",
   },
   calendarHeader: {
     flexDirection: "row",
@@ -490,7 +547,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   calendarDateCellActive: {
     backgroundColor: C.white,
@@ -507,30 +564,36 @@ const styles = StyleSheet.create({
   },
 
   usersCard: {
-    flex: 1,
+    height: "100%",
+    minHeight: 90,
     borderRadius: 16,
     padding: 16,
-    justifyContent: "center",
+    justifyContent: "space-between",
+  },
+  usersCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   usersCardValue: {
     fontFamily: F.bold,
-    fontSize: 22,
+    fontSize: 26,
     color: C.white,
   },
-  usersCardLabel: {
-    fontFamily: F.medium,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.85)",
-    letterSpacing: 0.5,
-    marginTop: 2,
-  },
-  usersIconBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: C.pink,
+  usersIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: C.white,
     alignItems: "center",
     justifyContent: "center",
+  },
+  usersCardLabel: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.9)",
+    letterSpacing: 0.5,
+    marginTop: 4,
   },
 
   chartCard: {
@@ -620,7 +683,8 @@ const styles = StyleSheet.create({
   },
 
   funnelAxis: {
-    height: 140,
+    height: 100,
+    marginBottom: 24,
     justifyContent: "space-between",
   },
   funnelAxisLabel: {
@@ -628,26 +692,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "rgba(255,255,255,0.6)",
   },
-  funnelTrack: {
+  funnelContainer: {
     flex: 1,
+  },
+  funnelTrack: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "flex-end",
-    height: 140,
-    overflow: "hidden",
+    height: 135,
+    paddingTop: 10,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.25)",
   },
   funnelBarGroup: {
     alignItems: "center",
-    gap: 6,
-    height: "100%",
     justifyContent: "flex-end",
+    gap: 6,
   },
-  // Fixed pixel height the bar scales within, kept separate from the value
-  // text/label above and below it so a 100%-tall bar never crowds them out.
   funnelBarTrack: {
-    width: 40,
+    width: 44,
     height: 90,
     justifyContent: "flex-end",
   },
@@ -659,12 +722,45 @@ const styles = StyleSheet.create({
   },
   funnelValue: {
     fontFamily: F.bold,
-    fontSize: 18,
+    fontSize: 16,
     color: C.white,
+    textAlign: "center",
+  },
+  funnelLabelsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingTop: 8,
   },
   funnelLabel: {
     fontFamily: F.medium,
     fontSize: 11,
     color: "rgba(255,255,255,0.85)",
+    textAlign: "center",
+  },
+  statsMobileGrid: {
+    width: "100%",
+    gap: 12,
+  },
+  statsMobileRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  statCardMobile: {
+    flex: 1,
+    minHeight: 105,
+    borderRadius: 16,
+    padding: 14,
+    justifyContent: "space-between",
+  },
+  statCardPressableMobile: {
+    flex: 1,
+    minHeight: 105,
+  },
+  usersCardMobile: {
+    minHeight: 105,
+    borderRadius: 16,
+    padding: 14,
+    justifyContent: "space-between",
   },
 });

@@ -118,10 +118,12 @@ export function CenterModal({
   visible,
   onClose,
   children,
+  maxWidth = 500,
 }: {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  maxWidth?: number | string;
 }) {
   return (
     <Modal
@@ -147,7 +149,7 @@ export function CenterModal({
           style={[
             {
               width: "100%",
-              maxWidth: 380,
+              maxWidth,
               backgroundColor: C.card,
               borderRadius: 24,
               padding: 22,
