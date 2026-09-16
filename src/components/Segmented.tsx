@@ -81,11 +81,11 @@ export function Segmented<V extends string>({
         />
       ) : null}
 
-      {options.map((option) => {
+      {options.map((option, idx) => {
         const active = option.value === value;
         return (
           <Pressable
-            key={option.value}
+            key={`${option.value}-${idx}`}
             onPress={() => onChange(option.value)}
             style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
             accessibilityRole="button"

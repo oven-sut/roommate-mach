@@ -13,6 +13,7 @@ import {
 } from "lucide-react-native";
 import { api } from "../../services/api";
 import { C, G } from "../../theme/colors";
+import { shadow } from "../../theme/styles";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 import { AdminLayout } from "./AdminLayout";
@@ -474,11 +475,7 @@ const styles = StyleSheet.create({
     minWidth: 160,
   },
   statCardActive: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    ...shadow(2),
   },
   statCardMuted: {
     backgroundColor: C.cardWarm,

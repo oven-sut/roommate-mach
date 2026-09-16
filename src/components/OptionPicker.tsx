@@ -64,11 +64,11 @@ export function OptionPicker({
       ) : null}
 
       <View style={{ gap: 2 }}>
-        {filtered.map((option) => {
+        {filtered.map((option, index) => {
           const active = option.value === value;
           return (
             <MotionPressable
-              key={option.value}
+              key={`${option.value}-${index}`}
               pressedScale={0.99}
               onPress={() => {
                 onSelect(option.value);

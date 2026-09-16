@@ -64,7 +64,7 @@ export function nameAndAge(person: MatchProfile | null | undefined): string {
  * housing preferences, so a card is never chip-less.
  */
 export function cardTags(person: MatchProfile | null | undefined): string[] {
-  if (person?.tags?.length) return person.tags;
+  if (person?.tags?.length) return Array.from(new Set(person.tags));
   const profile = person?.profile;
   if (!profile) return [];
   const tags: string[] = [];
@@ -72,9 +72,10 @@ export function cardTags(person: MatchProfile | null | undefined): string[] {
   if (profile.propertyType) tags.push(profile.propertyType);
   if (profile.zone) tags.push(profile.zone);
   if (profile.roommateGender) tags.push(profile.roommateGender);
-  return tags.length > 0
+  const result = tags.length > 0
     ? tags
     : ([profile.roomType, profile.propertyType].filter(Boolean) as string[]);
+  return Array.from(new Set(result));
 }
 
 export function isVerified(person: MatchProfile | null | undefined): boolean {
