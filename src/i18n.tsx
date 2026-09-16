@@ -334,7 +334,14 @@ const dict: Dict = {
 
   /* ----------------------------------------------------------- discovery */
   tapCardExpand: { en: "Tap card to expand", th: "แตะการ์ดเพื่อดูเพิ่ม" },
+  yourProfileCard: { en: "Your Profile", th: "โปรไฟล์ของคุณ" },
   slideToMatch: { en: "Slide to start matching", th: "เลื่อนเพื่อเริ่มจับคู่" },
+  accountHiddenNotice: { en: "Your account is hidden from Discover", th: "บัญชีของคุณถูกซ่อนจากหน้าค้นหา" },
+  enableStatusToMatch: {
+    en: "Turn on account status in Profile to start matching",
+    th: "เปิดใช้งานสถานะบัญชีในหน้าโปรไฟล์เพื่อเริ่มจับคู่",
+  },
+  goToProfile: { en: "Go to Profile", th: "ไปที่หน้าโปรไฟล์" },
   noMoreProfiles: { en: "No one left for now", th: "ยังไม่มีคนใหม่ตอนนี้" },
   noMoreProfilesSub: {
     en: "Widen your filters or check back later.",
@@ -399,6 +406,11 @@ const dict: Dict = {
     en: "Name, major, room type, preference",
     th: "ชื่อ สาขา ประเภทห้อง ความชอบ",
   },
+  editProfile: { en: "Edit Profile & Photos", th: "แก้ไขโปรไฟล์และรูปภาพ" },
+  editProfileSub: {
+    en: "Photos, name, major, room type, preference",
+    th: "รูปภาพ ชื่อ สาขา ประเภทห้อง ความชอบ",
+  },
   lifestyleQuestionnaire: { en: "Lifestyle questionnaire", th: "แบบสอบถามไลฟ์สไตล์" },
   lastTaken: { en: "Last taken", th: "ทำล่าสุด" },
   affectsScores: { en: "affects all match scores", th: "มีผลกับคะแนนจับคู่ทั้งหมด" },
@@ -407,6 +419,15 @@ const dict: Dict = {
   accountStatus: { en: "Account status", th: "สถานะบัญชี" },
   activeVisible: { en: "Active · visible in Discover", th: "ใช้งานอยู่ · แสดงในหน้าค้นหา" },
   hiddenFromDiscover: { en: "Hidden from Discover", th: "ซ่อนจากหน้าค้นหา" },
+  accountHiddenNotice: {
+    en: "Your account is hidden from Discover",
+    th: "สถานะบัญชีของคุณถูกซ่อนจากหน้าค้นหา",
+  },
+  enableStatusToMatch: {
+    en: "Enable your account status in profile to start sliding and matching with roommates.",
+    th: "เปิดสถานะบัญชีในโปรไฟล์ของคุณเพื่อเริ่มปัดจับคู่กับเพื่อนร่วมห้อง",
+  },
+  goToProfile: { en: "Go to Profile", th: "ไปที่โปรไฟล์" },
   settingTitle: { en: "Setting", th: "ตั้งค่า" },
   blockUsers: { en: "Block users", th: "ผู้ใช้ที่บล็อก" },
   messageNotif: { en: "Message", th: "ข้อความ" },

@@ -262,6 +262,7 @@ export function Matches({ go }: { go: (x: Screen) => void }) {
                             matchId: match.id,
                             userId: match.other?.id,
                             name: match.other?.displayName,
+                            photo: match.other?.profile?.photos?.[0],
                             conversationId: match.conversationId,
                           },
                           go,

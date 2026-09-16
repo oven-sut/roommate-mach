@@ -161,14 +161,14 @@ function AppContent() {
       setHasSeenOnboarding(true);
     }
     // Leaving the app entirely means the previous user's data must go too.
-    if (next === "login" || next === "signup") {
+    if (next === "login" || next === "signup" || next === "authChoice") {
       saveToken(null);
       resetAppState();
     }
     setScreen(next);
   };
 
-  const onAuth = (
+  const onAuth = async (
     token: string,
     user: AuthenticatedUser,
     remember = true,
@@ -177,10 +177,14 @@ function AppContent() {
     setHasSeenOnboarding(true);
     appState.currentUserId = user.id;
     populateProfileDraft(user);
-    api<AuthenticatedUser>("/api/me")
-      .then((me) => populateProfileDraft(me))
-      .catch(() => undefined);
-    setScreen(landingFor(user));
+
+    try {
+      const me = await api<AuthenticatedUser>("/api/me");
+      populateProfileDraft(me);
+      setScreen(landingFor(me));
+    } catch {
+      setScreen(landingFor(user));
+    }
   };
 
   if (initializing) {

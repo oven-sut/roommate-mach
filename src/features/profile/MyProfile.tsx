@@ -153,10 +153,16 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
   const toggleDiscoverable = async (nextValue: boolean) => {
     setDiscoverable(nextValue);
     try {
-      await api("/api/profile", {
-        method: "PUT",
-        body: JSON.stringify({ ...draft, discoverable: nextValue }),
-      });
+      await Promise.all([
+        api("/api/me", {
+          method: "PATCH",
+          body: JSON.stringify({ discoverable: nextValue }),
+        }),
+        api("/api/profile", {
+          method: "PUT",
+          body: JSON.stringify({ ...draft, discoverable: nextValue }),
+        }),
+      ]);
     } catch {
       setDiscoverable(!nextValue);
     }
@@ -274,13 +280,8 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
             </View>
 
             <NavRow
-              title={t("photosRow")}
-              subtitle={`${photoCount} of 3 ${t("uploadedCount")}`}
-              onPress={() => go("basics")}
-            />
-            <NavRow
-              title={t("basicsBio")}
-              subtitle={t("basicsBioSub")}
+              title={t("editProfile")}
+              subtitle={`${t("photosRow")} (${photoCount}/3) • ${t("basicsBioSub")}`}
               onPress={() => go("basics")}
             />
             {verified ? null : (

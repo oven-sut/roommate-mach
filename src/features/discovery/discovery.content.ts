@@ -67,7 +67,14 @@ export function cardTags(person: MatchProfile | null | undefined): string[] {
   if (person?.tags?.length) return person.tags;
   const profile = person?.profile;
   if (!profile) return [];
-  return [profile.roomType, profile.propertyType].filter(Boolean) as string[];
+  const tags: string[] = [];
+  if (profile.roomType) tags.push(profile.roomType);
+  if (profile.propertyType) tags.push(profile.propertyType);
+  if (profile.zone) tags.push(profile.zone);
+  if (profile.roommateGender) tags.push(profile.roommateGender);
+  return tags.length > 0
+    ? tags
+    : ([profile.roomType, profile.propertyType].filter(Boolean) as string[]);
 }
 
 export function isVerified(person: MatchProfile | null | undefined): boolean {

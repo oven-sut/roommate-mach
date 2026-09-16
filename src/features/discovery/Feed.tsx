@@ -105,6 +105,7 @@ function ActionButton({
  */
 export function Feed({ go }: { go: (x: Screen) => void }) {
   const { t } = useI18n();
+  const [meCard, setMeCard] = useState<MatchProfile | null>(null);
   const [people, setPeople] = useState<MatchProfile[]>([]);
   const [index, setIndex] = useState(0);
   const [page, setPage] = useState(1);
@@ -114,6 +115,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
   const [started, setStarted] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [discoverable, setDiscoverable] = useState(true);
 
   const cardAnim = useRef(new Animated.Value(1)).current;
 
@@ -124,9 +126,23 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
       const nextPage = isInitial ? 1 : page + 1;
       try {
-        const data = await api<MatchProfile[]>(
-          `/api/discover?${toQuery(filters, nextPage)}`,
-        );
+        const [meData, data] = await Promise.all([
+          isInitial ? api<any>("/api/me").catch(() => null) : Promise.resolve(null),
+          api<MatchProfile[]>(`/api/discover?${toQuery(filters, nextPage)}`),
+        ]);
+
+        if (meData) {
+          setMeCard({
+            id: meData.id,
+            displayName: meData.displayName,
+            profile: meData.profile,
+            verification: meData.verification,
+          });
+          if (typeof meData.discoverable === "boolean") {
+            setDiscoverable(meData.discoverable);
+          }
+        }
+
         setPage(nextPage);
         setPeople((prev) => {
           if (isInitial) {
@@ -157,7 +173,8 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const person = people[index];
+  const isShowingSelf = !started && !!meCard;
+  const person = isShowingSelf ? meCard! : people[index];
 
   const advance = () => {
     const nextIndex = index + 1;
@@ -202,8 +219,12 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
   const openProfile = () => {
     if (!person) return;
-    appState.activeProfile = person;
-    go("profile");
+    if (isShowingSelf) {
+      go("myprofile");
+    } else {
+      appState.activeProfile = person;
+      go("profile");
+    }
   };
 
   return (
@@ -246,12 +267,42 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 <DiscoverCard
                   person={person}
                   onPress={openProfile}
+                  showScore={!isShowingSelf}
+                  isSelf={isShowingSelf}
                   dimmed={liking}
                 />
               </Animated.View>
 
               <View style={{ paddingTop: 20, minHeight: 96 }}>
-                {started ? (
+                {!discoverable ? (
+                  <View
+                    style={{
+                      backgroundColor: C.card,
+                      borderRadius: 16,
+                      paddingVertical: 18,
+                      paddingHorizontal: 20,
+                      alignItems: "center",
+                      gap: 10,
+                      borderWidth: 1,
+                      borderColor: C.line,
+                      ...shadow(1),
+                    }}
+                  >
+                    <Txt role="bodyBold" style={{ textAlign: "center", color: C.ink }}>
+                      {t("accountHiddenNotice")}
+                    </Txt>
+                    <Txt role="caption" style={{ textAlign: "center", color: C.muted }}>
+                      {t("enableStatusToMatch")}
+                    </Txt>
+                    <Button
+                      tone="primary"
+                      style={{ width: "100%", maxWidth: 220, height: 48, marginTop: 4 }}
+                      onPress={() => go("myprofile")}
+                    >
+                      {t("goToProfile")}
+                    </Button>
+                  </View>
+                ) : started ? (
                   <View
                     style={{
                       flexDirection: "row",
@@ -266,7 +317,16 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 ) : (
                   <SlideAction
                     label={t("slideToMatch")}
-                    onComplete={() => setStarted(true)}
+                    onComplete={() => {
+                      cardAnim.setValue(0.94);
+                      Animated.timing(cardAnim, {
+                        toValue: 1,
+                        duration: 260,
+                        easing: Easing.out(Easing.cubic),
+                        useNativeDriver: true,
+                      }).start();
+                      setStarted(true);
+                    }}
                   />
                 )}
               </View>

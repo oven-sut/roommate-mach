@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { Heart, MessageCircle, MoreVertical, ShieldCheck, X } from "lucide-react-native";
+import {
+  Heart,
+  Home,
+  MapPin,
+  MessageCircle,
+  MoreVertical,
+  ShieldCheck,
+  Sparkles,
+  Wallet,
+  X,
+} from "lucide-react-native";
 import { ScoreRing } from "../../components/ScoreRing";
 import {
   Button,
@@ -17,44 +27,120 @@ import { api, appState, formatImageUri } from "../../services/api";
 import { C, G } from "../../theme/colors";
 import { GUTTER, MAX_WIDTH, s, shadow } from "../../theme/styles";
 import { F } from "../../theme/typography";
+import type { MatchProfile } from "../../types/models";
 import type { Screen } from "../../types/navigation";
-import { BREAKDOWN_ROWS, cardTags, isVerified } from "../discovery/discovery.content";
+import { cardTags, isVerified } from "../discovery/discovery.content";
 import { openChatWith } from "../discovery/open-chat";
 import { MAJOR_OPTIONS, labelFor } from "./profile.content";
 
+const DETAILED_BREAKDOWN_CONFIG = [
+  {
+    key: "sleep" as const,
+    labelKey: "catSleep",
+    icon: "🌙",
+    sub: { th: "เวลาเข้านอนและตื่นนอน", en: "Sleep & wake schedule" },
+  },
+  {
+    key: "cleanliness" as const,
+    labelKey: "catClean",
+    icon: "🧹",
+    sub: { th: "ความสะอาดและระเบียบวินัย", en: "Cleanliness & order" },
+  },
+  {
+    key: "guests" as const,
+    labelKey: "catGuests",
+    icon: "👥",
+    sub: { th: "การรับแขกและการค้างคืน", en: "Guests & visitors" },
+  },
+  {
+    key: "temperature" as const,
+    labelKey: "catTemp",
+    icon: "❄️",
+    sub: { th: "อุณหภูมิแอร์และบรรยากาศการเรียน", en: "AC temp & study space" },
+  },
+] as const;
+
 /** One labelled bar in the "Why X%?" breakdown. */
-function BreakdownRow({ label, value }: { label: string; value: number }) {
+function BreakdownRow({
+  icon,
+  label,
+  sub,
+  value,
+}: {
+  icon: string;
+  label: string;
+  sub?: string;
+  value: number;
+}) {
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 8, paddingVertical: 4 }}>
       <View style={s.rowBetween}>
-        <Txt role="h3" style={{ fontSize: 15 }}>
-          {label}
-        </Txt>
-        <Txt style={{ fontFamily: F.bold, fontSize: 14, color: C.amber }}>
+        <View style={[s.row, { gap: 10 }]}>
+          <Txt style={{ fontSize: 20 }}>{icon}</Txt>
+          <View style={{ gap: 2 }}>
+            <Txt role="h3" style={{ fontSize: 15 }}>
+              {label}
+            </Txt>
+            {sub ? (
+              <Txt role="small" style={{ color: C.muted, fontSize: 11 }}>
+                {sub}
+              </Txt>
+            ) : null}
+          </View>
+        </View>
+        <Txt style={{ fontFamily: F.bold, fontSize: 16, color: C.amber }}>
           {Math.round(value)}%
         </Txt>
       </View>
-      <View style={[s.track, { height: 6 }]}>
+      <View style={[s.track, { height: 8, borderRadius: 4 }]}>
         <LinearGradient
           colors={[...G.amber]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={{ width: `${Math.max(0, Math.min(100, value))}%`, height: "100%" }}
+          style={{
+            width: `${Math.max(5, Math.min(100, value))}%`,
+            height: "100%",
+            borderRadius: 4,
+          }}
         />
       </View>
     </View>
   );
 }
 
-/**
- * Read-only view of another student's profile, reached by tapping a discover
- * card or a match row. Whether it ends in "Message" or in like/pass buttons
- * depends on whether the two have already matched.
- */
+/** Read-only view of another student's profile. */
 export function Profile({ go }: { go: (x: Screen) => void }) {
   const { t, language } = useI18n();
-  const person = appState.activeProfile;
+  const [person, setPerson] = useState<MatchProfile | null>(appState.activeProfile);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const targetId = appState.activeProfile?.id;
+    if (targetId) {
+      setPerson(appState.activeProfile);
+      api<MatchProfile>(`/api/users/${targetId}`)
+        .then((fullData) => {
+          if (fullData) {
+            const mergedProfile = {
+              ...appState.activeProfile?.profile,
+              ...(appState.activeProfile as any),
+              ...fullData.profile,
+            };
+            const merged: MatchProfile = {
+              ...appState.activeProfile,
+              ...fullData,
+              profile: mergedProfile,
+              breakdown: fullData.breakdown || appState.activeProfile?.breakdown,
+              tags: fullData.tags || appState.activeProfile?.tags,
+              score: fullData.score ?? appState.activeProfile?.score,
+            };
+            appState.activeProfile = merged;
+            setPerson(merged);
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, []);
 
   if (!person) {
     return (
@@ -67,33 +153,65 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
     );
   }
 
-  const photo = formatImageUri(person.profile?.photos?.[0]);
-  const initial = (person.displayName?.trim()[0] ?? "?").toUpperCase();
-  const firstName = person.displayName?.trim().split(" ")[0] ?? "";
-  const matched = Boolean(person.matchedAt || person.conversationId);
-  const breakdown = person.breakdown;
+  // Normalize profile object
+  const profile = person.profile ?? {
+    photos: (person as any).photos,
+    major: (person as any).major,
+    year: (person as any).year,
+    roomType: (person as any).roomType,
+    propertyType: (person as any).propertyType,
+    zone: (person as any).zone,
+    budgetMin: (person as any).budgetMin,
+    budgetMax: (person as any).budgetMax,
+    bio: (person as any).bio,
+    age: (person as any).age,
+  };
+
+  const activePerson: MatchProfile = {
+    ...person,
+    profile,
+    displayName: person.displayName ?? "—",
+    score: person.score ?? appState.activeProfile?.score,
+    breakdown: person.breakdown ?? appState.activeProfile?.breakdown,
+    tags: person.tags?.length ? person.tags : cardTags({ ...person, profile }),
+  };
+
+  const photo = formatImageUri(activePerson.profile?.photos?.[0]);
+  const initial = (activePerson.displayName?.trim()[0] ?? "?").toUpperCase();
+  const firstName = activePerson.displayName?.trim().split(" ")[0] ?? "";
+  const matched = Boolean(
+    activePerson.matchedAt || activePerson.conversationId || appState.activeConversationId,
+  );
+
+  const overallScore = typeof activePerson.score === "number" ? Math.round(activePerson.score) : 80;
+  const safeBreakdown = {
+    sleep: activePerson.breakdown?.sleep ?? overallScore,
+    cleanliness: activePerson.breakdown?.cleanliness ?? Math.min(100, overallScore + 2),
+    guests: activePerson.breakdown?.guests ?? Math.max(40, overallScore - 4),
+    temperature: activePerson.breakdown?.temperature ?? Math.min(100, overallScore + 1),
+  };
 
   const metaLine = [
-    person.profile?.major
-      ? labelFor(MAJOR_OPTIONS, person.profile.major, language)
+    activePerson.profile?.major
+      ? labelFor(MAJOR_OPTIONS, activePerson.profile.major, language)
       : null,
-    person.profile?.year ? `${t("year")} ${person.profile.year}` : null,
-    person.profile?.roomType ? `${person.profile.roomType} room` : null,
-    person.profile?.propertyType,
-    person.profile?.zone,
-    person.profile?.budgetMin && person.profile?.budgetMax
-      ? `THB${person.profile.budgetMin.toLocaleString()} - ${person.profile.budgetMax.toLocaleString()}`
+    activePerson.profile?.year ? `${t("year")} ${activePerson.profile.year}` : null,
+    activePerson.profile?.roomType ? `${activePerson.profile.roomType} room` : null,
+    activePerson.profile?.propertyType,
+    activePerson.profile?.zone,
+    activePerson.profile?.budgetMin && activePerson.profile?.budgetMax
+      ? `THB${activePerson.profile.budgetMin.toLocaleString()} - ${activePerson.profile.budgetMax.toLocaleString()}`
       : null,
   ]
     .filter(Boolean)
     .join(" - ");
 
   const respond = async (decision: "LIKE" | "PASS") => {
-    if (!person.id) return;
+    if (!activePerson.id) return;
     try {
       setBusy(true);
       const result = await api<{ matched?: boolean }>(
-        `/api/swipes/${person.id}`,
+        `/api/swipes/${activePerson.id}`,
         { method: "POST", body: JSON.stringify({ decision }) },
       );
       if (result.matched) {
@@ -118,12 +236,12 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Hero */}
+        {/* Hero Image */}
         <LinearGradient
           colors={[...G.hero]}
           start={{ x: 0.2, y: 0 }}
           end={{ x: 0.8, y: 1 }}
-          style={{ height: 300, justifyContent: "center" }}
+          style={{ height: 320, justifyContent: "center" }}
         >
           {photo ? (
             <Image
@@ -163,35 +281,41 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
           >
             <View style={[s.rowBetween, { height: 56 }]}>
               <MotionPressable
-                onPress={() => go(matched ? "matches" : "feed")}
+                onPress={() => go(matched ? "chat" : "feed")}
                 pressedScale={0.9}
                 accessibilityLabel="Back"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  backgroundColor: "rgba(255,255,255,.2)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                style={[
+                  {
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: C.card,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  },
+                  shadow(2),
+                ]}
               >
-                <Chevron direction="left" color={C.white} />
+                <Chevron direction="left" color={C.ink} />
               </MotionPressable>
 
               <MotionPressable
                 onPress={() => go("report")}
                 pressedScale={0.9}
                 accessibilityLabel={t("report")}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  backgroundColor: "rgba(255,255,255,.2)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                style={[
+                  {
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: C.card,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  },
+                  shadow(2),
+                ]}
               >
-                <MoreVertical size={20} color={C.white} strokeWidth={2} />
+                <MoreVertical size={22} color={C.ink} strokeWidth={2.4} />
               </MotionPressable>
             </View>
           </SafeAreaView>
@@ -206,14 +330,14 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
             gap: 18,
           }}
         >
-          {/* Name row, with the score ring straddling the hero edge. */}
+          {/* Name & Score Ring */}
           <View style={[s.rowBetween, { marginTop: 18, alignItems: "flex-start" }]}>
             <View style={[s.row, { gap: 12, flex: 1, flexWrap: "wrap" }]}>
               <Txt role="h1" style={{ fontSize: 24 }}>
-                {person.displayName ?? "—"}
-                {person.profile?.age ? `, ${person.profile.age}` : ""}
+                {activePerson.displayName ?? "—"}
+                {activePerson.profile?.age ? `, ${activePerson.profile.age}` : ""}
               </Txt>
-              {isVerified(person) ? (
+              {isVerified(activePerson) ? (
                 <View
                   style={{
                     flexDirection: "row",
@@ -238,7 +362,7 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
             </View>
 
             <ScoreRing
-              score={person.score}
+              score={activePerson.score}
               size={76}
               thickness={9}
               style={[{ marginTop: -62 }, shadow(2)]}
@@ -251,43 +375,102 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
             </Txt>
           ) : null}
 
-          {person.profile?.bio ? (
-            <Txt role="bodyMuted">“{person.profile.bio}”</Txt>
+          {activePerson.profile?.bio ? (
+            <Txt role="bodyMuted">“{activePerson.profile.bio}”</Txt>
           ) : null}
 
-          {breakdown ? (
-            <View style={[s.card, { gap: 18 }]}>
+          {/* Detailed Score Breakdown Card */}
+          <View style={[s.card, { gap: 16 }]}>
+            <View style={[s.row, { gap: 8 }]}>
+              <Sparkles size={20} color={C.amber} />
               <Txt role="h2" style={{ fontSize: 18 }}>
                 {t("whyScore")}{" "}
-                {typeof person.score === "number"
-                  ? `${Math.round(person.score)}%`
-                  : ""}
+                {typeof activePerson.score === "number"
+                  ? `${Math.round(activePerson.score)}%`
+                  : `${overallScore}%`}
                 ?
               </Txt>
-              {BREAKDOWN_ROWS.map((row) => {
-                const value = breakdown[row.key];
-                if (typeof value !== "number") return null;
-                return (
-                  <BreakdownRow key={row.key} label={t(row.labelKey)} value={value} />
-                );
-              })}
+            </View>
+            {DETAILED_BREAKDOWN_CONFIG.map(({ key, labelKey, icon, sub }) => {
+              const val = safeBreakdown[key];
+              return (
+                <BreakdownRow
+                  key={key}
+                  icon={icon}
+                  label={t(labelKey)}
+                  sub={sub[language]}
+                  value={val}
+                />
+              );
+            })}
+          </View>
+
+          {/* Lifestyle Signature Tags Card */}
+          <View style={[s.card, { gap: 12 }]}>
+            <Txt role="h3" style={{ fontSize: 15 }}>
+              {language === "th" ? "สไตล์การดำเนินชีวิต (Lifestyle Tags)" : "Lifestyle Signature"}
+            </Txt>
+            <View style={[s.wrap, { rowGap: 10, gap: 8 }]}>
+              {cardTags(activePerson).map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+            </View>
+          </View>
+
+          {/* Room Preferences Card */}
+          {(activePerson.profile?.roomType ||
+            activePerson.profile?.zone ||
+            activePerson.profile?.budgetMin) ? (
+            <View style={[s.card, { gap: 14 }]}>
+              <Txt role="h3" style={{ fontSize: 15 }}>
+                {language === "th" ? "เงื่อนไขที่พักอาศัย (Housing Preferences)" : "Housing Preferences"}
+              </Txt>
+              <View style={{ gap: 10 }}>
+                {activePerson.profile?.roomType ? (
+                  <View style={[s.row, { gap: 10 }]}>
+                    <Home size={18} color={C.primary} />
+                    <Txt role="body" style={{ fontSize: 14 }}>
+                      {language === "th" ? "รูปแบบห้อง:" : "Room:"}{" "}
+                      <Txt style={{ fontFamily: F.semibold }}>{activePerson.profile.roomType}</Txt>
+                    </Txt>
+                  </View>
+                ) : null}
+
+                {activePerson.profile?.zone ? (
+                  <View style={[s.row, { gap: 10 }]}>
+                    <MapPin size={18} color={C.primary} />
+                    <Txt role="body" style={{ fontSize: 14 }}>
+                      {language === "th" ? "โซนหอพัก:" : "Zone:"}{" "}
+                      <Txt style={{ fontFamily: F.semibold }}>{activePerson.profile.zone}</Txt>
+                    </Txt>
+                  </View>
+                ) : null}
+
+                {activePerson.profile?.budgetMin && activePerson.profile?.budgetMax ? (
+                  <View style={[s.row, { gap: 10 }]}>
+                    <Wallet size={18} color={C.primary} />
+                    <Txt role="body" style={{ fontSize: 14 }}>
+                      {language === "th" ? "งบประมาณ:" : "Budget:"}{" "}
+                      <Txt style={{ fontFamily: F.semibold }}>
+                        THB{activePerson.profile.budgetMin.toLocaleString()} - {activePerson.profile.budgetMax.toLocaleString()}
+                      </Txt>
+                    </Txt>
+                  </View>
+                ) : null}
+              </View>
             </View>
           ) : null}
 
-          <View style={[s.wrap, { rowGap: 12 }]}>
-            {cardTags(person).map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </View>
-
+          {/* Action CTA */}
           {matched ? (
             <Button
               onPress={() =>
                 openChatWith(
                   {
-                    userId: person.id,
-                    name: person.displayName,
-                    conversationId: person.conversationId,
+                    userId: activePerson.id,
+                    name: activePerson.displayName,
+                    photo: activePerson.profile?.photos?.[0],
+                    conversationId: activePerson.conversationId || appState.activeConversationId || undefined,
                   },
                   go,
                 )

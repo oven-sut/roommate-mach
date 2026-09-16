@@ -23,12 +23,15 @@ export function DiscoverCard({
   onPress,
   showScore = true,
   dimmed = false,
+  isSelf = false,
 }: {
   person: MatchProfile;
   onPress?: () => void;
   showScore?: boolean;
   /** Renders the darkened state used while a like animates. */
   dimmed?: boolean;
+  /** True when rendering the current user's own profile card. */
+  isSelf?: boolean;
 }) {
   const { t, language } = useI18n();
   const photo = formatImageUri(person.profile?.photos?.[0]);
@@ -115,30 +118,53 @@ export function DiscoverCard({
             alignItems: "flex-start",
           }}
         >
-          {isVerified(person) ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,.6)",
-                backgroundColor: "rgba(255,255,255,.16)",
-              }}
-            >
-              <ShieldCheck size={13} color="#9BE3B0" strokeWidth={2.2} />
-              <Txt
-                style={{ fontFamily: F.semibold, fontSize: 11, color: C.white }}
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            {isSelf ? (
+              <View
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,.6)",
+                  backgroundColor: C.primary,
+                }}
               >
-                {t("verified")}
-              </Txt>
-            </View>
-          ) : (
-            <View />
-          )}
+                <Txt
+                  style={{
+                    fontFamily: F.bold,
+                    fontSize: 11,
+                    color: C.white,
+                  }}
+                >
+                  {t("yourProfileCard")}
+                </Txt>
+              </View>
+            ) : null}
+
+            {isVerified(person) ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,.6)",
+                  backgroundColor: "rgba(255,255,255,.16)",
+                }}
+              >
+                <ShieldCheck size={13} color="#9BE3B0" strokeWidth={2.2} />
+                <Txt
+                  style={{ fontFamily: F.semibold, fontSize: 11, color: C.white }}
+                >
+                  {t("verified")}
+                </Txt>
+              </View>
+            ) : null}
+          </View>
 
           {showScore && typeof person.score === "number" ? (
             <ScoreRing score={person.score} size={62} thickness={7} />

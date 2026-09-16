@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 import type { ApiProfile, MatchProfile, ProfileDraft } from "../types/models";
 import { secureStorage } from "./secureStorage";
 
@@ -20,11 +21,27 @@ const ONBOARDING_KEY = "has_seen_onboarding";
  * hardcoding an address that goes stale the next time DHCP moves.
  */
 function resolveApiUrl(): string {
-  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
+  let configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configured) {
+    configured = configured.replace(/\/$/, "");
+    if (Platform.OS === "android") {
+      configured = configured.replace(/localhost|127\.0\.0\.1/g, "10.0.2.2");
+    }
+    return configured;
+  }
+
+  if (Platform.OS === "web") {
+    return `http://localhost:${DEV_API_PORT}`;
+  }
+
+  if (Platform.OS === "android") {
+    return `http://10.0.2.2:${DEV_API_PORT}`;
+  }
 
   const devHost = Constants.expoConfig?.hostUri?.split(":")[0];
-  if (devHost) return `http://${devHost}:${DEV_API_PORT}`;
+  if (devHost && devHost !== "localhost" && devHost !== "127.0.0.1") {
+    return `http://${devHost}:${DEV_API_PORT}`;
+  }
 
   return `http://localhost:${DEV_API_PORT}`;
 }
@@ -188,6 +205,7 @@ export async function api<T = unknown>(
 export const appState = {
   activeConversationId: null as string | null,
   activeConversationName: "Chat",
+  activeConversationPhoto: null as string | null,
   currentUserId: null as string | null,
   activeProfile: null as MatchProfile | null,
   profileDraft: {
@@ -222,6 +240,7 @@ export const appState = {
 export function resetAppState() {
   appState.activeConversationId = null;
   appState.activeConversationName = "Chat";
+  appState.activeConversationPhoto = null;
   appState.currentUserId = null;
   appState.activeProfile = null;
   appState.questionnaireDraft = null;

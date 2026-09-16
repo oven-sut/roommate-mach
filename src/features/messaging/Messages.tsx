@@ -18,8 +18,22 @@ type Row = {
   updatedAt?: string;
   unread?: number;
   other?: { id?: string; displayName?: string; profile?: { photos?: string[] } };
-  messages?: { text?: string; senderId?: string }[];
+  messages?: { text?: string; senderId?: string; createdAt?: string }[];
 };
+
+function sortRows(rows: Row[]): Row[] {
+  return [...rows].sort((a, b) => {
+    const timeA = Math.max(
+      a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
+      a.messages?.[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0,
+    );
+    const timeB = Math.max(
+      b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
+      b.messages?.[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0,
+    );
+    return timeB - timeA;
+  });
+}
 
 /** Conversation inbox. */
 export function Messages({ go }: { go: (x: Screen) => void }) {
@@ -29,15 +43,35 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<Row[]>("/api/conversations")
-      .then((data) => setConversations(data ?? []))
-      .catch(() => setConversations([]))
-      .finally(() => setLoading(false));
+    let active = true;
+
+    const fetchConversations = (isInitial = false) => {
+      if (isInitial) setLoading(true);
+      api<Row[]>("/api/conversations")
+        .then((data) => {
+          if (active) setConversations(sortRows(data ?? []));
+        })
+        .catch(() => {
+          if (active) setConversations([]);
+        })
+        .finally(() => {
+          if (active && isInitial) setLoading(false);
+        });
+    };
+
+    fetchConversations(true);
+    const timer = setInterval(() => fetchConversations(false), 4000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   const open = (row: Row) => {
     appState.activeConversationId = row.id;
     appState.activeConversationName = row.other?.displayName ?? "Chat";
+    appState.activeConversationPhoto = row.other?.profile?.photos?.[0] ?? null;
     go("chat");
   };
 
@@ -97,12 +131,13 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
               contentContainerStyle={{ gap: 12, paddingBottom: NAV_HEIGHT + 30 }}
             >
               {visible.map((row) => {
-                const unread = row.unread ?? 0;
+                const unread = (row.unread ?? 0) > 0;
                 const last = row.messages?.[0];
                 const mine = last?.senderId === appState.currentUserId;
                 const preview = last?.text
                   ? `${mine ? "You : " : ""}${last.text}`
                   : t("sayHi");
+                const time = last?.createdAt ?? row.updatedAt;
 
                 return (
                   <MotionPressable
@@ -115,9 +150,8 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
                       {
                         gap: 14,
                         paddingVertical: 16,
-                        // Unread threads get a crimson spine on the left edge.
-                        borderLeftWidth: unread > 0 ? 5 : 1,
-                        borderLeftColor: unread > 0 ? C.primary : C.line,
+                        borderLeftWidth: unread ? 4 : 1,
+                        borderLeftColor: unread ? C.green : C.line,
                       },
                       shadow(1),
                     ]}
@@ -128,39 +162,49 @@ export function Messages({ go }: { go: (x: Screen) => void }) {
                       size={54}
                     />
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Txt role="h3" style={{ fontSize: 17 }}>
+                      <Txt
+                        role="h3"
+                        style={{
+                          fontSize: 17,
+                          fontFamily: unread ? F.bold : F.semibold,
+                          color: C.ink,
+                        }}
+                      >
                         {row.other?.displayName ?? "—"}
                       </Txt>
-                      <Txt role="small" numberOfLines={1}>
+                      <Txt
+                        role="small"
+                        numberOfLines={1}
+                        style={{
+                          fontFamily: unread ? F.bold : F.regular,
+                          color: unread ? C.ink : C.faint,
+                        }}
+                      >
                         {preview}
                       </Txt>
                     </View>
 
-                    {unread > 0 ? (
-                      <View
+                    <View style={{ alignItems: "flex-end", gap: 6 }}>
+                      <Txt
+                        role="small"
                         style={{
-                          minWidth: 30,
-                          height: 30,
-                          paddingHorizontal: 8,
-                          borderRadius: 15,
-                          backgroundColor: C.primary,
-                          alignItems: "center",
-                          justifyContent: "center",
+                          fontFamily: unread ? F.bold : F.regular,
+                          color: unread ? C.green : C.faint,
                         }}
                       >
-                        <Txt
+                        {relativeTime(time)}
+                      </Txt>
+                      {unread ? (
+                        <View
                           style={{
-                            fontFamily: F.bold,
-                            fontSize: 13,
-                            color: C.white,
+                            width: 12,
+                            height: 12,
+                            borderRadius: 6,
+                            backgroundColor: C.green,
                           }}
-                        >
-                          {unread}
-                        </Txt>
-                      </View>
-                    ) : (
-                      <Txt role="small">{relativeTime(row.updatedAt)}</Txt>
-                    )}
+                        />
+                      ) : null}
+                    </View>
                   </MotionPressable>
                 );
               })}
