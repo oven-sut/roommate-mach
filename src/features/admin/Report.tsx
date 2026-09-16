@@ -74,13 +74,18 @@ export function Report({ go }: { go: (x: Screen) => void }) {
     }
   };
 
-  const handleSuspend = async (userId: string) => {
+  const handleSuspend = async (userId: string, nextSuspended: boolean) => {
     try {
       await api(`/api/admin/users/${userId}/suspend`, {
         method: "PATCH",
-        body: JSON.stringify({ suspended: true }),
+        body: JSON.stringify({ suspended: nextSuspended }),
       });
-      Alert.alert("Suspend User", "ระงับการใช้งานบัญชีเรียบร้อยแล้ว");
+      Alert.alert(
+        nextSuspended ? "Suspend User" : "Reinstate User",
+        nextSuspended
+          ? "ระงับการใช้งานบัญชีเรียบร้อยแล้ว"
+          : "เปิดใช้งานบัญชีเรียบร้อยแล้ว",
+      );
       loadReports();
     } catch (reason) {
       Alert.alert(
@@ -192,11 +197,18 @@ export function Report({ go }: { go: (x: Screen) => void }) {
               <View style={[styles.tdActions, { flex: 1.4, justifyContent: "flex-end", gap: 6 }]}>
                 {item.reported?.id ? (
                   <Pressable
-                    style={styles.btnBan}
-                    onPress={() => handleSuspend(item.reported!.id)}
+                    style={[
+                      styles.btnBan,
+                      item.reported.suspended && styles.btnUnban,
+                    ]}
+                    onPress={() =>
+                      handleSuspend(item.reported!.id, !item.reported!.suspended)
+                    }
                   >
                     <UserX size={14} color="#FFFFFF" />
-                    <Text style={styles.btnBanText}>Suspend</Text>
+                    <Text style={styles.btnBanText}>
+                      {item.reported.suspended ? "Unsuspend" : "Suspend"}
+                    </Text>
                   </Pressable>
                 ) : null}
                 {item.status === "PENDING" ? (
@@ -350,6 +362,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
+  },
+  btnUnban: {
+    backgroundColor: "#10B981",
   },
   btnBanText: {
     fontFamily: F.bold,
