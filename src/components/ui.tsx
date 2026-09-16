@@ -173,7 +173,13 @@ export function Button({
         colors={[...colors]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={[base, { width: "100%" }]}
+        style={{
+          width: "100%",
+          height: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 16,
+        }}
       >
         <Txt role="button">{children}</Txt>
       </LinearGradient>

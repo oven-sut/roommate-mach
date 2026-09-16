@@ -205,6 +205,7 @@ export async function api<T = unknown>(
 export const appState = {
   activeConversationId: null as string | null,
   activeConversationName: "Chat",
+  activeConversationPhoto: null as string | null,
   currentUserId: null as string | null,
   activeProfile: null as MatchProfile | null,
   profileDraft: {
@@ -239,6 +240,7 @@ export const appState = {
 export function resetAppState() {
   appState.activeConversationId = null;
   appState.activeConversationName = "Chat";
+  appState.activeConversationPhoto = null;
   appState.currentUserId = null;
   appState.activeProfile = null;
   appState.questionnaireDraft = null;

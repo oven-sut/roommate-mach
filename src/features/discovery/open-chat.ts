@@ -14,16 +14,19 @@ export async function openChatWith(
     matchId,
     userId,
     name,
+    photo,
     conversationId,
   }: {
     matchId?: string;
     userId?: string;
     name?: string;
+    photo?: string;
     conversationId?: string;
   },
   go: (screen: Screen) => void,
 ) {
   appState.activeConversationName = name || "Chat";
+  appState.activeConversationPhoto = photo ?? null;
 
   if (conversationId) {
     appState.activeConversationId = conversationId;
@@ -32,12 +35,15 @@ export async function openChatWith(
   }
 
   try {
-    const created = await api<Conversation>("/api/conversations", {
+    const created = await api<any>("/api/conversations", {
       method: "POST",
       body: JSON.stringify({ matchId, userId }),
     });
     if (created?.id) {
       appState.activeConversationId = created.id;
+      if (created.other?.profile?.photos?.[0]) {
+        appState.activeConversationPhoto = created.other.profile.photos[0];
+      }
       go("chat");
       return;
     }

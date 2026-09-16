@@ -24,29 +24,31 @@ type ReportItem = {
 
 export function Report({ go }: { go: (x: Screen) => void }) {
   const [reports, setReports] = useState<ReportItem[]>([]);
+  const [summary, setSummary] = useState<{
+    total: number;
+    pending: number;
+    resolved: number;
+    dismissed: number;
+  }>({ total: 0, pending: 0, resolved: 0, dismissed: 0 });
 
   const loadReports = useCallback(async () => {
     try {
-      const data = await api<any>("/api/admin/reports");
+      const [data, sumData] = await Promise.all([
+        api<any>("/api/admin/reports"),
+        api<any>("/api/admin/reports/summary").catch(() => null),
+      ]);
       const list = Array.isArray(data) ? data : (data?.items ?? []);
       setReports(Array.isArray(list) ? list : []);
+      if (sumData) {
+        setSummary({
+          total: sumData.total ?? 0,
+          pending: sumData.pending ?? 0,
+          resolved: sumData.resolved ?? 0,
+          dismissed: sumData.dismissed ?? 0,
+        });
+      }
     } catch {
-      // Demo mock reports
-      setReports([
-        {
-          id: "1",
-          reporter: { displayName: "Ploy Siriwan", email: "student102@g.sut.ac.th" },
-          reported: {
-            id: "user-99",
-            displayName: "Spam Bot",
-            email: "spambot@g.sut.ac.th",
-            suspended: false,
-          },
-          reason: "Spamming commercial messages in chat",
-          details: "Sent multiple external links in chatroom",
-          status: "PENDING",
-        },
-      ]);
+      setReports([]);
     }
   }, []);
 
@@ -58,7 +60,11 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
   const handleAction = async (id: string, action: "resolve" | "dismiss") => {
     try {
-      await api(`/api/admin/reports/${id}/${action}`, { method: "PATCH" });
+      const status = action === "resolve" ? "RESOLVED" : "DISMISSED";
+      await api(`/api/admin/reports/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
       loadReports();
     } catch (reason) {
       Alert.alert(
@@ -74,6 +80,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
         method: "PATCH",
         body: JSON.stringify({ suspended: true }),
       });
+      Alert.alert("Suspend User", "ระงับการใช้งานบัญชีเรียบร้อยแล้ว");
       loadReports();
     } catch (reason) {
       Alert.alert(
@@ -82,6 +89,10 @@ export function Report({ go }: { go: (x: Screen) => void }) {
       );
     }
   };
+
+  const pendingCount = summary.pending || reportList.filter((r) => r.status === "PENDING").length;
+  const resolvedCount = summary.resolved || reportList.filter((r) => r.status === "RESOLVED").length;
+  const dismissedCount = summary.dismissed || reportList.filter((r) => r.status === "DISMISSED").length;
 
   return (
     <AdminLayout currentScreen="adminReports" go={go}>
@@ -93,7 +104,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
             <Clock size={18} color="#F59E0B" />
           </View>
           <Text style={[styles.metricVal, { color: "#D97706" }]}>
-            {reportList.filter((r) => r.status === "PENDING").length}
+            {pendingCount}
           </Text>
         </View>
 
@@ -103,7 +114,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
             <CheckCircle size={18} color="#10B981" />
           </View>
           <Text style={[styles.metricVal, { color: "#059669" }]}>
-            {reportList.filter((r) => r.status === "RESOLVED").length}
+            {resolvedCount}
           </Text>
         </View>
 
@@ -113,7 +124,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
             <XCircle size={18} color="#6B7280" />
           </View>
           <Text style={[styles.metricVal, { color: "#4B5563" }]}>
-            {reportList.filter((r) => r.status === "DISMISSED").length}
+            {dismissedCount}
           </Text>
         </View>
       </View>
@@ -130,66 +141,84 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           <Text style={[styles.th, { flex: 1.2 }]}>Reporter</Text>
           <Text style={[styles.th, { flex: 1.5 }]}>Reason & Details</Text>
           <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-          <Text style={[styles.th, { flex: 1.2, textAlign: "right" }]}>Actions</Text>
+          <Text style={[styles.th, { flex: 1.4, textAlign: "right" }]}>Actions</Text>
         </View>
 
-        {reportList.map((item) => (
-          <View key={item.id} style={styles.tableRow}>
-            <View style={[styles.td, { flex: 1.2 }]}>
-              <Text style={styles.reportedName}>
-                {item.reported?.displayName ?? "—"}
-              </Text>
-              <Text style={styles.subText}>{item.reported?.email}</Text>
-            </View>
+        {reportList.length === 0 ? (
+          <View style={{ padding: 24, alignItems: "center" }}>
+            <Text style={{ fontFamily: F.regular, color: "#6B7280" }}>
+              ไม่มีรายการรายงานในขณะนี้
+            </Text>
+          </View>
+        ) : (
+          reportList.map((item) => (
+            <View key={item.id} style={styles.tableRow}>
+              <View style={[styles.td, { flex: 1.2 }]}>
+                <Text style={styles.reportedName}>
+                  {item.reported?.displayName ?? "—"}
+                </Text>
+                <Text style={styles.subText}>{item.reported?.email}</Text>
+              </View>
 
-            <View style={[styles.td, { flex: 1.2 }]}>
-              <Text style={styles.reporterName}>
-                {item.reporter?.displayName ?? "—"}
-              </Text>
-              <Text style={styles.subText}>{item.reporter?.email}</Text>
-            </View>
+              <View style={[styles.td, { flex: 1.2 }]}>
+                <Text style={styles.reporterName}>
+                  {item.reporter?.displayName ?? "—"}
+                </Text>
+                <Text style={styles.subText}>{item.reporter?.email}</Text>
+              </View>
 
-            <View style={[styles.td, { flex: 1.5 }]}>
-              <Text style={styles.reasonText}>{item.reason}</Text>
-              {item.details ? (
-                <Text style={styles.subText}>{item.details}</Text>
-              ) : null}
-            </View>
+              <View style={[styles.td, { flex: 1.5 }]}>
+                <Text style={styles.reasonText}>{item.reason}</Text>
+                {item.details ? (
+                  <Text style={styles.subText}>{item.details}</Text>
+                ) : null}
+              </View>
 
-            <View style={[styles.td, { flex: 1 }]}>
-              <View
-                style={[
-                  styles.statusBadge,
-                  item.status === "RESOLVED"
-                    ? styles.badgeResolved
-                    : item.status === "DISMISSED"
-                    ? styles.badgeDismissed
-                    : styles.badgePending,
-                ]}
-              >
-                <Text style={styles.badgeText}>{item.status}</Text>
+              <View style={[styles.td, { flex: 1 }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    item.status === "RESOLVED"
+                      ? styles.badgeResolved
+                      : item.status === "DISMISSED"
+                      ? styles.badgeDismissed
+                      : styles.badgePending,
+                  ]}
+                >
+                  <Text style={styles.badgeText}>{item.status}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.tdActions, { flex: 1.4, justifyContent: "flex-end", gap: 6 }]}>
+                {item.reported?.id ? (
+                  <Pressable
+                    style={styles.btnBan}
+                    onPress={() => handleSuspend(item.reported!.id)}
+                  >
+                    <UserX size={14} color="#FFFFFF" />
+                    <Text style={styles.btnBanText}>Suspend</Text>
+                  </Pressable>
+                ) : null}
+                {item.status === "PENDING" ? (
+                  <>
+                    <Pressable
+                      style={styles.btnResolve}
+                      onPress={() => handleAction(item.id, "resolve")}
+                    >
+                      <CheckCircle size={14} color="#FFFFFF" />
+                    </Pressable>
+                    <Pressable
+                      style={[styles.btnResolve, { backgroundColor: "#6B7280" }]}
+                      onPress={() => handleAction(item.id, "dismiss")}
+                    >
+                      <XCircle size={14} color="#FFFFFF" />
+                    </Pressable>
+                  </>
+                ) : null}
               </View>
             </View>
-
-            <View style={[styles.tdActions, { flex: 1.2, justifyContent: "flex-end" }]}>
-              {item.reported?.id ? (
-                <Pressable
-                  style={styles.btnBan}
-                  onPress={() => handleSuspend(item.reported!.id)}
-                >
-                  <UserX size={14} color="#FFFFFF" />
-                  <Text style={styles.btnBanText}>Suspend</Text>
-                </Pressable>
-              ) : null}
-              <Pressable
-                style={styles.btnResolve}
-                onPress={() => handleAction(item.id, "resolve")}
-              >
-                <CheckCircle size={14} color="#FFFFFF" />
-              </Pressable>
-            </View>
-          </View>
-        ))}
+          ))
+        )}
       </View>
     </AdminLayout>
   );

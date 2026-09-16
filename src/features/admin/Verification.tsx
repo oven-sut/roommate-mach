@@ -8,7 +8,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Check, Search, ShieldCheck, X } from "lucide-react-native";
+import { Check, Clock, Eye, History, Search, ShieldAlert, ShieldCheck, X } from "lucide-react-native";
+import { CenterModal } from "../../components/Sheet";
+import { Button, Txt } from "../../components/ui";
 import { api, formatImageUri } from "../../services/api";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
@@ -27,6 +29,10 @@ type VerificationItem = {
 export function Verification({ go }: { go: (x: Screen) => void }) {
   const [items, setItems] = useState<VerificationItem[]>([]);
   const [query, setQuery] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState<{
+    name: string;
+    url: string;
+  } | null>(null);
 
   const loadVerifications = useCallback(async () => {
     try {
@@ -85,12 +91,104 @@ export function Verification({ go }: { go: (x: Screen) => void }) {
       )
     : items;
 
+  // Separate pending items (TOP) vs processed items (BOTTOM)
+  const pendingItems = visible.filter((item) => item.status === "PENDING");
+  const processedItems = visible.filter((item) => item.status !== "PENDING");
+
+  const renderTableRows = (list: VerificationItem[], isPendingSection: boolean) => (
+    <>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.th, { flex: 1.2 }]}>Student</Text>
+        <Text style={[styles.th, { flex: 1 }]}>SUT ID</Text>
+        <Text style={[styles.th, { flex: 1 }]}>Document Card</Text>
+        <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+        <Text style={[styles.th, { flex: 1, textAlign: "right" }]}>Action</Text>
+      </View>
+
+      {list.map((item) => (
+        <View key={item.id} style={styles.tableRow}>
+          <View style={[styles.td, { flex: 1.2 }]}>
+            <Text style={styles.nameText}>{item.displayName ?? "—"}</Text>
+            <Text style={styles.emailText}>{item.email}</Text>
+          </View>
+          <View style={[styles.td, { flex: 1 }]}>
+            <Text style={styles.sutIdText}>{item.sutId ?? "—"}</Text>
+          </View>
+          <View style={[styles.td, { flex: 1 }]}>
+            {item.documentUrl ? (
+              <Pressable
+                style={styles.docThumbContainer}
+                onPress={() =>
+                  setSelectedDoc({
+                    name: item.displayName || "Student ID Card",
+                    url: formatImageUri(item.documentUrl),
+                  })
+                }
+              >
+                <Image
+                  source={{ uri: formatImageUri(item.documentUrl) }}
+                  style={styles.docThumb}
+                />
+                <View style={styles.docEyeOverlay}>
+                  <Eye size={12} color="#FFFFFF" />
+                </View>
+              </Pressable>
+            ) : (
+              <Text style={styles.noDocText}>No Doc</Text>
+            )}
+          </View>
+          <View style={[styles.td, { flex: 1 }]}>
+            <View
+              style={[
+                styles.statusBadge,
+                item.status === "VERIFIED"
+                  ? styles.badgeVerified
+                  : item.status === "REJECTED"
+                  ? styles.badgeRejected
+                  : styles.badgePending,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  item.status === "VERIFIED"
+                    ? styles.textVerified
+                    : item.status === "REJECTED"
+                    ? styles.textRejected
+                    : styles.textPending,
+                ]}
+              >
+                {item.status}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.tdRow, { flex: 1, justifyContent: "flex-end" }]}>
+            <Pressable
+              style={[styles.btnAction, styles.btnApprove]}
+              onPress={() => updateStatus(item.id, "VERIFIED")}
+              accessibilityLabel="Approve verification"
+            >
+              <Check size={16} color="#FFFFFF" />
+            </Pressable>
+            <Pressable
+              style={[styles.btnAction, styles.btnReject]}
+              onPress={() => updateStatus(item.id, "REJECTED")}
+              accessibilityLabel="Reject verification"
+            >
+              <X size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
+      ))}
+    </>
+  );
+
   return (
     <AdminLayout currentScreen="verification" go={go}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <ShieldCheck size={20} color="#8B1E1E" />
-          <Text style={styles.cardTitle}>Student ID Verification Requests</Text>
+          <ShieldCheck size={22} color="#8B1E1E" />
+          <Text style={styles.cardTitle}>Student ID Verification Management</Text>
         </View>
 
         {/* Search Bar */}
@@ -105,76 +203,91 @@ export function Verification({ go }: { go: (x: Screen) => void }) {
           />
         </View>
 
-        {/* Verification Requests List Table */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.th, { flex: 1.2 }]}>Student</Text>
-          <Text style={[styles.th, { flex: 1 }]}>SUT ID</Text>
-          <Text style={[styles.th, { flex: 1 }]}>Document Card</Text>
-          <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-          <Text style={[styles.th, { flex: 1, textAlign: "right" }]}>Action</Text>
-        </View>
-
-        {visible.map((item) => (
-          <View key={item.id} style={styles.tableRow}>
-            <View style={[styles.td, { flex: 1.2 }]}>
-              <Text style={styles.nameText}>{item.displayName ?? "—"}</Text>
-              <Text style={styles.emailText}>{item.email}</Text>
+        {/* ============================================================ */}
+        {/* SECTION 1 (TOP): PENDING VERIFICATION REQUESTS */}
+        {/* ============================================================ */}
+        <View style={styles.pendingSectionBox}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderTitleGroup}>
+              <ShieldAlert size={20} color="#D97706" />
+              <Text style={styles.pendingSectionTitle}>
+                คำขอยืนยันตัวตนที่รอการอนุมัติ (Pending Verification Requests)
+              </Text>
             </View>
-            <View style={[styles.td, { flex: 1 }]}>
-              <Text style={styles.sutIdText}>{item.sutId ?? "—"}</Text>
-            </View>
-            <View style={[styles.td, { flex: 1 }]}>
-              {item.documentUrl ? (
-                <Image
-                  source={{ uri: formatImageUri(item.documentUrl) }}
-                  style={styles.docThumb}
-                />
-              ) : (
-                <Text style={styles.noDocText}>No Doc</Text>
-              )}
-            </View>
-            <View style={[styles.td, { flex: 1 }]}>
-              <View
-                style={[
-                  styles.statusBadge,
-                  item.status === "VERIFIED"
-                    ? styles.badgeVerified
-                    : item.status === "REJECTED"
-                    ? styles.badgeRejected
-                    : styles.badgePending,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusBadgeText,
-                    item.status === "VERIFIED"
-                      ? styles.textVerified
-                      : item.status === "REJECTED"
-                      ? styles.textRejected
-                      : styles.textPending,
-                  ]}
-                >
-                  {item.status}
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.tdRow, { flex: 1, justifyContent: "flex-end" }]}>
-              <Pressable
-                style={[styles.btnAction, styles.btnApprove]}
-                onPress={() => updateStatus(item.id, "VERIFIED")}
-              >
-                <Check size={16} color="#FFFFFF" />
-              </Pressable>
-              <Pressable
-                style={[styles.btnAction, styles.btnReject]}
-                onPress={() => updateStatus(item.id, "REJECTED")}
-              >
-                <X size={16} color="#FFFFFF" />
-              </Pressable>
+            <View style={styles.pendingBadgePill}>
+              <Clock size={12} color="#D97706" />
+              <Text style={styles.pendingBadgeText}>
+                {pendingItems.length} รายการรอนุมัติ
+              </Text>
             </View>
           </View>
-        ))}
+
+          {pendingItems.length > 0 ? (
+            renderTableRows(pendingItems, true)
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyCardText}>
+                🎉 ไม่มีคำขอยืนยันตัวตนที่ค้างรอนุมัติในขณะนี้ (All pending requests completed!)
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* ============================================================ */}
+        {/* SECTION 2 (BOTTOM): PROCESSED VERIFICATION HISTORY */}
+        {/* ============================================================ */}
+        <View style={styles.historySectionBox}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderTitleGroup}>
+              <History size={20} color="#4B5563" />
+              <Text style={styles.historySectionTitle}>
+                ประวัติการดำเนินการแล้ว (Verification History)
+              </Text>
+            </View>
+            <View style={styles.historyBadgePill}>
+              <Text style={styles.historyBadgeText}>
+                {processedItems.length} รายการ
+              </Text>
+            </View>
+          </View>
+
+          {processedItems.length > 0 ? (
+            renderTableRows(processedItems, false)
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyCardText}>
+                ยังไม่มีประวัติการอนุมัติหรือปฏิเสธข้อมูล
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
+
+      {/* Document Preview Modal */}
+      <CenterModal
+        visible={Boolean(selectedDoc)}
+        onClose={() => setSelectedDoc(null)}
+      >
+        {selectedDoc ? (
+          <View style={{ gap: 14, alignItems: "center" }}>
+            <Txt role="h3" style={{ fontSize: 16 }}>
+              {selectedDoc.name}
+            </Txt>
+            <Image
+              source={{ uri: selectedDoc.url }}
+              style={styles.fullDocImage}
+              resizeMode="contain"
+            />
+            <Button
+              variant="subtle"
+              style={{ width: "100%", marginTop: 8 }}
+              onPress={() => setSelectedDoc(null)}
+            >
+              ปิดหน้าต่าง (Close)
+            </Button>
+          </View>
+        ) : null}
+      </CenterModal>
     </AdminLayout>
   );
 }
@@ -189,12 +302,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    gap: 16,
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 16,
   },
   cardTitle: {
     fontFamily: F.bold,
@@ -211,7 +324,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     height: 44,
-    marginBottom: 16,
   },
   searchInput: {
     flex: 1,
@@ -220,12 +332,96 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
+  // Section 1: Pending Box
+  pendingSectionBox: {
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1.5,
+    borderColor: "#FCD34D",
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  sectionHeaderTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  pendingSectionTitle: {
+    fontFamily: F.bold,
+    fontSize: 14,
+    color: "#92400E",
+  },
+  pendingBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  pendingBadgeText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "#B45309",
+  },
+
+  // Section 2: History Box
+  historySectionBox: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+  },
+  historySectionTitle: {
+    fontFamily: F.bold,
+    fontSize: 14,
+    color: "#374151",
+  },
+  historyBadgePill: {
+    backgroundColor: "#E5E7EB",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  historyBadgeText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    color: "#4B5563",
+  },
+
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  emptyCardText: {
+    fontFamily: F.regular,
+    fontSize: 13,
+    color: "#6B7280",
+  },
+
   tableHeader: {
     flexDirection: "row",
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 10,
     borderRadius: 6,
   },
@@ -237,10 +433,11 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
   },
   td: {
     justifyContent: "center",
@@ -265,12 +462,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#374151",
   },
+  docThumbContainer: {
+    position: "relative",
+    alignSelf: "flex-start",
+  },
   docThumb: {
     width: 48,
     height: 32,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+  },
+  docEyeOverlay: {
+    position: "absolute",
+    right: 2,
+    bottom: 2,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 3,
+    padding: 2,
   },
   noDocText: {
     fontFamily: F.regular,
@@ -301,4 +510,11 @@ const styles = StyleSheet.create({
   },
   btnApprove: { backgroundColor: "#10B981" },
   btnReject: { backgroundColor: "#EF4444" },
+
+  fullDocImage: {
+    width: 320,
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+  },
 });

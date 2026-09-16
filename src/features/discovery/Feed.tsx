@@ -115,6 +115,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
   const [started, setStarted] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [discoverable, setDiscoverable] = useState(true);
 
   const cardAnim = useRef(new Animated.Value(1)).current;
 
@@ -137,6 +138,9 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
             profile: meData.profile,
             verification: meData.verification,
           });
+          if (typeof meData.discoverable === "boolean") {
+            setDiscoverable(meData.discoverable);
+          }
         }
 
         setPage(nextPage);
@@ -270,7 +274,35 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
               </Animated.View>
 
               <View style={{ paddingTop: 20, minHeight: 96 }}>
-                {started ? (
+                {!discoverable ? (
+                  <View
+                    style={{
+                      backgroundColor: C.card,
+                      borderRadius: 16,
+                      paddingVertical: 18,
+                      paddingHorizontal: 20,
+                      alignItems: "center",
+                      gap: 10,
+                      borderWidth: 1,
+                      borderColor: C.line,
+                      ...shadow(1),
+                    }}
+                  >
+                    <Txt role="bodyBold" style={{ textAlign: "center", color: C.ink }}>
+                      {t("accountHiddenNotice")}
+                    </Txt>
+                    <Txt role="caption" style={{ textAlign: "center", color: C.muted }}>
+                      {t("enableStatusToMatch")}
+                    </Txt>
+                    <Button
+                      tone="primary"
+                      style={{ width: "100%", maxWidth: 220, height: 48, marginTop: 4 }}
+                      onPress={() => go("myprofile")}
+                    >
+                      {t("goToProfile")}
+                    </Button>
+                  </View>
+                ) : started ? (
                   <View
                     style={{
                       flexDirection: "row",

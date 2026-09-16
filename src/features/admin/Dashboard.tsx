@@ -12,6 +12,7 @@ import {
   Users as UsersIcon,
 } from "lucide-react-native";
 import { api } from "../../services/api";
+import { C, G } from "../../theme/colors";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 import { AdminLayout } from "./AdminLayout";
@@ -73,15 +74,15 @@ function PeakTimeChart() {
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
         <Defs>
           <SvgLinearGradient id="peakFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#B53C3C" stopOpacity={0.35} />
-            <Stop offset="1" stopColor="#B53C3C" stopOpacity={0} />
+            <Stop offset="0" stopColor={C.primary} stopOpacity={0.35} />
+            <Stop offset="1" stopColor={C.primary} stopOpacity={0} />
           </SvgLinearGradient>
         </Defs>
         <Path d={areaPath} fill="url(#peakFill)" stroke="none" />
         <Path
           d={linePath}
           fill="none"
-          stroke="#B53C3C"
+          stroke={C.primary}
           strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -142,7 +143,7 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
   /* ---- Left column blocks ---- */
   const statsBlock = (
     <View style={styles.statsRow}>
-      <LinearGradient colors={["#8B1E1E", "#6B1620"]} style={[styles.statCard, styles.statCardActive]}>
+      <LinearGradient colors={[...G.hero]} style={[styles.statCard, styles.statCardActive]}>
         <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
         <Text style={styles.statNumberActive}>{stats.pendingVerifications ?? 12}</Text>
         <View style={styles.statProgressTrack}>
@@ -163,23 +164,23 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
   );
 
   const safetyBlock = (
-    <LinearGradient colors={["#FDEEEE", "#FFFFFF"]} style={styles.chartCard}>
+    <LinearGradient colors={[C.cardWarm, C.card]} style={styles.chartCard}>
       <View style={styles.chartHeaderRow}>
         <View style={styles.chartHeaderLeft}>
-          <ShieldCheck size={20} color="#8B1E1E" />
+          <ShieldCheck size={20} color={C.primary} />
           <Text style={styles.chartTitle}>รายงานความปลอดภัย</Text>
         </View>
         <View style={styles.legendCompact}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#3B82F6" }]} />
+            <View style={[styles.legendDot, { backgroundColor: C.blue }]} />
             <Text style={styles.legendText}>โปรไฟล์</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
+            <View style={[styles.legendDot, { backgroundColor: C.ember }]} />
             <Text style={styles.legendText}>คุกคาม</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#F59E0B" }]} />
+            <View style={[styles.legendDot, { backgroundColor: C.amber }]} />
             <Text style={styles.legendText}>สแปม</Text>
           </View>
         </View>
@@ -197,7 +198,7 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
               <View
                 style={{
                   width: "100%",
-                  backgroundColor: "#3B82F6",
+                  backgroundColor: C.blue,
                   height: `${(item.profile / 130) * 100}%`,
                   borderTopLeftRadius: 4,
                   borderTopRightRadius: 4,
@@ -206,14 +207,14 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
               <View
                 style={{
                   width: "100%",
-                  backgroundColor: "#EF4444",
+                  backgroundColor: C.ember,
                   height: `${(item.harassment / 130) * 100}%`,
                 }}
               />
               <View
                 style={{
                   width: "100%",
-                  backgroundColor: "#F59E0B",
+                  backgroundColor: C.amber,
                   height: `${(item.spam / 130) * 100}%`,
                 }}
               />
@@ -226,11 +227,11 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
   );
 
   const swipeBlock = (
-    <LinearGradient colors={["#8B1E1E", "#6B1620"]} style={styles.chartCard}>
+    <LinearGradient colors={[...G.hero]} style={styles.chartCard}>
       <View style={styles.chartHeaderRow}>
         <View style={styles.chartHeaderLeft}>
-          <BarChart2 size={20} color="#FFFFFF" />
-          <Text style={[styles.chartTitle, { color: "#FFFFFF" }]}>ปัดเลือก & จับคู่</Text>
+          <BarChart2 size={20} color={C.white} />
+          <Text style={[styles.chartTitle, { color: C.white }]}>ปัดเลือก & จับคู่</Text>
         </View>
       </View>
       <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
@@ -262,14 +263,14 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     <View style={styles.calendarWidget}>
       <View style={styles.calendarHeader}>
         <Pressable onPress={() => setWeekOffset((o) => o - 1)} hitSlop={8}>
-          <ChevronLeft size={18} color="#FFFFFF" />
+          <ChevronLeft size={18} color={C.white} />
         </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <CalendarIcon size={16} color="#FFFFFF" />
+          <CalendarIcon size={16} color={C.white} />
           <Text style={styles.calendarTitle}>{monthText}</Text>
         </View>
         <Pressable onPress={() => setWeekOffset((o) => o + 1)} hitSlop={8}>
-          <ChevronRight size={18} color="#FFFFFF" />
+          <ChevronRight size={18} color={C.white} />
         </Pressable>
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 14 }}>
@@ -297,12 +298,12 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
 
   const usersBlock = (
     <View style={{ flexDirection: "row", gap: 12 }}>
-      <LinearGradient colors={["#6F97CC", "#3F5F8F"]} style={styles.usersCard}>
+      <LinearGradient colors={[...G.primary]} style={styles.usersCard}>
         <Text style={styles.usersCardValue}>{stats.members.toLocaleString()}</Text>
         <Text style={styles.usersCardLabel}>USERS</Text>
       </LinearGradient>
       <Pressable style={styles.usersIconBtn} onPress={() => go("users")}>
-        <UsersIcon size={22} color="#3F5F8F" />
+        <UsersIcon size={22} color={C.primary} />
       </Pressable>
     </View>
   );
@@ -311,7 +312,7 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
     <View style={styles.chartCard}>
       <View style={styles.chartHeaderRow}>
         <View style={styles.chartHeaderLeft}>
-          <Activity size={20} color="#3B82F6" />
+          <Activity size={20} color={C.primary} />
           <Text style={styles.chartTitle}>ช่วงเวลาหนาแน่นที่สุด</Text>
         </View>
       </View>
@@ -384,7 +385,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   statCardMuted: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.cardWarm,
+    borderWidth: 1,
+    borderColor: C.line,
   },
   statLabelActive: {
     fontFamily: F.medium,
@@ -395,7 +398,7 @@ const styles = StyleSheet.create({
   statNumberActive: {
     fontFamily: F.bold,
     fontSize: 28,
-    color: "#FFFFFF",
+    color: C.white,
     marginBottom: 10,
   },
   statProgressTrack: {
@@ -406,23 +409,23 @@ const styles = StyleSheet.create({
   },
   statProgressFill: {
     height: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.white,
     borderRadius: 2,
   },
   statLabelMuted: {
     fontFamily: F.medium,
     fontSize: 13,
-    color: "#9CA3AF",
+    color: C.muted,
     marginBottom: 8,
   },
   statNumberMuted: {
     fontFamily: F.bold,
     fontSize: 28,
-    color: "#374151",
+    color: C.ink,
   },
 
   calendarWidget: {
-    backgroundColor: "#8B1E1E",
+    backgroundColor: C.wine,
     borderRadius: 16,
     padding: 16,
   },
@@ -434,7 +437,7 @@ const styles = StyleSheet.create({
   calendarTitle: {
     fontFamily: F.bold,
     fontSize: 14,
-    color: "#FFFFFF",
+    color: C.white,
   },
   calendarDaysLabel: {
     flex: 1,
@@ -450,17 +453,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   calendarDateCellActive: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.white,
     borderRadius: 14,
     marginHorizontal: 2,
   },
   calendarDatesLabel: {
     fontFamily: F.bold,
     fontSize: 13,
-    color: "#FFFFFF",
+    color: C.white,
   },
   calendarDatesLabelActive: {
-    color: "#8B1E1E",
+    color: C.wine,
   },
 
   usersCard: {
@@ -472,7 +475,7 @@ const styles = StyleSheet.create({
   usersCardValue: {
     fontFamily: F.bold,
     fontSize: 22,
-    color: "#FFFFFF",
+    color: C.white,
   },
   usersCardLabel: {
     fontFamily: F.medium,
@@ -485,15 +488,17 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: "#DCE7F5",
+    backgroundColor: C.pink,
     alignItems: "center",
     justifyContent: "center",
   },
 
   chartCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 16,
     padding: 18,
+    borderWidth: 1,
+    borderColor: C.line,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -514,7 +519,7 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontFamily: F.bold,
     fontSize: 15,
-    color: "#111827",
+    color: C.ink,
   },
 
   barChartContainer: {
@@ -524,7 +529,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingTop: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: C.line,
   },
   barGroup: {
     alignItems: "center",
@@ -541,7 +546,7 @@ const styles = StyleSheet.create({
   barLabel: {
     fontFamily: F.medium,
     fontSize: 11,
-    color: "#6B7280",
+    color: C.muted,
   },
   legendCompact: {
     gap: 4,
@@ -560,7 +565,7 @@ const styles = StyleSheet.create({
   legendText: {
     fontFamily: F.regular,
     fontSize: 11,
-    color: "#4B5563",
+    color: C.muted,
   },
 
   peakAxisRow: {
@@ -571,7 +576,7 @@ const styles = StyleSheet.create({
   peakAxisLabel: {
     fontFamily: F.regular,
     fontSize: 10,
-    color: "#9CA3AF",
+    color: C.muted,
   },
 
   funnelAxis: {
@@ -600,14 +605,14 @@ const styles = StyleSheet.create({
   },
   funnelBar: {
     width: 40,
-    backgroundColor: "#BFDBFE",
+    backgroundColor: C.amberLight,
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
   },
   funnelValue: {
     fontFamily: F.bold,
     fontSize: 12,
-    color: "#FFFFFF",
+    color: C.white,
   },
   funnelLabel: {
     fontFamily: F.medium,

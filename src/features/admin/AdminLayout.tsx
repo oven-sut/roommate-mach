@@ -217,11 +217,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#F4F5F7",
+    backgroundColor: C.bg,
   },
   desktopSidebar: {
     width: 240,
-    backgroundColor: "#8B1E1E",
+    backgroundColor: C.wine,
     height: "100%",
   },
   sidebarInner: {
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontFamily: F.bold,
     fontSize: 15,
-    color: "#FFFFFF",
+    color: C.white,
   },
   brandSub: {
     fontFamily: F.regular,
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   navLabelActive: {
     fontFamily: F.bold,
-    color: "#FFFFFF",
+    color: C.white,
   },
   logoutBtn: {
     flexDirection: "row",
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   mobileDrawerContent: {
     width: 260,
     height: "100%",
-    backgroundColor: "#8B1E1E",
+    backgroundColor: C.wine,
   },
   mobileDrawerHeader: {
     flexDirection: "row",
@@ -314,23 +314,23 @@ const styles = StyleSheet.create({
   mobileDrawerTitle: {
     fontFamily: F.bold,
     fontSize: 16,
-    color: "#FFFFFF",
+    color: C.white,
   },
 
   /* Main View Area */
   mainContent: {
     flex: 1,
     flexDirection: "column",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: C.bg,
   },
   topHeader: {
     height: 64,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: C.line,
     gap: 16,
   },
   menuToggleBtn: {
@@ -339,13 +339,13 @@ const styles = StyleSheet.create({
   headerAdminName: {
     fontFamily: F.bold,
     fontSize: 15,
-    color: "#111827",
+    color: C.ink,
     letterSpacing: 0.5,
   },
   headerAdminRole: {
     fontFamily: F.regular,
     fontSize: 12,
-    color: "#6B7280",
+    color: C.muted,
   },
   headerRight: {
     flexDirection: "row",
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.line,
     alignItems: "center",
     justifyContent: "center",
   },

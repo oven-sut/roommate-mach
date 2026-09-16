@@ -153,10 +153,16 @@ export function MyProfile({ go }: { go: (x: Screen) => void }) {
   const toggleDiscoverable = async (nextValue: boolean) => {
     setDiscoverable(nextValue);
     try {
-      await api("/api/profile", {
-        method: "PUT",
-        body: JSON.stringify({ ...draft, discoverable: nextValue }),
-      });
+      await Promise.all([
+        api("/api/me", {
+          method: "PATCH",
+          body: JSON.stringify({ discoverable: nextValue }),
+        }),
+        api("/api/profile", {
+          method: "PUT",
+          body: JSON.stringify({ ...draft, discoverable: nextValue }),
+        }),
+      ]);
     } catch {
       setDiscoverable(!nextValue);
     }
