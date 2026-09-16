@@ -1,6 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Search, Users as UsersIcon } from "lucide-react-native";
+import { CenterModal } from "../../components/Sheet";
 import { api } from "../../services/api";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
@@ -14,6 +24,23 @@ type AdminUser = {
   suspended?: boolean;
   verification?: { status?: string };
   _count?: { reportsReceived?: number };
+};
+
+type UserActivity = {
+  displayName?: string;
+  email?: string;
+  joinedAt: string;
+  suspended: boolean;
+  verificationStatus: string;
+  swipesSent: number;
+  likesSent: number;
+  swipesReceived: number;
+  likesReceived: number;
+  matches: number;
+  messagesSent: number;
+  reportsMade: number;
+  reportsReceived: number;
+  recentReportsReceived: { reason: string; status: string; createdAt: string }[];
 };
 
 export function Users({ go }: { go: (x: Screen) => void }) {
@@ -55,6 +82,79 @@ export function Users({ go }: { go: (x: Screen) => void }) {
     load();
   };
 
+  /** Same confirm-then-act flow AdminLayout's logout button uses. */
+  const confirmAction = (message: string, onConfirm: () => void) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(message)) onConfirm();
+      return;
+    }
+    Alert.alert("ยืนยันการทำรายการ", message, [
+      { text: "ยกเลิก", style: "cancel" },
+      { text: "ยืนยัน", style: "destructive", onPress: onConfirm },
+    ]);
+  };
+
+  const [historyUser, setHistoryUser] = useState<{ id: string; name: string } | null>(null);
+  const [historyData, setHistoryData] = useState<UserActivity | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistory = async (user: AdminUser) => {
+    const name = user.displayName ?? user.email ?? "—";
+    setHistoryUser({ id: user.id, name });
+    setHistoryData(null);
+    setHistoryLoading(true);
+    try {
+      const data = await api<UserActivity>(`/api/admin/users/${user.id}/activity`);
+      setHistoryData(data);
+    } catch (reason) {
+      Alert.alert(
+        "ประวัติผู้ใช้",
+        reason instanceof Error ? reason.message : "โหลดประวัติไม่สำเร็จ",
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const resetPassword = (user: AdminUser) => {
+    const name = user.displayName ?? user.email ?? "ผู้ใช้นี้";
+    confirmAction(
+      `รีเซ็ตรหัสผ่านของ ${name}? ระบบจะสร้างรหัสผ่านชั่วคราวใหม่ทันที`,
+      async () => {
+        try {
+          const res = await api<{ tempPassword: string }>(
+            `/api/admin/users/${user.id}/reset-password`,
+            { method: "POST" },
+          );
+          Alert.alert(
+            "รีเซ็ตรหัสผ่านสำเร็จ",
+            `รหัสผ่านชั่วคราวของ ${name}:\n${res.tempPassword}\n\nกรุณาแจ้งผู้ใช้ให้เปลี่ยนรหัสผ่านทันที`,
+          );
+        } catch (reason) {
+          Alert.alert(
+            "รีเซ็ตรหัสผ่าน",
+            reason instanceof Error ? reason.message : "ทำรายการไม่สำเร็จ",
+          );
+        }
+      },
+    );
+  };
+
+  const deleteAccount = (user: AdminUser) => {
+    const name = user.displayName ?? user.email ?? "ผู้ใช้นี้";
+    confirmAction(`ลบบัญชีของ ${name}? การลบไม่สามารถย้อนกลับได้`, async () => {
+      try {
+        await api(`/api/admin/users/${user.id}`, { method: "DELETE" });
+        load();
+      } catch (reason) {
+        Alert.alert(
+          "ลบบัญชี",
+          reason instanceof Error ? reason.message : "ทำรายการไม่สำเร็จ",
+        );
+      }
+    });
+  };
+
   const userList = Array.isArray(users) ? users : [];
   const needle = query.trim().toLowerCase();
   const visible = needle
@@ -90,7 +190,7 @@ export function Users({ go }: { go: (x: Screen) => void }) {
             <Text style={[styles.th, { flex: 1.5 }]}>Email</Text>
             <Text style={[styles.th, { flex: 0.8 }]}>Role</Text>
             <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-            <Text style={[styles.th, { flex: 1.2, textAlign: "right" }]}>Actions</Text>
+            <Text style={[styles.th, { flex: 2.2, textAlign: "right" }]}>Actions</Text>
           </View>
         ) : null}
 
@@ -126,9 +226,23 @@ export function Users({ go }: { go: (x: Screen) => void }) {
                   <Text style={styles.reportBadge}>⚠️ Reported {reports} times</Text>
                 ) : null}
 
-                <View style={styles.mobileActionsRow}>
+                <View style={{ gap: 8, marginTop: 4 }}>
                   <Text style={styles.roleText}>Role: {user.role ?? "USER"}</Text>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    <Pressable
+                      style={[styles.btnAction, styles.btnHistory]}
+                      onPress={() => openHistory(user)}
+                    >
+                      <Text style={styles.btnActionText}>ประวัติผู้ใช้</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[styles.btnAction, styles.btnReset]}
+                      onPress={() => resetPassword(user)}
+                    >
+                      <Text style={styles.btnActionText}>รีเซ็ตรหัสผ่าน</Text>
+                    </Pressable>
+
                     <Pressable
                       style={[
                         styles.btnAction,
@@ -137,8 +251,15 @@ export function Users({ go }: { go: (x: Screen) => void }) {
                       onPress={() => suspend(user.id, !user.suspended)}
                     >
                       <Text style={styles.btnActionText}>
-                        {user.suspended ? "Unsuspend" : "Suspend"}
+                        {user.suspended ? "เปิดใช้งาน" : "ระงับบัญชี"}
                       </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[styles.btnAction, styles.btnDelete]}
+                      onPress={() => deleteAccount(user)}
+                    >
+                      <Text style={styles.btnActionText}>ลบบัญชี</Text>
                     </Pressable>
 
                     {user.verification?.status === "PENDING" ? (
@@ -191,7 +312,26 @@ export function Users({ go }: { go: (x: Screen) => void }) {
                 </View>
               </View>
 
-              <View style={[styles.tdActions, { flex: 1.2, justifyContent: "flex-end" }]}>
+              <View
+                style={[
+                  styles.tdActions,
+                  { flex: 2.2, flexWrap: "wrap", justifyContent: "flex-end" },
+                ]}
+              >
+                <Pressable
+                  style={[styles.btnAction, styles.btnHistory]}
+                  onPress={() => openHistory(user)}
+                >
+                  <Text style={styles.btnActionText}>ประวัติผู้ใช้</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.btnAction, styles.btnReset]}
+                  onPress={() => resetPassword(user)}
+                >
+                  <Text style={styles.btnActionText}>รีเซ็ตรหัสผ่าน</Text>
+                </Pressable>
+
                 <Pressable
                   style={[
                     styles.btnAction,
@@ -200,8 +340,15 @@ export function Users({ go }: { go: (x: Screen) => void }) {
                   onPress={() => suspend(user.id, !user.suspended)}
                 >
                   <Text style={styles.btnActionText}>
-                    {user.suspended ? "Unsuspend" : "Suspend"}
+                    {user.suspended ? "เปิดใช้งาน" : "ระงับบัญชี"}
                   </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.btnAction, styles.btnDelete]}
+                  onPress={() => deleteAccount(user)}
+                >
+                  <Text style={styles.btnActionText}>ลบบัญชี</Text>
                 </Pressable>
 
                 {user.verification?.status === "PENDING" ? (
@@ -217,6 +364,80 @@ export function Users({ go }: { go: (x: Screen) => void }) {
           );
         })}
       </View>
+
+      {/* User Activity / History Modal */}
+      <CenterModal visible={Boolean(historyUser)} onClose={() => setHistoryUser(null)}>
+        {historyUser ? (
+          <View style={{ gap: 14 }}>
+            <Text style={styles.historyTitle}>ประวัติผู้ใช้: {historyUser.name}</Text>
+
+            {historyLoading ? (
+              <Text style={styles.historyLoading}>กำลังโหลด...</Text>
+            ) : historyData ? (
+              <>
+                <View style={styles.historyStatsGrid}>
+                  <View style={styles.historyStat}>
+                    <Text style={styles.historyStatValue}>{historyData.swipesSent}</Text>
+                    <Text style={styles.historyStatLabel}>ปัดทั้งหมด</Text>
+                  </View>
+                  <View style={styles.historyStat}>
+                    <Text style={styles.historyStatValue}>{historyData.likesSent}</Text>
+                    <Text style={styles.historyStatLabel}>กดถูกใจ</Text>
+                  </View>
+                  <View style={styles.historyStat}>
+                    <Text style={styles.historyStatValue}>{historyData.matches}</Text>
+                    <Text style={styles.historyStatLabel}>จับคู่สำเร็จ</Text>
+                  </View>
+                  <View style={styles.historyStat}>
+                    <Text style={styles.historyStatValue}>{historyData.messagesSent}</Text>
+                    <Text style={styles.historyStatLabel}>ข้อความที่ส่ง</Text>
+                  </View>
+                  <View style={styles.historyStat}>
+                    <Text style={styles.historyStatValue}>{historyData.reportsReceived}</Text>
+                    <Text style={styles.historyStatLabel}>ถูกรายงาน</Text>
+                  </View>
+                  <View style={styles.historyStat}>
+                    <Text style={styles.historyStatValue}>{historyData.reportsMade}</Text>
+                    <Text style={styles.historyStatLabel}>รายงานผู้อื่น</Text>
+                  </View>
+                </View>
+
+                <View style={styles.historyMetaRow}>
+                  <Text style={styles.historyMetaText}>
+                    เข้าร่วมเมื่อ {new Date(historyData.joinedAt).toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.historyMetaText}>
+                    ยืนยันตัวตน: {historyData.verificationStatus}
+                  </Text>
+                </View>
+
+                {historyData.recentReportsReceived.length > 0 ? (
+                  <View style={{ gap: 6 }}>
+                    <Text style={styles.historySectionTitle}>รายงานล่าสุดที่ถูกแจ้ง</Text>
+                    {historyData.recentReportsReceived.map((r, i) => (
+                      <View key={i} style={styles.historyReportRow}>
+                        <Text style={styles.historyReportReason}>{r.reason}</Text>
+                        <Text style={styles.historyReportMeta}>
+                          {r.status} · {new Date(r.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.historyLoading}>ไม่พบข้อมูล</Text>
+            )}
+
+            <Pressable
+              style={[styles.btnAction, styles.btnClose]}
+              onPress={() => setHistoryUser(null)}
+            >
+              <Text style={[styles.btnActionText, { textAlign: "center" }]}>ปิดหน้าต่าง</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </CenterModal>
     </AdminLayout>
   );
 }
@@ -275,13 +496,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
   },
-  mobileActionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-
   tableHeader: {
     flexDirection: "row",
     paddingVertical: 10,
@@ -350,12 +564,86 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
   },
-  btnSuspend: { backgroundColor: "#EF4444" },
+  btnSuspend: { backgroundColor: "#F97316" },
   btnUnsuspend: { backgroundColor: "#10B981" },
   btnVerify: { backgroundColor: "#3B82F6" },
+  btnHistory: { backgroundColor: "#6B7280" },
+  btnReset: { backgroundColor: "#6366F1" },
+  btnDelete: { backgroundColor: "#EF4444" },
+  btnClose: { backgroundColor: "#6B7280" },
   btnActionText: {
     fontFamily: F.bold,
     fontSize: 12,
     color: "#FFFFFF",
+  },
+
+  historyTitle: {
+    fontFamily: F.bold,
+    fontSize: 16,
+    color: "#111827",
+  },
+  historyLoading: {
+    fontFamily: F.regular,
+    fontSize: 13,
+    color: "#6B7280",
+    textAlign: "center",
+    paddingVertical: 12,
+  },
+  historyStatsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  historyStat: {
+    flexBasis: "30%",
+    flexGrow: 1,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  historyStatValue: {
+    fontFamily: F.bold,
+    fontSize: 18,
+    color: "#8B1E1E",
+  },
+  historyStatLabel: {
+    fontFamily: F.medium,
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  historyMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  historyMetaText: {
+    fontFamily: F.regular,
+    fontSize: 12,
+    color: "#4B5563",
+  },
+  historySectionTitle: {
+    fontFamily: F.bold,
+    fontSize: 13,
+    color: "#111827",
+  },
+  historyReportRow: {
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    borderRadius: 8,
+    padding: 8,
+    gap: 2,
+  },
+  historyReportReason: {
+    fontFamily: F.medium,
+    fontSize: 12,
+    color: "#111827",
+  },
+  historyReportMeta: {
+    fontFamily: F.regular,
+    fontSize: 11,
+    color: "#9CA3AF",
   },
 });
