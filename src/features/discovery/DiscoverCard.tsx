@@ -198,8 +198,8 @@ export function DiscoverCard({
             {describe(person, language, t)}
           </Txt>
           <View style={[s.wrap, { rowGap: 8 }]}>
-            {tags.map((tag) => (
-              <Tag key={tag} tone="onDark">
+            {tags.map((tag, idx) => (
+              <Tag key={`${tag}-${idx}`} tone="onDark">
                 {tag}
               </Tag>
             ))}

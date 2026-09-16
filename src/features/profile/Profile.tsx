@@ -411,8 +411,8 @@ export function Profile({ go }: { go: (x: Screen) => void }) {
               {language === "th" ? "สไตล์การดำเนินชีวิต (Lifestyle Tags)" : "Lifestyle Signature"}
             </Txt>
             <View style={[s.wrap, { rowGap: 10, gap: 8 }]}>
-              {cardTags(activePerson).map((tag) => (
-                <Tag key={tag}>{tag}</Tag>
+              {cardTags(activePerson).map((tag, idx) => (
+                <Tag key={`${tag}-${idx}`}>{tag}</Tag>
               ))}
             </View>
           </View>

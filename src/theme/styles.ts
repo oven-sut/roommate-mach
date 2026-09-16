@@ -22,6 +22,9 @@ export function shadow(level: 1 | 2 | 3 = 1) {
 
   return Platform.select({
     android: { elevation: config.elevation },
+    web: {
+      boxShadow: `0px ${config.offset}px ${config.radius}px rgba(74, 42, 28, ${config.opacity})`,
+    } as any,
     default: {
       shadowColor: "#4A2A1C",
       shadowOpacity: config.opacity,

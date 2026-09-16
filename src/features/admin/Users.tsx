@@ -24,6 +24,7 @@ import {
 } from "lucide-react-native";
 import { CenterModal } from "../../components/Sheet";
 import { api } from "../../services/api";
+import { shadow } from "../../theme/styles";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 import { AdminLayout } from "./AdminLayout";
@@ -678,11 +679,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadow(1),
   },
   cardHeader: {
     flexDirection: "row",

@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   View,
@@ -35,7 +36,7 @@ export function Sheet({
     Animated.timing(slide, {
       toValue: visible ? 1 : 0,
       duration: visible ? 280 : 200,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start();
   }, [visible, slide]);
 

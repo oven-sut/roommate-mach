@@ -136,7 +136,7 @@ function AppContent() {
       toValue: 1,
       duration: 380,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start();
   }, [screen, transition]);
 
