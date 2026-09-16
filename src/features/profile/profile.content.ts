@@ -36,7 +36,13 @@ export const MAJOR_OPTIONS: Option[] = [
 ];
 
 /** Values are stored verbatim, so keep them stable — the API matches on them. */
-export const ROOM_TYPES = ["Single", "Double", "Either"] as const;
+export const ROOM_TYPES = [
+  "Single",
+  "Double",
+  "Triple",
+  "Group",
+  "Either",
+] as const;
 export const PROPERTY_TYPES = [
   "On-campus",
   "Off-campus",
@@ -49,7 +55,13 @@ export const ROOMMATE_GENDERS = [
 ] as const;
 
 /** i18n keys for the fixed option sets above, in the same order. */
-export const ROOM_TYPE_KEYS = ["single", "double", "either"] as const;
+export const ROOM_TYPE_KEYS = [
+  "single",
+  "double",
+  "triple",
+  "groupRoom",
+  "either",
+] as const;
 export const PROPERTY_TYPE_KEYS = [
   "onCampus",
   "offCampus",

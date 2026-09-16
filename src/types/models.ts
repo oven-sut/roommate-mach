@@ -58,7 +58,7 @@ export interface ProfileDraft {
   gender: string;
   bio: string;
   year: number;
-  /** "Single" | "Double" | "Either" */
+  /** "Single" | "Double" | "Triple" | "Group" | "Either" */
   roomType: string;
   /** "On-campus" | "Off-campus" | "House" | "Condo" */
   propertyType: string;
