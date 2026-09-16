@@ -17,6 +17,14 @@ import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 import { AdminLayout } from "./AdminLayout";
 
+type ReportTrendPoint = {
+  monthIndex: number;
+  year: number;
+  profile: number;
+  harassment: number;
+  spam: number;
+};
+
 type Stats = {
   members: number;
   active: number;
@@ -26,6 +34,10 @@ type Stats = {
   pendingVerifications?: number;
   verifiedVerifications?: number;
   unverifiedVerifications?: number;
+  swipes?: number;
+  likes?: number;
+  reportTrend?: ReportTrendPoint[];
+  activityByHour?: number[];
 };
 
 const EMPTY_STATS: Stats = {
@@ -37,13 +49,28 @@ const EMPTY_STATS: Stats = {
   pendingVerifications: 12,
   verifiedVerifications: 321,
   unverifiedVerifications: 12,
+  swipes: 4890,
+  likes: 1420,
 };
 
 const THAI_MONTHS = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
 ];
+const THAI_MONTHS_SHORT = [
+  "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+];
 const WEEKDAY_LABELS = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
+
+/** Fallback series shown only until the real 5-month report trend loads. */
+const FALLBACK_REPORT_TREND = [
+  { month: "พ.ค.", profile: 15, harassment: 8, spam: 12 },
+  { month: "มิ.ย.", profile: 22, harassment: 14, spam: 18 },
+  { month: "ก.ค.", profile: 30, harassment: 18, spam: 25 },
+  { month: "ส.ค.", profile: 42, harassment: 25, spam: 32 },
+  { month: "ก.ย.", profile: 55, harassment: 30, spam: 38 },
+];
 
 function startOfWeek(date: Date) {
   const d = new Date(date);
@@ -54,18 +81,19 @@ function startOfWeek(date: Date) {
   return d;
 }
 
-// Decorative usage curve (hourly buckets) — no hourly breakdown exists in Stats yet.
-const PEAK_CURVE = [
+// Shown only until the real per-hour message activity loads.
+const FALLBACK_PEAK_CURVE = [
   120, 90, 60, 40, 30, 25, 35, 55, 80, 100, 90, 70,
   50, 40, 45, 60, 90, 140, 220, 300, 360, 380, 340, 260,
 ];
 
-function PeakTimeChart() {
+function PeakTimeChart({ data }: { data?: number[] }) {
+  const curve = data && data.length === 24 && data.some((v) => v > 0) ? data : FALLBACK_PEAK_CURVE;
   const W = 240;
   const H = 120;
-  const max = Math.max(...PEAK_CURVE);
-  const stepX = W / (PEAK_CURVE.length - 1);
-  const points = PEAK_CURVE.map((v, i) => [i * stepX, H - (v / max) * H]);
+  const max = Math.max(...curve, 1);
+  const stepX = W / (curve.length - 1);
+  const points = curve.map((v, i) => [i * stepX, H - (v / max) * H]);
   const linePath = `M${points.map((p) => p.join(",")).join(" L ")}`;
   const areaPath = `${linePath} L ${W},${H} L 0,${H} Z`;
 
@@ -134,11 +162,25 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
       : 8;
 
   const swipeStages = [
-    { label: "ปัดเลือกทั้งหมด", value: 4890 },
-    { label: "กดถูกใจ", value: 1420 },
+    { label: "ปัดเลือกทั้งหมด", value: stats.swipes ?? 4890 },
+    { label: "กดถูกใจ", value: stats.likes ?? 1420 },
     { label: "จับคู่สำเร็จ", value: stats.matches ?? 142 },
   ];
-  const swipeBase = swipeStages[0].value;
+  const swipeBase = Math.max(swipeStages[0].value, 1);
+
+  const reportTrend = useMemo(() => {
+    if (!stats.reportTrend || stats.reportTrend.length === 0) return FALLBACK_REPORT_TREND;
+    return stats.reportTrend.map((m) => ({
+      month: THAI_MONTHS_SHORT[m.monthIndex],
+      profile: m.profile,
+      harassment: m.harassment,
+      spam: m.spam,
+    }));
+  }, [stats.reportTrend]);
+  const reportTrendMax = Math.max(
+    1,
+    ...reportTrend.map((m) => m.profile + m.harassment + m.spam),
+  );
 
   /* ---- Left column blocks ---- */
   const statsBlock = (
@@ -186,20 +228,14 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
         </View>
       </View>
       <View style={styles.barChartContainer}>
-        {[
-          { month: "พ.ค.", profile: 15, harassment: 8, spam: 12 },
-          { month: "มิ.ย.", profile: 22, harassment: 14, spam: 18 },
-          { month: "ก.ค.", profile: 30, harassment: 18, spam: 25 },
-          { month: "ส.ค.", profile: 42, harassment: 25, spam: 32 },
-          { month: "ก.ย.", profile: 55, harassment: 30, spam: 38 },
-        ].map((item) => (
+        {reportTrend.map((item) => (
           <View key={item.month} style={styles.barGroup}>
             <View style={styles.barTrack}>
               <View
                 style={{
                   width: "100%",
                   backgroundColor: C.blue,
-                  height: `${(item.profile / 130) * 100}%`,
+                  height: `${(item.profile / reportTrendMax) * 100}%`,
                   borderTopLeftRadius: 4,
                   borderTopRightRadius: 4,
                 }}
@@ -208,14 +244,14 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
                 style={{
                   width: "100%",
                   backgroundColor: C.ember,
-                  height: `${(item.harassment / 130) * 100}%`,
+                  height: `${(item.harassment / reportTrendMax) * 100}%`,
                 }}
               />
               <View
                 style={{
                   width: "100%",
                   backgroundColor: C.amber,
-                  height: `${(item.spam / 130) * 100}%`,
+                  height: `${(item.spam / reportTrendMax) * 100}%`,
                 }}
               />
             </View>
@@ -316,7 +352,7 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
           <Text style={styles.chartTitle}>ช่วงเวลาหนาแน่นที่สุด</Text>
         </View>
       </View>
-      <PeakTimeChart />
+      <PeakTimeChart data={stats.activityByHour} />
     </View>
   );
 
