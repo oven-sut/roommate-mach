@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Check, Clock, Eye, History, Search, ShieldAlert, ShieldCheck, X } from "lucide-react-native";
 import { CenterModal } from "../../components/Sheet";
@@ -27,6 +28,8 @@ type VerificationItem = {
 };
 
 export function Verification({ go }: { go: (x: Screen) => void }) {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   const [items, setItems] = useState<VerificationItem[]>([]);
   const [query, setQuery] = useState("");
   const [selectedDoc, setSelectedDoc] = useState<{
@@ -95,93 +98,182 @@ export function Verification({ go }: { go: (x: Screen) => void }) {
   const pendingItems = visible.filter((item) => item.status === "PENDING");
   const processedItems = visible.filter((item) => item.status !== "PENDING");
 
-  const renderTableRows = (list: VerificationItem[], isPendingSection: boolean) => (
-    <>
-      <View style={styles.tableHeader}>
-        <Text style={[styles.th, { flex: 1.2 }]}>Student</Text>
-        <Text style={[styles.th, { flex: 1 }]}>SUT ID</Text>
-        <Text style={[styles.th, { flex: 1 }]}>Document Card</Text>
-        <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-        <Text style={[styles.th, { flex: 1, textAlign: "right" }]}>Action</Text>
-      </View>
-
-      {list.map((item) => (
-        <View key={item.id} style={styles.tableRow}>
-          <View style={[styles.td, { flex: 1.2 }]}>
-            <Text style={styles.nameText}>{item.displayName ?? "—"}</Text>
-            <Text style={styles.emailText}>{item.email}</Text>
-          </View>
-          <View style={[styles.td, { flex: 1 }]}>
-            <Text style={styles.sutIdText}>{item.sutId ?? "—"}</Text>
-          </View>
-          <View style={[styles.td, { flex: 1 }]}>
-            {item.documentUrl ? (
-              <Pressable
-                style={styles.docThumbContainer}
-                onPress={() =>
-                  setSelectedDoc({
-                    name: item.displayName || "Student ID Card",
-                    url: formatImageUri(item.documentUrl),
-                  })
-                }
-              >
-                <Image
-                  source={{ uri: formatImageUri(item.documentUrl) }}
-                  style={styles.docThumb}
-                />
-                <View style={styles.docEyeOverlay}>
-                  <Eye size={12} color="#FFFFFF" />
+  const renderTableRows = (list: VerificationItem[], isPendingSection: boolean) => {
+    if (!isDesktop) {
+      return (
+        <View style={{ gap: 10 }}>
+          {list.map((item) => (
+            <View key={item.id} style={styles.mobileVerificationCard}>
+              <View style={styles.mobileCardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nameText}>{item.displayName ?? "—"}</Text>
+                  <Text style={styles.emailText}>{item.email}</Text>
                 </View>
-              </Pressable>
-            ) : (
-              <Text style={styles.noDocText}>No Doc</Text>
-            )}
-          </View>
-          <View style={[styles.td, { flex: 1 }]}>
-            <View
-              style={[
-                styles.statusBadge,
-                item.status === "VERIFIED"
-                  ? styles.badgeVerified
-                  : item.status === "REJECTED"
-                  ? styles.badgeRejected
-                  : styles.badgePending,
-              ]}
-            >
-              <Text
+                <View
+                  style={[
+                    styles.statusBadge,
+                    item.status === "VERIFIED"
+                      ? styles.badgeVerified
+                      : item.status === "REJECTED"
+                      ? styles.badgeRejected
+                      : styles.badgePending,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      item.status === "VERIFIED"
+                        ? styles.textVerified
+                        : item.status === "REJECTED"
+                        ? styles.textRejected
+                        : styles.textPending,
+                    ]}
+                  >
+                    {item.status}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.mobileCardFooter}>
+                <View style={{ gap: 6, flex: 1 }}>
+                  <Text style={styles.mobileMetaLabel}>
+                    SUT ID: <Text style={styles.sutIdText}>{item.sutId ?? "—"}</Text>
+                  </Text>
+
+                  {item.documentUrl ? (
+                    <Pressable
+                      style={styles.docThumbContainer}
+                      onPress={() =>
+                        setSelectedDoc({
+                          name: item.displayName || "Student ID Card",
+                          url: formatImageUri(item.documentUrl),
+                        })
+                      }
+                    >
+                      <Image
+                        source={{ uri: formatImageUri(item.documentUrl) }}
+                        style={styles.docThumb}
+                      />
+                      <View style={styles.docEyeOverlay}>
+                        <Eye size={12} color="#FFFFFF" />
+                      </View>
+                    </Pressable>
+                  ) : (
+                    <Text style={styles.noDocText}>No Document</Text>
+                  )}
+                </View>
+
+                <View style={styles.tdRow}>
+                  <Pressable
+                    style={[styles.btnAction, styles.btnApprove]}
+                    onPress={() => updateStatus(item.id, "VERIFIED")}
+                    accessibilityLabel="Approve verification"
+                  >
+                    <Check size={16} color="#FFFFFF" />
+                  </Pressable>
+                  <Pressable
+                    style={[styles.btnAction, styles.btnReject]}
+                    onPress={() => updateStatus(item.id, "REJECTED")}
+                    accessibilityLabel="Reject verification"
+                  >
+                    <X size={16} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.th, { flex: 1.2 }]}>Student</Text>
+          <Text style={[styles.th, { flex: 1 }]}>SUT ID</Text>
+          <Text style={[styles.th, { flex: 1 }]}>Document Card</Text>
+          <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+          <Text style={[styles.th, { flex: 1, textAlign: "right" }]}>Action</Text>
+        </View>
+
+        {list.map((item) => (
+          <View key={item.id} style={styles.tableRow}>
+            <View style={[styles.td, { flex: 1.2 }]}>
+              <Text style={styles.nameText}>{item.displayName ?? "—"}</Text>
+              <Text style={styles.emailText}>{item.email}</Text>
+            </View>
+            <View style={[styles.td, { flex: 1 }]}>
+              <Text style={styles.sutIdText}>{item.sutId ?? "—"}</Text>
+            </View>
+            <View style={[styles.td, { flex: 1 }]}>
+              {item.documentUrl ? (
+                <Pressable
+                  style={styles.docThumbContainer}
+                  onPress={() =>
+                    setSelectedDoc({
+                      name: item.displayName || "Student ID Card",
+                      url: formatImageUri(item.documentUrl),
+                    })
+                  }
+                >
+                  <Image
+                    source={{ uri: formatImageUri(item.documentUrl) }}
+                    style={styles.docThumb}
+                  />
+                  <View style={styles.docEyeOverlay}>
+                    <Eye size={12} color="#FFFFFF" />
+                  </View>
+                </Pressable>
+              ) : (
+                <Text style={styles.noDocText}>No Doc</Text>
+              )}
+            </View>
+            <View style={[styles.td, { flex: 1 }]}>
+              <View
                 style={[
-                  styles.statusBadgeText,
+                  styles.statusBadge,
                   item.status === "VERIFIED"
-                    ? styles.textVerified
+                    ? styles.badgeVerified
                     : item.status === "REJECTED"
-                    ? styles.textRejected
-                    : styles.textPending,
+                    ? styles.badgeRejected
+                    : styles.badgePending,
                 ]}
               >
-                {item.status}
-              </Text>
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    item.status === "VERIFIED"
+                      ? styles.textVerified
+                      : item.status === "REJECTED"
+                      ? styles.textRejected
+                      : styles.textPending,
+                  ]}
+                >
+                  {item.status}
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.tdRow, { flex: 1, justifyContent: "flex-end" }]}>
+              <Pressable
+                style={[styles.btnAction, styles.btnApprove]}
+                onPress={() => updateStatus(item.id, "VERIFIED")}
+                accessibilityLabel="Approve verification"
+              >
+                <Check size={16} color="#FFFFFF" />
+              </Pressable>
+              <Pressable
+                style={[styles.btnAction, styles.btnReject]}
+                onPress={() => updateStatus(item.id, "REJECTED")}
+                accessibilityLabel="Reject verification"
+              >
+                <X size={16} color="#FFFFFF" />
+              </Pressable>
             </View>
           </View>
-          <View style={[styles.tdRow, { flex: 1, justifyContent: "flex-end" }]}>
-            <Pressable
-              style={[styles.btnAction, styles.btnApprove]}
-              onPress={() => updateStatus(item.id, "VERIFIED")}
-              accessibilityLabel="Approve verification"
-            >
-              <Check size={16} color="#FFFFFF" />
-            </Pressable>
-            <Pressable
-              style={[styles.btnAction, styles.btnReject]}
-              onPress={() => updateStatus(item.id, "REJECTED")}
-              accessibilityLabel="Reject verification"
-            >
-              <X size={16} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        </View>
-      ))}
-    </>
-  );
+        ))}
+      </>
+    );
+  };
 
   return (
     <AdminLayout currentScreen="verification" go={go}>
@@ -345,7 +437,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 4,
+  },
+
+  mobileVerificationCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    gap: 10,
+  },
+  mobileCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  mobileCardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    gap: 10,
+  },
+  mobileMetaLabel: {
+    fontFamily: F.medium,
+    fontSize: 12,
+    color: "#6B7280",
   },
   sectionHeaderTitleGroup: {
     flexDirection: "row",

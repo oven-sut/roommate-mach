@@ -6,7 +6,7 @@ import {
   Easing,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Heart, SlidersHorizontal, X } from "lucide-react-native";
 import { BottomNav } from "../../components/BottomNav";
@@ -52,7 +52,7 @@ function ActionButton({
   onPress: () => void;
 }) {
   const like = kind === "like";
-  const size = like ? 74 : 64;
+  const size = like ? 70 : 60;
 
   const inner = like ? (
     <LinearGradient
@@ -67,7 +67,7 @@ function ActionButton({
         justifyContent: "center",
       }}
     >
-      <Heart size={30} color={C.white} fill={C.white} />
+      <Heart size={28} color={C.white} fill={C.white} />
     </LinearGradient>
   ) : (
     <View
@@ -80,7 +80,7 @@ function ActionButton({
         justifyContent: "center",
       }}
     >
-      <X size={27} color={C.muted} strokeWidth={2.2} />
+      <X size={25} color={C.muted} strokeWidth={2.2} />
     </View>
   );
 
@@ -105,6 +105,7 @@ function ActionButton({
  */
 export function Feed({ go }: { go: (x: Screen) => void }) {
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [meCard, setMeCard] = useState<MatchProfile | null>(null);
   const [people, setPeople] = useState<MatchProfile[]>([]);
   const [index, setIndex] = useState(0);
@@ -237,7 +238,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
             maxWidth: MAX_WIDTH,
             alignSelf: "center",
             paddingHorizontal: GUTTER,
-            paddingBottom: NAV_HEIGHT + 8,
+            paddingBottom: NAV_HEIGHT + Math.max(insets.bottom, 14) + 14,
           }}
         >
           <View style={[s.rowBetween, { height: 60 }]}>
@@ -273,7 +274,7 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
                 />
               </Animated.View>
 
-              <View style={{ paddingTop: 20, minHeight: 96 }}>
+              <View style={{ paddingTop: 14, paddingBottom: 4, minHeight: 80, justifyContent: "center" }}>
                 {!discoverable ? (
                   <View
                     style={{

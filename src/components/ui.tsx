@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Heart, House } from "lucide-react-native";
+import { Eye, EyeOff, Heart, House } from "lucide-react-native";
 import { C, G } from "../theme/colors";
 import { NAV_HEIGHT, s, shadow } from "../theme/styles";
 import { F, T } from "../theme/typography";

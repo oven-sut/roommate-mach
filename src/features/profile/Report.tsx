@@ -89,7 +89,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
   const handleConfirmUnmatch = async () => {
     const targetId = target?.id;
     if (!targetId) {
-      go("matches");
+      go(appState.activeProfile ? "matches" : "settings");
       return;
     }
 
@@ -103,7 +103,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           ? "ลบออกจากรายการแมตช์เรียบร้อยแล้ว"
           : "Removed from your matches list",
       );
-      go("matches");
+      go(appState.activeProfile ? "matches" : "settings");
     } catch (reason) {
       Alert.alert(
         t("somethingWrong"),
@@ -117,7 +117,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
   const handleConfirmBlock = async () => {
     const targetId = target?.id;
     if (!targetId) {
-      go("matches");
+      go(appState.activeProfile ? "matches" : "settings");
       return;
     }
 
@@ -131,7 +131,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           ? "ระบบจะไม่แสดงโปรไฟล์ของกันและกันอีก"
           : "User has been blocked",
       );
-      go("matches");
+      go(appState.activeProfile ? "matches" : "settings");
     } catch (reason) {
       Alert.alert(
         t("somethingWrong"),
@@ -145,7 +145,14 @@ export function Report({ go }: { go: (x: Screen) => void }) {
   const handleConfirmReport = async () => {
     const targetId = target?.id;
     if (!targetId) {
-      go("matches");
+      setActiveModal(null);
+      Alert.alert(
+        language === "th" ? "ส่งรายงานเรียบร้อย" : "Report Submitted",
+        language === "th"
+          ? "ทีมผู้ดูแลจะทำการตรวจสอบเรื่องที่คุณรายงานโดยเร็วที่สุด"
+          : "The admin team will review your report shortly.",
+      );
+      go("settings");
       return;
     }
 
@@ -165,7 +172,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           ? "ทีมผู้ดูแลจะทำการตรวจสอบเรื่องที่คุณรายงานโดยเร็วที่สุด"
           : "The admin team will review your report shortly.",
       );
-      go("matches");
+      go(appState.activeProfile ? "matches" : "settings");
     } catch (reason) {
       Alert.alert(
         t("somethingWrong"),
@@ -180,7 +187,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
     <ScreenShell>
       <View style={[s.row, { gap: 16, height: 60 }]}>
         <MotionPressable
-          onPress={() => go("profile")}
+          onPress={() => go(appState.activeProfile ? "profile" : "settings")}
           pressedScale={0.9}
           style={s.iconBtn}
           accessibilityLabel="Back"

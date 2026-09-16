@@ -9,7 +9,19 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Search, Users as UsersIcon } from "lucide-react-native";
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  Heart,
+  KeyRound,
+  MessageSquare,
+  Search,
+  ShieldCheck,
+  User,
+  UserX,
+  Users as UsersIcon,
+} from "lucide-react-native";
 import { CenterModal } from "../../components/Sheet";
 import { api } from "../../services/api";
 import { F } from "../../theme/typography";
@@ -124,13 +136,12 @@ export function Users({ go }: { go: (x: Screen) => void }) {
     ]);
   };
 
-  const [historyUser, setHistoryUser] = useState<{ id: string; name: string } | null>(null);
+  const [historyUser, setHistoryUser] = useState<AdminUser | null>(null);
   const [historyData, setHistoryData] = useState<UserActivity | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const openHistory = async (user: AdminUser) => {
-    const name = user.displayName ?? user.email ?? "—";
-    setHistoryUser({ id: user.id, name });
+    setHistoryUser(user);
     setHistoryData(null);
     setHistoryLoading(true);
     try {
@@ -149,16 +160,16 @@ export function Users({ go }: { go: (x: Screen) => void }) {
   const resetPassword = (user: AdminUser) => {
     const name = user.displayName ?? user.email ?? "ผู้ใช้นี้";
     confirmAction(
-      `รีเซ็ตรหัสผ่านของ ${name}? ระบบจะสร้างรหัสผ่านชั่วคราวใหม่ทันที`,
+      `รีเซ็ตรหัสผ่านของ ${name}? ระบบจะจัดส่งรหัสยืนยัน (OTP) และแบบฟอร์มเปลี่ยนรหัสผ่านไปยังอีเมลของผู้ใช้ (${user.email ?? "อีเมลของผู้ใช้"})`,
       async () => {
         try {
-          const res = await api<{ tempPassword: string }>(
+          await api<{ tempPassword?: string; code?: string }>(
             `/api/admin/users/${user.id}/reset-password`,
             { method: "POST" },
           );
           Alert.alert(
-            "รีเซ็ตรหัสผ่านสำเร็จ",
-            `รหัสผ่านชั่วคราวของ ${name}:\n${res.tempPassword}\n\nกรุณาแจ้งผู้ใช้ให้เปลี่ยนรหัสผ่านทันที`,
+            "ส่งแบบฟอร์มรีเซ็ตรหัสผ่านเรียบร้อย",
+            `ระบบได้ทำการจัดส่ง OTP และแบบฟอร์มสำหรับตั้งรหัสผ่านใหม่ไปยังอีเมล ${user.email ?? name} เรียบร้อยแล้ว`,
           );
         } catch (reason) {
           Alert.alert(
@@ -202,8 +213,8 @@ export function Users({ go }: { go: (x: Screen) => void }) {
   const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * (pageSize === "all" ? filtered.length : pageSize) + 1;
   const rangeEnd = pageSize === "all" ? filtered.length : Math.min(currentPage * pageSize, filtered.length);
 
-  const paginationBar = (
-    <View style={styles.paginationBar}>
+  const topPaginationBar = (
+    <View style={styles.topPaginationBar}>
       <Text style={styles.paginationInfo}>
         {filtered.length === 0
           ? "ไม่พบผู้ใช้"
@@ -229,8 +240,12 @@ export function Users({ go }: { go: (x: Screen) => void }) {
           </Pressable>
         ))}
       </View>
+    </View>
+  );
 
-      {pageSize !== "all" && pageCount > 1 ? (
+  const bottomPaginationBar =
+    pageSize !== "all" && pageCount > 1 ? (
+      <View style={styles.bottomPaginationBar}>
         <View style={styles.pageNavGroup}>
           <Pressable
             disabled={currentPage <= 1}
@@ -264,9 +279,8 @@ export function Users({ go }: { go: (x: Screen) => void }) {
             </Text>
           </Pressable>
         </View>
-      ) : null}
-    </View>
-  );
+      </View>
+    ) : null;
 
   return (
     <AdminLayout currentScreen="users" go={go}>
@@ -288,8 +302,8 @@ export function Users({ go }: { go: (x: Screen) => void }) {
           />
         </View>
 
-        {/* Pagination */}
-        {paginationBar}
+        {/* Top Pagination Bar */}
+        {topPaginationBar}
 
         {/* Table View (Desktop) / Card View (Mobile) */}
         {isDesktop ? (
@@ -303,7 +317,6 @@ export function Users({ go }: { go: (x: Screen) => void }) {
         ) : null}
 
         {(Array.isArray(visible) ? visible : []).map((user) => {
-          const reports = user._count?.reportsReceived ?? 0;
           if (!isDesktop) {
             {/* Mobile Responsive Card */}
             return (
@@ -329,10 +342,6 @@ export function Users({ go }: { go: (x: Screen) => void }) {
                     </Text>
                   </View>
                 </View>
-
-                {reports > 0 ? (
-                  <Text style={styles.reportBadge}>⚠️ Reported {reports} times</Text>
-                ) : null}
 
                 <View style={{ gap: 8, marginTop: 4 }}>
                   <Text style={styles.roleText}>Role: {user.role ?? "USER"}</Text>
@@ -389,9 +398,6 @@ export function Users({ go }: { go: (x: Screen) => void }) {
             <View key={user.id} style={styles.tableRow}>
               <View style={[styles.td, { flex: 1.5 }]}>
                 <Text style={styles.userName}>{user.displayName ?? "—"}</Text>
-                {reports > 0 ? (
-                  <Text style={styles.reportBadge}>{reports} reports</Text>
-                ) : null}
               </View>
 
               <View style={[styles.td, { flex: 1.5 }]}>
@@ -471,38 +477,123 @@ export function Users({ go }: { go: (x: Screen) => void }) {
             </View>
           );
         })}
+
+        {/* Bottom Pagination Bar */}
+        {bottomPaginationBar}
       </View>
 
       {/* User Activity / History Modal */}
-      <CenterModal visible={Boolean(historyUser)} onClose={() => setHistoryUser(null)}>
+      <CenterModal visible={Boolean(historyUser)} onClose={() => setHistoryUser(null)} maxWidth={520}>
         {historyUser ? (
-          <View style={{ gap: 14 }}>
-            <Text style={styles.historyTitle}>ประวัติผู้ใช้: {historyUser.name}</Text>
+          <View style={{ gap: 14, width: "100%" }}>
+            {/* Header Profile Box */}
+            <View style={styles.modalProfileHeader}>
+              <View style={styles.avatarCircle}>
+                <User size={22} color="#8B1E1E" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Text style={styles.modalUserName}>{historyUser.displayName ?? historyUser.email ?? "—"}</Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      historyUser.suspended ? styles.badgeSuspended : styles.badgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        historyUser.suspended ? styles.textSuspended : styles.textActive,
+                      ]}
+                    >
+                      {historyUser.suspended ? "Suspended" : "Active"}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.modalUserEmail}>{historyUser.email}</Text>
+              </View>
+            </View>
 
             {historyLoading ? (
-              <Text style={styles.historyLoading}>กำลังโหลด...</Text>
+              <View style={{ paddingVertical: 20, alignItems: "center" }}>
+                <Text style={styles.historyLoading}>กำลังโหลดข้อมูลประวัติ...</Text>
+              </View>
             ) : historyData ? (
               <>
+                {/* Meta Row Badges */}
+                <View style={styles.historyMetaRow}>
+                  <View style={styles.metaBadge}>
+                    <Calendar size={12} color="#6B7280" />
+                    <Text style={styles.historyMetaText}>
+                      เข้าร่วม: {new Date(historyData.joinedAt).toLocaleDateString("th-TH")}
+                    </Text>
+                  </View>
+                  <View style={styles.metaBadge}>
+                    <ShieldCheck size={12} color="#6B7280" />
+                    <Text style={styles.historyMetaText}>
+                      ยืนยันตัวตน: {historyData.verificationStatus}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 6 Key Stats Grid */}
                 <View style={styles.historyStatsGrid}>
                   <View style={styles.historyStat}>
                     <Text style={styles.historyStatValue}>{historyData.swipesSent}</Text>
                     <Text style={styles.historyStatLabel}>ปัดทั้งหมด</Text>
                   </View>
                   <View style={styles.historyStat}>
-                    <Text style={styles.historyStatValue}>{historyData.likesSent}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Heart size={13} color="#EC4899" />
+                      <Text style={[styles.historyStatValue, { color: "#EC4899" }]}>
+                        {historyData.likesSent}
+                      </Text>
+                    </View>
                     <Text style={styles.historyStatLabel}>กดถูกใจ</Text>
                   </View>
                   <View style={styles.historyStat}>
-                    <Text style={styles.historyStatValue}>{historyData.matches}</Text>
+                    <Text style={[styles.historyStatValue, { color: "#10B981" }]}>
+                      {historyData.matches}
+                    </Text>
                     <Text style={styles.historyStatLabel}>จับคู่สำเร็จ</Text>
                   </View>
                   <View style={styles.historyStat}>
-                    <Text style={styles.historyStatValue}>{historyData.messagesSent}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <MessageSquare size={13} color="#3B82F6" />
+                      <Text style={[styles.historyStatValue, { color: "#3B82F6" }]}>
+                        {historyData.messagesSent}
+                      </Text>
+                    </View>
                     <Text style={styles.historyStatLabel}>ข้อความที่ส่ง</Text>
                   </View>
-                  <View style={styles.historyStat}>
-                    <Text style={styles.historyStatValue}>{historyData.reportsReceived}</Text>
-                    <Text style={styles.historyStatLabel}>ถูกรายงาน</Text>
+                  <View
+                    style={[
+                      styles.historyStat,
+                      historyData.reportsReceived > 0 && styles.statReportedActive,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <AlertTriangle
+                        size={13}
+                        color={historyData.reportsReceived > 0 ? "#DC2626" : "#6B7280"}
+                      />
+                      <Text
+                        style={[
+                          styles.historyStatValue,
+                          historyData.reportsReceived > 0 && { color: "#DC2626" },
+                        ]}
+                      >
+                        {historyData.reportsReceived}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.historyStatLabel,
+                        historyData.reportsReceived > 0 && { color: "#991B1B" },
+                      ]}
+                    >
+                      ถูกรายงาน
+                    </Text>
                   </View>
                   <View style={styles.historyStat}>
                     <Text style={styles.historyStatValue}>{historyData.reportsMade}</Text>
@@ -510,38 +601,70 @@ export function Users({ go }: { go: (x: Screen) => void }) {
                   </View>
                 </View>
 
-                <View style={styles.historyMetaRow}>
-                  <Text style={styles.historyMetaText}>
-                    เข้าร่วมเมื่อ {new Date(historyData.joinedAt).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.historyMetaText}>
-                    ยืนยันตัวตน: {historyData.verificationStatus}
-                  </Text>
-                </View>
-
+                {/* Reports Section */}
                 {historyData.recentReportsReceived.length > 0 ? (
                   <View style={{ gap: 6 }}>
-                    <Text style={styles.historySectionTitle}>รายงานล่าสุดที่ถูกแจ้ง</Text>
+                    <Text style={styles.historySectionTitle}>⚠️ รายงานความไม่เหมาะสมที่ถูกแจ้ง</Text>
                     {historyData.recentReportsReceived.map((r, i) => (
                       <View key={i} style={styles.historyReportRow}>
                         <Text style={styles.historyReportReason}>{r.reason}</Text>
                         <Text style={styles.historyReportMeta}>
-                          {r.status} · {new Date(r.createdAt).toLocaleDateString()}
+                          สถานะ: {r.status} · {new Date(r.createdAt).toLocaleDateString("th-TH")}
                         </Text>
                       </View>
                     ))}
                   </View>
-                ) : null}
+                ) : (
+                  <View style={styles.cleanRecordRow}>
+                    <CheckCircle2 size={15} color="#059669" />
+                    <Text style={styles.cleanRecordText}>ไม่มีประวัติการถูกแจ้งรายงานปัญหา</Text>
+                  </View>
+                )}
+
+                {/* Quick Admin Actions Inside History Modal */}
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                  <Pressable
+                    style={[styles.btnAction, styles.btnReset, { flex: 1, justifyContent: "center" }]}
+                    onPress={() => {
+                      const u = historyUser;
+                      setHistoryUser(null);
+                      resetPassword(u);
+                    }}
+                  >
+                    <KeyRound size={13} color="#FFFFFF" />
+                    <Text style={styles.btnActionText}>รีเซ็ตรหัสผ่าน</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[
+                      styles.btnAction,
+                      historyUser.suspended ? styles.btnUnsuspend : styles.btnSuspend,
+                      { flex: 1, justifyContent: "center" },
+                    ]}
+                    onPress={() => {
+                      const u = historyUser;
+                      setHistoryUser(null);
+                      suspend(u.id, !u.suspended);
+                    }}
+                  >
+                    <UserX size={13} color="#FFFFFF" />
+                    <Text style={styles.btnActionText}>
+                      {historyUser.suspended ? "เปิดใช้งาน" : "ระงับบัญชี"}
+                    </Text>
+                  </Pressable>
+                </View>
               </>
             ) : (
-              <Text style={styles.historyLoading}>ไม่พบข้อมูล</Text>
+              <Text style={styles.historyLoading}>ไม่พบข้อมูลประวัติ</Text>
             )}
 
             <Pressable
-              style={[styles.btnAction, styles.btnClose]}
+              style={[styles.btnAction, styles.btnClose, { marginTop: 4 }]}
               onPress={() => setHistoryUser(null)}
             >
-              <Text style={[styles.btnActionText, { textAlign: "center" }]}>ปิดหน้าต่าง</Text>
+              <Text style={[styles.btnActionText, { textAlign: "center", flex: 1 }]}>
+                ปิดหน้าต่าง
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -685,6 +808,47 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
+  modalProfileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#F9FAFB",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FEF2F2",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  modalUserName: {
+    fontFamily: F.bold,
+    fontSize: 15,
+    color: "#111827",
+  },
+  modalUserEmail: {
+    fontFamily: F.regular,
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+
+  metaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
   historyTitle: {
     fontFamily: F.bold,
     fontSize: 16,
@@ -706,14 +870,20 @@ const styles = StyleSheet.create({
     flexBasis: "30%",
     flexGrow: 1,
     backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center",
   },
+  statReportedActive: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+  },
   historyStatValue: {
     fontFamily: F.bold,
-    fontSize: 18,
-    color: "#8B1E1E",
+    fontSize: 17,
+    color: "#111827",
   },
   historyStatLabel: {
     fontFamily: F.medium,
@@ -725,10 +895,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 8,
   },
   historyMetaText: {
-    fontFamily: F.regular,
+    fontFamily: F.medium,
     fontSize: 12,
     color: "#4B5563",
   },
@@ -739,28 +909,50 @@ const styles = StyleSheet.create({
   },
   historyReportRow: {
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: "#FEE2E2",
+    backgroundColor: "#FEF2F2",
     borderRadius: 8,
-    padding: 8,
+    padding: 10,
     gap: 2,
   },
   historyReportReason: {
-    fontFamily: F.medium,
+    fontFamily: F.bold,
     fontSize: 12,
-    color: "#111827",
+    color: "#991B1B",
   },
   historyReportMeta: {
     fontFamily: F.regular,
     fontSize: 11,
-    color: "#9CA3AF",
+    color: "#B91C1C",
+  },
+  cleanRecordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    padding: 10,
+    borderRadius: 8,
+  },
+  cleanRecordText: {
+    fontFamily: F.medium,
+    fontSize: 12,
+    color: "#047857",
   },
 
-  paginationBar: {
+  topPaginationBar: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+    marginBottom: 16,
+  },
+  bottomPaginationBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,

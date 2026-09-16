@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Platform, View } from "react-native";
+import { Alert, Platform, Share, View } from "react-native";
 import { LogOut } from "lucide-react-native";
 import { CenterModal } from "../../components/Sheet";
 import { Toggle } from "../../components/Toggle";
@@ -16,6 +16,7 @@ import { LanguageToggle, useI18n } from "../../i18n";
 import { api, resetAppState, saveToken } from "../../services/api";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
+import { F } from "../../theme/typography";
 import type { Me } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 
@@ -102,11 +103,38 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [email, setEmail] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const resetModalState = () => {
+    setPasswordOpen(false);
+    setStep(1);
+    setCurrent("");
+    setNext("");
+    setConfirm("");
+    setOtp("");
+    setOtpSent(false);
+    setOtpVerified(false);
+    setCountdown(0);
+    setError("");
+  };
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(
+      () => setCountdown((seconds) => Math.max(0, seconds - 1)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [countdown]);
 
   useEffect(() => {
     api<Me>("/api/me")
@@ -147,7 +175,61 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
     }
   };
 
+  const sendChangePasswordOtp = async () => {
+    if (!email) {
+      setError("Email is missing");
+      return;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      await api("/auth/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setOtpSent(true);
+      setCountdown(60);
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : "Unable to send OTP";
+      if (msg.includes("just sent") || msg.includes("wait a moment")) {
+        setOtpSent(true);
+        setError("เพิ่งส่งรหัส OTP ไปเมื่อครู่ สามารถนำรหัสใน Backend Log มากรอกได้เลยครับ");
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyChangePasswordOtp = async () => {
+    if (!otp.trim()) {
+      setError("Please enter the 6-digit OTP code");
+      return;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      await api("/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, otp: otp.trim() }),
+      });
+      setOtpVerified(true);
+      setStep(2); // Automatically jump to Step 2: Change Password
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Invalid or expired code",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const changePassword = async () => {
+    if (!otpVerified) {
+      setError("กรุณายืนยันรหัส OTP ก่อน");
+      return;
+    }
     if (next.length < 8) {
       setError("Password must be at least 8 characters");
       return;
@@ -163,10 +245,7 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
         method: "PATCH",
         body: JSON.stringify({ currentPassword: current, password: next }),
       });
-      setPasswordOpen(false);
-      setCurrent("");
-      setNext("");
-      setConfirm("");
+      setStep(3); // Jump to Step 3: Success Notification
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : t("somethingWrong"),
@@ -283,15 +362,7 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
               />
             }
           />
-          <Row label={t("blockUsers")} onPress={() => go("blocked")} />
-          <Row label={t("search")} onPress={() => go("search")} />
-          <Row
-            label={t("downloadData")}
-            last
-            onPress={() =>
-              Alert.alert(t("downloadData"), t("pleaseWait"))
-            }
-          />
+          <Row label={t("blockUsers")} last onPress={() => go("blocked")} />
         </Group>
 
         <Group label={t("support")}>
@@ -324,44 +395,167 @@ export function Settings({ go }: { go: (x: Screen) => void }) {
 
       <CenterModal
         visible={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
+        onClose={resetModalState}
       >
-        <Txt role="h2">{t("changePassword")}</Txt>
-        <Field
-          label={t("password")}
-          value={current}
-          onChangeText={setCurrent}
-          secureTextEntry
-          autoCapitalize="none"
-        />
-        <Field
-          label={t("newPassword")}
-          value={next}
-          onChangeText={setNext}
-          secureTextEntry
-          autoCapitalize="none"
-        />
-        <Field
-          label={t("confirmPassword")}
-          value={confirm}
-          onChangeText={setConfirm}
-          secureTextEntry
-          autoCapitalize="none"
-          error={error || undefined}
-        />
-        <View style={[s.row, { gap: 12 }]}>
-          <Button
-            tone="outline"
-            style={{ flex: 1 }}
-            onPress={() => setPasswordOpen(false)}
-          >
-            {t("cancel")}
-          </Button>
-          <Button style={{ flex: 1 }} loading={busy} onPress={changePassword}>
-            {t("save")}
-          </Button>
-        </View>
+        {step === 1 ? (
+          <>
+            <Txt role="h2">ขั้นตอนที่ 1: ยืนยันตัวตนด้วย OTP</Txt>
+
+            <Field
+              label="อีเมลที่จะรับ OTP"
+              value={email}
+              editable={false}
+              right={
+                <Button
+                  tone="blue"
+                  style={{ height: 36, paddingHorizontal: 10 }}
+                  disabled={busy || otpVerified || countdown > 0}
+                  onPress={sendChangePasswordOtp}
+                >
+                  {countdown > 0
+                    ? `ส่ง OTP (${countdown}s)`
+                    : otpSent
+                    ? "ส่ง OTP อีกครั้ง"
+                    : "ส่ง OTP"}
+                </Button>
+              }
+            />
+
+            {otpSent ? (
+              <View
+                style={{
+                  backgroundColor: "#E0F2FE",
+                  borderColor: "#3B82F6",
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  padding: 10,
+                }}
+              >
+                <Txt role="small" style={{ color: "#1D4ED8", textAlign: "center" }}>
+                  📨 ส่งรหัส OTP 6 หลักเรียบร้อย (ดูรหัสได้ใน Backend Console Log)
+                </Txt>
+              </View>
+            ) : null}
+
+            <Field
+              label="รหัส OTP (6 หลัก)"
+              placeholder="กรอกรหัส OTP 6 หลัก"
+              value={otp}
+              onChangeText={setOtp}
+              keyboardType="number-pad"
+              editable={!otpVerified}
+            />
+
+            {error ? (
+              <Txt role="small" style={{ color: C.primary, textAlign: "center" }}>
+                {error}
+              </Txt>
+            ) : null}
+
+            <View style={[s.row, { gap: 12, marginTop: 6 }]}>
+              <Button tone="outline" style={{ flex: 1 }} onPress={resetModalState}>
+                {t("cancel")}
+              </Button>
+              <Button
+                style={{ flex: 1 }}
+                disabled={busy || !otpSent || !otp.trim()}
+                loading={busy}
+                onPress={verifyChangePasswordOtp}
+              >
+                ถัดไป (ยืนยัน OTP)
+              </Button>
+            </View>
+          </>
+        ) : step === 2 ? (
+          <>
+            <Txt role="h2">ขั้นตอนที่ 2: ตั้งรหัสผ่านใหม่</Txt>
+
+            <View
+              style={{
+                backgroundColor: "#D1FAE5",
+                borderColor: "#10B981",
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 10,
+              }}
+            >
+              <Txt role="small" style={{ color: "#047857", textAlign: "center", fontFamily: F.bold }}>
+                ✓ ยืนยันรหัส OTP สำเร็จแล้ว กรุณากรอกรหัสผ่านใหม่
+              </Txt>
+            </View>
+
+            <Field
+              label={t("password")}
+              placeholder="รหัสผ่านปัจจุบัน"
+              value={current}
+              onChangeText={setCurrent}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <Field
+              label={t("newPassword")}
+              placeholder="รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)"
+              value={next}
+              onChangeText={setNext}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <Field
+              label={t("confirmPassword")}
+              placeholder="ยืนยันรหัสผ่านใหม่"
+              value={confirm}
+              onChangeText={setConfirm}
+              secureTextEntry
+              autoCapitalize="none"
+              error={error || undefined}
+            />
+
+            {error ? (
+              <Txt role="small" style={{ color: C.primary, textAlign: "center" }}>
+                {error}
+              </Txt>
+            ) : null}
+
+            <View style={[s.row, { gap: 12, marginTop: 6 }]}>
+              <Button tone="outline" style={{ flex: 1 }} onPress={() => setStep(1)}>
+                ย้อนกลับ
+              </Button>
+              <Button style={{ flex: 1 }} loading={busy} onPress={changePassword}>
+                บันทึกรหัสผ่านใหม่
+              </Button>
+            </View>
+          </>
+        ) : (
+          /* Step 3: Success Notification */
+          <View style={{ alignItems: "center", gap: 16, paddingVertical: 10 }}>
+            <View
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 34,
+                backgroundColor: "#D1FAE5",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Txt style={{ fontSize: 32 }}>🎉</Txt>
+            </View>
+
+            <Txt role="h2" style={{ color: C.green, textAlign: "center" }}>
+              เปลี่ยนรหัสผ่านสำเร็จ!
+            </Txt>
+
+            <Txt role="body" style={{ textAlign: "center", color: C.muted }}>
+              รหัสผ่านใหม่ของคุณได้รับการบันทึกและอัปเดตเรียบร้อยแล้ว
+            </Txt>
+
+            <Button style={{ width: "100%", marginTop: 8 }} onPress={resetModalState}>
+              ตกลง (เรียบร้อย)
+            </Button>
+          </View>
+        )}
       </CenterModal>
+
     </>
   );
 }
