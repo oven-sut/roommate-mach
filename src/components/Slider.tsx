@@ -90,6 +90,11 @@ export function Slider({
 }) {
   const [width, setWidth] = useState(0);
   const widthRef = useRef(0);
+  const offsetRef = useRef(0);
+  const trackRef = useRef<View>(null);
+
+  const valueRef = useRef(value);
+  valueRef.current = value;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -109,18 +114,25 @@ export function Slider({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (e) =>
-          onChangeRef.current(toValue(e.nativeEvent.locationX)),
-        onPanResponderMove: (_e, gesture) =>
-          onChangeRef.current(toValue(gesture.moveX - offsetRef.current)),
+        onPanResponderGrant: (e) => {
+          const { locationX, pageX } = e.nativeEvent;
+          if (typeof pageX === "number" && typeof locationX === "number") {
+            offsetRef.current = pageX - locationX;
+          }
+          const next = toValue(locationX);
+          if (next !== valueRef.current) {
+            onChangeRef.current(next);
+          }
+        },
+        onPanResponderMove: (_e, gesture) => {
+          const next = toValue(gesture.moveX - offsetRef.current);
+          if (next !== valueRef.current) {
+            onChangeRef.current(next);
+          }
+        },
       }),
     [toValue],
   );
-
-  // Page X of the track's left edge, needed because gestures report page
-  // coordinates while `locationX` is only reliable on the initial touch.
-  const offsetRef = useRef(0);
-  const trackRef = useRef<View>(null);
 
   const ratio = max === min ? 0 : (value - min) / (max - min);
   const fillWidth = width * ratio;
@@ -135,12 +147,15 @@ export function Slider({
           widthRef.current = w;
           setWidth(w);
           trackRef.current?.measureInWindow((x) => {
-            offsetRef.current = x;
+            if (typeof x === "number") {
+              offsetRef.current = x;
+            }
           });
         }}
         style={{ paddingTop: 10, paddingBottom: 6, justifyContent: "center" }}
       >
         <View
+          pointerEvents="none"
           style={{
             height: TRACK_HEIGHT,
             borderRadius: TRACK_HEIGHT / 2,
@@ -221,9 +236,15 @@ export function RangeSlider({
       const next = toValue(x);
       const { low: lo, high: hi } = stateRef.current;
       if (activeThumb.current === "low") {
-        onChangeRef.current(Math.min(next, hi - step), hi);
+        const nextLow = Math.min(next, hi - step);
+        if (nextLow !== lo) {
+          onChangeRef.current(nextLow, hi);
+        }
       } else {
-        onChangeRef.current(lo, Math.max(next, lo + step));
+        const nextHigh = Math.max(next, lo + step);
+        if (nextHigh !== hi) {
+          onChangeRef.current(lo, nextHigh);
+        }
       }
     },
     [step, toValue],
@@ -235,15 +256,20 @@ export function RangeSlider({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (e) => {
-          const x = e.nativeEvent.locationX;
+          const { locationX, pageX } = e.nativeEvent;
+          if (typeof pageX === "number" && typeof locationX === "number") {
+            offsetRef.current = pageX - locationX;
+          }
+          const x = locationX;
           const touched = toValue(x);
           const { low: lo, high: hi } = stateRef.current;
           activeThumb.current =
             Math.abs(touched - lo) <= Math.abs(touched - hi) ? "low" : "high";
           apply(x);
         },
-        onPanResponderMove: (_e, gesture) =>
-          apply(gesture.moveX - offsetRef.current),
+        onPanResponderMove: (_e, gesture) => {
+          apply(gesture.moveX - offsetRef.current);
+        },
       }),
     [apply, toValue],
   );
@@ -262,12 +288,15 @@ export function RangeSlider({
           widthRef.current = w;
           setWidth(w);
           trackRef.current?.measureInWindow((x) => {
-            offsetRef.current = x;
+            if (typeof x === "number") {
+              offsetRef.current = x;
+            }
           });
         }}
         style={{ paddingTop: 10, paddingBottom: 6, justifyContent: "center" }}
       >
         <View
+          pointerEvents="none"
           style={{
             height: TRACK_HEIGHT,
             borderRadius: TRACK_HEIGHT / 2,
