@@ -1,39 +1,112 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import {
   BookOpen,
   Layers,
   PieChart as PieIcon,
   Tag as TagIcon,
 } from "lucide-react-native";
+import { api } from "../../services/api";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 import { AdminLayout } from "./AdminLayout";
 
+const DONUT_SIZE = 130;
+const DONUT_STROKE = 12;
+
+/** Ring whose filled arc actually reflects `percent`, unlike a static border trick. */
+function MatchedRatioRing({ percent }: { percent: number }) {
+  const radius = (DONUT_SIZE - DONUT_STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const filled = (Math.min(100, Math.max(0, percent)) / 100) * circumference;
+  const center = DONUT_SIZE / 2;
+  return (
+    <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
+      <Circle
+        cx={center}
+        cy={center}
+        r={radius}
+        stroke="#E5E7EB"
+        strokeWidth={DONUT_STROKE}
+        fill="none"
+      />
+      <Circle
+        cx={center}
+        cy={center}
+        r={radius}
+        stroke="#8B1E1E"
+        strokeWidth={DONUT_STROKE}
+        strokeDasharray={`${filled} ${circumference - filled}`}
+        strokeLinecap="round"
+        fill="none"
+        rotation={-90}
+        origin={`${center}, ${center}`}
+      />
+    </Svg>
+  );
+}
+
+type AnalyticsData = {
+  matchedRatio: { matchedPercent: number; singlePercent: number };
+  yearDistribution: { year: number; count: number; percent: number }[];
+  facultyDistribution: { major: string; count: number }[];
+  lifestyleTags: { tag: string; count: number; percent: number }[];
+};
+
+const EMPTY_ANALYTICS: AnalyticsData = {
+  matchedRatio: { matchedPercent: 0, singlePercent: 0 },
+  yearDistribution: [],
+  facultyDistribution: [],
+  lifestyleTags: [],
+};
+
+const YEAR_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6"];
+const TAG_COLORS: Record<string, string> = {
+  "Night Owl": "#8B1E1E",
+  Spotless: "#10B981",
+  "Quiet Hours": "#3B82F6",
+  "AC 25°C": "#F59E0B",
+  "Library Study": "#8B5CF6",
+};
+const FACULTY_COLORS = [
+  "#8B1E1E",
+  "#EC4899",
+  "#3B82F6",
+  "#F59E0B",
+  "#10B981",
+  "#8B5CF6",
+];
+
 export function Analytics({ go }: { go: (x: Screen) => void }) {
-  const years = [
-    { label: "Year 1", percent: 45, color: "#3B82F6" },
-    { label: "Year 2", percent: 30, color: "#10B981" },
-    { label: "Year 3", percent: 15, color: "#F59E0B" },
-    { label: "Year 4", percent: 10, color: "#EC4899" },
-  ];
+  const [data, setData] = useState<AnalyticsData>(EMPTY_ANALYTICS);
 
-  const lifestyleTags = [
-    { tag: "Night Owl", count: 890, percent: 85, color: "#8B1E1E" },
-    { tag: "Spotless", count: 720, percent: 70, color: "#10B981" },
-    { tag: "Quiet Hours", count: 640, percent: 62, color: "#3B82F6" },
-    { tag: "AC 25°C", count: 950, percent: 92, color: "#F59E0B" },
-    { tag: "Library Study", count: 510, percent: 50, color: "#8B5CF6" },
-  ];
+  useEffect(() => {
+    api<AnalyticsData>("/api/admin/analytics")
+      .then(setData)
+      .catch(() => setData(EMPTY_ANALYTICS));
+  }, []);
 
-  const faculties = [
-    { name: "Computer Eng.", count: 340, color: "#8B1E1E" },
-    { name: "Nursing", count: 280, color: "#EC4899" },
-    { name: "Information Tech", count: 210, color: "#3B82F6" },
-    { name: "Civil Eng.", count: 180, color: "#F59E0B" },
-    { name: "Medicine", count: 150, color: "#10B981" },
-    { name: "Agriculture", count: 96, color: "#8B5CF6" },
-  ];
+  const { matchedRatio, yearDistribution, facultyDistribution, lifestyleTags } = data;
+  const maxYearPercent = Math.max(...yearDistribution.map((y) => y.percent), 1);
+  const years = yearDistribution.map((y, i) => ({
+    label: `Year ${y.year}`,
+    percent: y.percent,
+    // Bar height is relative to the largest year so the tallest bar always
+    // reaches the top of the track, regardless of how many years there are.
+    barHeightPercent: (y.percent / maxYearPercent) * 100,
+    count: y.count,
+    color: YEAR_COLORS[i % YEAR_COLORS.length],
+  }));
+  const tags = lifestyleTags.map((t) => ({
+    ...t,
+    color: TAG_COLORS[t.tag] ?? "#8B1E1E",
+  }));
+  const faculties = facultyDistribution.map((f, i) => ({
+    name: f.major,
+    count: f.count,
+    color: FACULTY_COLORS[i % FACULTY_COLORS.length],
+  }));
 
   return (
     <AdminLayout currentScreen="analytics" go={go}>
@@ -46,19 +119,22 @@ export function Analytics({ go }: { go: (x: Screen) => void }) {
             <Text style={styles.cardTitle}>Matched Ratio</Text>
           </View>
           <View style={styles.donutContainer}>
-            <View style={styles.donutCircle}>
-              <Text style={styles.donutPercent}>78%</Text>
-              <Text style={styles.donutLabel}>Matched</Text>
+            <View style={styles.donutWrap}>
+              <MatchedRatioRing percent={matchedRatio.matchedPercent} />
+              <View style={styles.donutCenter}>
+                <Text style={styles.donutPercent}>{matchedRatio.matchedPercent}%</Text>
+                <Text style={styles.donutLabel}>Matched</Text>
+              </View>
             </View>
           </View>
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
               <View style={[styles.dot, { backgroundColor: "#8B1E1E" }]} />
-              <Text style={styles.legendText}>Matched (78%)</Text>
+              <Text style={styles.legendText}>Matched ({matchedRatio.matchedPercent}%)</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.dot, { backgroundColor: "#E5E7EB" }]} />
-              <Text style={styles.legendText}>Single (22%)</Text>
+              <Text style={styles.legendText}>Single ({matchedRatio.singlePercent}%)</Text>
             </View>
           </View>
         </View>
@@ -77,7 +153,7 @@ export function Analytics({ go }: { go: (x: Screen) => void }) {
                   <View
                     style={[
                       styles.yearBarFill,
-                      { height: `${y.percent * 1.8}%`, backgroundColor: y.color },
+                      { height: `${y.barHeightPercent}%`, backgroundColor: y.color },
                     ]}
                   />
                 </View>
@@ -97,7 +173,7 @@ export function Analytics({ go }: { go: (x: Screen) => void }) {
             <Text style={styles.cardTitle}>Lifestyle Tags Distribution</Text>
           </View>
           <View style={styles.tagsContainer}>
-            {lifestyleTags.map((item) => (
+            {tags.map((item) => (
               <View key={item.tag} style={styles.tagProgressRow}>
                 <Text style={styles.tagName}>{item.tag}</Text>
                 <View style={styles.tagTrack}>
@@ -171,13 +247,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 14,
   },
-  donutCircle: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    borderWidth: 12,
-    borderColor: "#8B1E1E",
-    borderRightColor: "#E5E7EB",
+  donutWrap: {
+    width: DONUT_SIZE,
+    height: DONUT_SIZE,
+  },
+  donutCenter: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: "center",
     justifyContent: "center",
   },
