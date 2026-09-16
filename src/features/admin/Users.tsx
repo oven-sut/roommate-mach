@@ -472,70 +472,8 @@ export function Users({ go }: { go: (x: Screen) => void }) {
           );
         })}
 
-        {/* Pagination */}
-        <View style={styles.paginationBar}>
-          <Text style={styles.paginationInfo}>
-            {filtered.length === 0
-              ? "ไม่พบผู้ใช้"
-              : `แสดง ${rangeStart}-${rangeEnd} จาก ${filtered.length} คน`}
-          </Text>
-
-          <View style={styles.pageSizeGroup}>
-            <Text style={styles.pageSizeLabel}>แสดงต่อหน้า</Text>
-            {([10, 30, 50, "all"] as PageSizeOption[]).map((opt) => (
-              <Pressable
-                key={String(opt)}
-                style={[styles.pageSizeBtn, pageSize === opt && styles.pageSizeBtnActive]}
-                onPress={() => setPageSize(opt)}
-              >
-                <Text
-                  style={[
-                    styles.pageSizeBtnText,
-                    pageSize === opt && styles.pageSizeBtnTextActive,
-                  ]}
-                >
-                  {opt === "all" ? "ทั้งหมด" : opt}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {pageSize !== "all" && pageCount > 1 ? (
-            <View style={styles.pageNavGroup}>
-              <Pressable
-                disabled={currentPage <= 1}
-                onPress={() => setPage((p) => Math.max(1, p - 1))}
-                style={[styles.pageNavBtn, currentPage <= 1 && styles.pageNavBtnDisabled]}
-              >
-                <Text
-                  style={[
-                    styles.pageNavBtnText,
-                    currentPage <= 1 && styles.pageNavBtnTextDisabled,
-                  ]}
-                >
-                  ก่อนหน้า
-                </Text>
-              </Pressable>
-              <Text style={styles.pageIndicator}>
-                หน้า {currentPage} / {pageCount}
-              </Text>
-              <Pressable
-                disabled={currentPage >= pageCount}
-                onPress={() => setPage((p) => Math.min(pageCount, p + 1))}
-                style={[styles.pageNavBtn, currentPage >= pageCount && styles.pageNavBtnDisabled]}
-              >
-                <Text
-                  style={[
-                    styles.pageNavBtnText,
-                    currentPage >= pageCount && styles.pageNavBtnTextDisabled,
-                  ]}
-                >
-                  ถัดไป
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
+        {/* Pagination (bottom, for after scrolling through the list) */}
+        {paginationBar}
       </View>
 
       {/* User Activity / History Modal */}
