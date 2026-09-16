@@ -288,7 +288,7 @@ export function Users({ go }: { go: (x: Screen) => void }) {
           />
         </View>
 
-        {/* Pagination (top) so the page-size and page controls don't require scrolling past the whole list */}
+        {/* Pagination */}
         {paginationBar}
 
         {/* Table View (Desktop) / Card View (Mobile) */}
@@ -471,9 +471,6 @@ export function Users({ go }: { go: (x: Screen) => void }) {
             </View>
           );
         })}
-
-        {/* Pagination (bottom, for after scrolling through the list) */}
-        {paginationBar}
       </View>
 
       {/* User Activity / History Modal */}
