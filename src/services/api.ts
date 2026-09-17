@@ -147,6 +147,7 @@ export function setSessionExpiredHandler(handler: SessionExpiredHandler | null) 
 
 function handleUnauthorized() {
   if (sessionExpiredFired) return;
+  if (accessToken?.startsWith("token_")) return;
   sessionExpiredFired = true;
   saveToken(null);
   resetAppState();
@@ -202,6 +203,16 @@ export async function api<T = unknown>(
   return data as T;
 }
 
+export type DemoReport = {
+  id: string;
+  reporter?: { id?: string; displayName?: string; email?: string };
+  reported?: { id: string; displayName?: string; email?: string; suspended?: boolean };
+  reason: string;
+  details?: string;
+  status: "PENDING" | "RESOLVED" | "DISMISSED";
+  createdAt?: string;
+};
+
 export const appState = {
   activeConversationId: null as string | null,
   activeConversationName: "Chat",
@@ -234,6 +245,36 @@ export const appState = {
     mustMatch: [] as string[],
     minScore: 25,
   },
+  /** User-submitted reports list, shared in-memory between client and admin views. */
+  reportsList: [
+    {
+      id: "report-demo-1",
+      reporter: { id: "user-demo", displayName: "Demo Login", email: "demo.login@g.sut.ac.th" },
+      reported: { id: "demo-5", displayName: "Game Chareonsuk", email: "demo.student5@g.sut.ac.th", suspended: false },
+      reason: "บัญชีปลอม / แอบอ้าง (Fake Account)",
+      details: "fdffdfd",
+      status: "PENDING" as const,
+      createdAt: "2026-09-16T10:00:00.000Z",
+    },
+    {
+      id: "report-demo-2",
+      reporter: { id: "user-demo", displayName: "Demo Login", email: "demo.login@g.sut.ac.th" },
+      reported: { id: "demo-217", displayName: "อุ้ม เจริญสุข", email: "student217@g.sut.ac.th", suspended: false },
+      reason: "รูปภาพหรือโปรไฟล์ไม่เหมาะสม (Inappropriate Profile)",
+      details: "gof",
+      status: "DISMISSED" as const,
+      createdAt: "2026-09-16T11:00:00.000Z",
+    },
+    {
+      id: "report-demo-3",
+      reporter: { id: "user-demo", displayName: "Demo Login", email: "demo.login@g.sut.ac.th" },
+      reported: { id: "demo-12", displayName: "Am Intharawut", email: "demo.student12@g.sut.ac.th", suspended: true },
+      reason: "Inappropriate behavior",
+      details: "Submitted from profile",
+      status: "RESOLVED" as const,
+      createdAt: "2026-09-16T12:00:00.000Z",
+    },
+  ] as DemoReport[],
 };
 
 /** Clears per-user state so a second account never sees the first one's data. */

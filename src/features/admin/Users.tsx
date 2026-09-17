@@ -68,7 +68,7 @@ function getDemoAdminUsers(): AdminUser[] {
     email: `student${index + 101}@g.sut.ac.th`,
     role: "USER",
     suspended: false,
-    verification: p.verification ?? { status: "VERIFIED" },
+    verification: p.verification ?? { status: "NOT_SUBMITTED" },
     _count: { reportsReceived: index % 17 === 0 ? 1 : 0 },
     sutId: `B66${String(10000 + index)}`,
     profile: p.profile,
