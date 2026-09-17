@@ -79,7 +79,8 @@ export function cardTags(person: MatchProfile | null | undefined): string[] {
 }
 
 export function isVerified(person: MatchProfile | null | undefined): boolean {
-  return person?.verification?.status === "VERIFIED";
+  const status = person?.verification?.status?.toUpperCase();
+  return status === "VERIFIED" || status === "APPROVED";
 }
 
 /** "matched 2 h ago" — coarse on purpose; exact times add no value here. */
@@ -179,26 +180,191 @@ const BIO_TEMPLATES = [
   "ชอบแต่งห้องสไตล์มินิมอล ล้างจานทันทีหลังกินเสร็จ ไม่ส่งเสียงดังหลัง 23:00 น."
 ];
 
-function generate100DemoProfiles(): MatchProfile[] {
-  const list: MatchProfile[] = [];
+import type { Answers } from "../questionnaire/questionnaire.content";
+
+export type DemoAnswers = {
+  sleepFrom: number;
+  sleepTo: number;
+  wakeFrom: number;
+  wakeTo: number;
+  cleanScore: number;
+  cleanHabits: string[];
+  overnight: string | null;
+  guestFrequency: number;
+  guestTimes: number;
+  guestTypes: string[];
+  acTiming: number;
+  acTemp: number;
+  quiet: number;
+  studyPlace: string | null;
+};
+
+export function calculateDynamicMatchScore(
+  userAnswers: Answers | null | undefined,
+  candidate: MatchProfile & { candidateAnswers?: DemoAnswers },
+): {
+  score: number;
+  breakdown: { sleep: number; cleanliness: number; guests: number; temperature: number };
+} {
+  if (!userAnswers || !candidate.candidateAnswers) {
+    return {
+      score: candidate.score ?? 75,
+      breakdown: candidate.breakdown ?? { sleep: 75, cleanliness: 75, guests: 75, temperature: 75 },
+    };
+  }
+
+  const cand = candidate.candidateAnswers;
+
+  // 1. Sleep similarity
+  const diffSleep = Math.abs((userAnswers.sleepFrom ?? 4) - cand.sleepFrom);
+  const diffWake = Math.abs((userAnswers.wakeFrom ?? 4) - cand.wakeFrom);
+  const sleepScore = Math.max(35, Math.min(100, Math.round(100 - (diffSleep * 8 + diffWake * 6))));
+
+  // 2. Cleanliness similarity
+  const diffClean = Math.abs((userAnswers.cleanScore ?? 3) - cand.cleanScore);
+  const cleanlinessScore = Math.max(35, Math.min(100, Math.round(100 - diffClean * 15)));
+
+  // 3. Guests similarity
+  const overnightMatch =
+    userAnswers.overnight === cand.overnight
+      ? 100
+      : !userAnswers.overnight || !cand.overnight || userAnswers.overnight === "sometime" || cand.overnight === "sometime"
+        ? 75
+        : 40;
+  const diffFreq = Math.abs((userAnswers.guestFrequency ?? 1) - cand.guestFrequency);
+  const guestsScore = Math.max(35, Math.min(100, Math.round(overnightMatch * 0.6 + (100 - diffFreq * 20) * 0.4)));
+
+  // 4. Temperature & Quiet environment similarity
+  const diffTemp = Math.abs((userAnswers.acTemp ?? 25) - cand.acTemp);
+  const diffQuiet = Math.abs((userAnswers.quiet ?? 4) - cand.quiet);
+  const studyMatch =
+    userAnswers.studyPlace && cand.studyPlace
+      ? userAnswers.studyPlace === cand.studyPlace
+        ? 100
+        : 70
+      : 85;
+  const temperatureScore = Math.max(
+    35,
+    Math.min(100, Math.round((100 - diffTemp * 8 - diffQuiet * 6) * 0.7 + studyMatch * 0.3))
+  );
+
+  // Overall Weighted Score
+  const totalScore = Math.round(
+    sleepScore * 0.3 + cleanlinessScore * 0.25 + guestsScore * 0.2 + temperatureScore * 0.25
+  );
+
+  return {
+    score: totalScore,
+    breakdown: {
+      sleep: sleepScore,
+      cleanliness: cleanlinessScore,
+      guests: guestsScore,
+      temperature: temperatureScore,
+    },
+  };
+}
+
+function generate100DemoProfiles(): (MatchProfile & { candidateAnswers?: DemoAnswers })[] {
+  const list: (MatchProfile & { candidateAnswers?: DemoAnswers })[] = [];
   const zones = ["Gate 1", "Gate 2", "Gate 3", "Gate 4", "Off-campus"];
   const roomTypes = ["Double", "Single", "Group"];
   const propertyTypes = ["Off-campus", "On-campus"];
+
+  const perfectAnswers: DemoAnswers = {
+    sleepFrom: 4,
+    sleepTo: 6,
+    wakeFrom: 4,
+    wakeTo: 8,
+    cleanScore: 5,
+    cleanHabits: ["Spotless", "Dishes same day"],
+    overnight: "no",
+    guestFrequency: 0,
+    guestTimes: 0,
+    guestTypes: ["Study group"],
+    acTiming: 2,
+    acTemp: 25,
+    quiet: 8,
+    studyPlace: "Library",
+  };
+
+  list.push({
+    id: "demo-match-perfect-1",
+    displayName: "กวิน วรเมธ (Kawin - 100% Match)",
+    score: 100,
+    breakdown: { sleep: 100, cleanliness: 100, guests: 100, temperature: 100 },
+    candidateAnswers: perfectAnswers,
+    tags: ["Early Riser 22:30", "Spotless 5/5", "Quiet Hours", "AC 25°C"],
+    verification: { status: "VERIFIED" },
+    profile: {
+      age: 20,
+      gender: "ชาย",
+      major: "วิศวกรรมคอมพิวเตอร์",
+      year: 2,
+      bio: "หาเพื่อนหารห้องวิศวะคอม นอนไว 22:30 น. แอร์ 25°C รักสะอาด 5/5 เงียบสงบ 100% แมตช์กันแน่นอนครับ!",
+      roomType: "Double",
+      propertyType: "On-campus",
+      zone: "Gate 1",
+      budgetMin: 3000,
+      budgetMax: 5000,
+      photos: [
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+      ],
+      completed: true,
+    },
+  });
+
+  list.push({
+    id: "demo-match-perfect-2",
+    displayName: "ฟ้า นภัสสร (Fah - 100% Match)",
+    score: 100,
+    breakdown: { sleep: 100, cleanliness: 100, guests: 100, temperature: 100 },
+    candidateAnswers: perfectAnswers,
+    tags: ["Early Riser 22:30", "Spotless 5/5", "Quiet Hours", "AC 25°C"],
+    verification: { status: "VERIFIED" },
+    profile: {
+      age: 20,
+      gender: "หญิง",
+      major: "วิศวกรรมคอมพิวเตอร์",
+      year: 2,
+      bio: "มองหารูมเมทสายตั้งใจเรียน นอนไว 22:30 น. แอร์ 25°C รักสะอาดมาก ชวนติววิศวะได้ค่ะ!",
+      roomType: "Double",
+      propertyType: "On-campus",
+      zone: "Gate 1",
+      budgetMin: 3000,
+      budgetMax: 5000,
+      photos: [
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
+      ],
+      completed: true,
+    },
+  });
 
   for (let i = 1; i <= 100; i++) {
     const isFemale = i % 2 === 1;
     const names = isFemale ? FEMALE_NAMES : MALE_NAMES;
     const nameIndex = Math.floor((i - 1) / 2) % names.length;
     const name = names[nameIndex];
-    
-    // Spread scores smoothly from 99% down to 52%
-    const score = Math.max(52, Math.min(99, Math.round(99 - ((i - 1) * 47) / 99)));
-    
-    // Slightly randomize breakdown components around the total score
-    const sleep = Math.min(100, Math.max(45, score + ((i % 5) - 2) * 3));
-    const cleanliness = Math.min(100, Math.max(45, score + (((i + 2) % 5) - 2) * 3));
-    const guests = Math.min(100, Math.max(45, score + (((i + 1) % 5) - 2) * 3));
-    const temperature = Math.min(100, Math.max(45, score + (((i + 3) % 5) - 2) * 3));
+
+    const candidateAnswers: DemoAnswers = {
+      sleepFrom: (i % 7) * 2,
+      sleepTo: (i % 7) * 2 + 2,
+      wakeFrom: (i % 4) * 2,
+      wakeTo: (i % 4) * 2 + 4,
+      cleanScore: 1 + (i % 5),
+      cleanHabits: i % 2 === 0 ? ["Spotless", "Dishes same day"] : ["Organized chaos", "Weekly deep clean"],
+      overnight: i % 3 === 0 ? "yes" : i % 3 === 1 ? "sometime" : "no",
+      guestFrequency: i % 4,
+      guestTimes: (i % 5) * 2,
+      guestTypes: i % 2 === 0 ? ["Close friends"] : ["Study group"],
+      acTiming: i % 4,
+      acTemp: 20 + ((i * 3) % 9),
+      quiet: 1 + ((i * 2) % 8),
+      studyPlace: i % 3 === 0 ? "In room" : i % 3 === 1 ? "Library" : "Cafe / out",
+    };
+
+    const initialResult = calculateDynamicMatchScore(null, { candidateAnswers });
+    const score = initialResult.score;
+    const { sleep, cleanliness, guests, temperature } = initialResult.breakdown;
 
     const photos = isFemale ? FEMALE_PHOTOS : MALE_PHOTOS;
     const photoUrl = photos[(i - 1) % photos.length];
@@ -206,22 +372,23 @@ function generate100DemoProfiles(): MatchProfile[] {
     const major = MAJORS_LIST[(i - 1) % MAJORS_LIST.length];
     const bio = BIO_TEMPLATES[(i - 1) % BIO_TEMPLATES.length];
 
-    const age = 18 + (i % 6); // 18-23
-    const year = 1 + (i % 4); // 1-4
+    const age = 18 + (i % 6);
+    const year = 1 + (i % 4);
     const zone = zones[i % zones.length];
     const roomType = roomTypes[i % roomTypes.length];
     const propertyType = propertyTypes[i % propertyTypes.length];
 
-    const budgetMin = 2000 + (i % 5) * 500; // 2000 - 4000
-    const budgetMax = budgetMin + 2500 + (i % 4) * 500; // 4500 - 7000
+    const budgetMin = 2000 + (i % 5) * 500;
+    const budgetMax = budgetMin + 2500 + (i % 4) * 500;
 
     list.push({
       id: `demo-${i}`,
       displayName: name,
       score,
       breakdown: { sleep, cleanliness, guests, temperature },
+      candidateAnswers,
       tags,
-      verification: { status: i % 4 === 0 ? "NOT_SUBMITTED" : "VERIFIED" },
+      verification: { status: "NOT_SUBMITTED" },
       profile: {
         age,
         gender: isFemale ? "หญิง" : "ชาย",
@@ -246,5 +413,7 @@ function generate100DemoProfiles(): MatchProfile[] {
  * Rich set of 100 diverse demo profiles with varied lifestyle questionnaire scores,
  * majors, room types, and match percentages (52% - 99%).
  */
-export const DEMO_PROFILES: MatchProfile[] = generate100DemoProfiles();
+export const DEMO_PROFILES: (MatchProfile & { candidateAnswers?: DemoAnswers })[] =
+  generate100DemoProfiles();
+
 

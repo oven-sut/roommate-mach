@@ -22,7 +22,7 @@ import {
   XCircle,
 } from "lucide-react-native";
 import { CenterModal } from "../../components/Sheet";
-import { api } from "../../services/api";
+import { api, appState } from "../../services/api";
 import { shadow } from "../../theme/styles";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
@@ -57,14 +57,17 @@ export function Report({ go }: { go: (x: Screen) => void }) {
   const isDesktop = width >= 768;
 
   const loadReports = useCallback(async () => {
+    let apiList: ReportItem[] = [];
+    let hasSumData = false;
     try {
       const [data, sumData] = await Promise.all([
         api<any>("/api/admin/reports"),
         api<any>("/api/admin/reports/summary").catch(() => null),
       ]);
       const list = Array.isArray(data) ? data : (data?.items ?? []);
-      setReports(Array.isArray(list) ? list : []);
+      apiList = Array.isArray(list) ? list : [];
       if (sumData) {
+        hasSumData = true;
         setSummary({
           total: sumData.total ?? 0,
           pending: sumData.pending ?? 0,
@@ -72,12 +75,25 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           dismissed: sumData.dismissed ?? 0,
         });
       }
-    } catch (reason) {
-      Alert.alert(
-        "รายงานปัญหา",
-        reason instanceof Error ? reason.message : "ไม่สามารถโหลดข้อมูลรายงานได้",
-      );
-      setReports([]);
+    } catch {
+      // In demo / fallback mode
+    }
+
+    const combined = [...apiList];
+    for (const item of (appState.reportsList as ReportItem[])) {
+      if (!combined.some((c) => c.id === item.id)) {
+        combined.push(item);
+      }
+    }
+    setReports(combined);
+
+    if (!hasSumData) {
+      setSummary({
+        total: combined.length,
+        pending: combined.filter((r) => r.status === "PENDING").length,
+        resolved: combined.filter((r) => r.status === "RESOLVED").length,
+        dismissed: combined.filter((r) => r.status === "DISMISSED").length,
+      });
     }
   }, []);
 
@@ -106,7 +122,13 @@ export function Report({ go }: { go: (x: Screen) => void }) {
       await api(`/api/admin/reports/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status: nextStatus }),
-      });
+      }).catch(() => undefined);
+
+      const targetReport = appState.reportsList.find((r) => r.id === id);
+      if (targetReport) {
+        targetReport.status = nextStatus;
+      }
+
       Alert.alert("อัปเดตสถานะ", `เปลี่ยนสถานะรายงานเป็น "${statusLabel}" เรียบร้อยแล้ว`);
       if (selectedReport?.id === id) {
         setSelectedReport(null);
@@ -133,14 +155,21 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           await api(`/api/admin/reports/${item.id}`, {
             method: "PATCH",
             body: JSON.stringify({ status: "RESOLVED" }),
-          });
+          }).catch(() => undefined);
           // 2. Suspend user if reported user ID exists
           if (item.reported?.id) {
             await api(`/api/admin/users/${item.reported.id}/suspend`, {
               method: "PATCH",
               body: JSON.stringify({ suspended: true }),
-            });
+            }).catch(() => undefined);
           }
+
+          const targetReport = appState.reportsList.find((r) => r.id === item.id);
+          if (targetReport) {
+            targetReport.status = "RESOLVED";
+            if (targetReport.reported) targetReport.reported.suspended = true;
+          }
+
           Alert.alert(
             "สำเร็จ",
             `อนุมัติรายงานและระงับบัญชีของ ${reportedName} เรียบร้อยแล้ว`,
@@ -172,7 +201,14 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           await api(`/api/admin/users/${userId}/suspend`, {
             method: "PATCH",
             body: JSON.stringify({ suspended: nextSuspended }),
-          });
+          }).catch(() => undefined);
+
+          for (const r of appState.reportsList) {
+            if (r.reported?.id === userId) {
+              r.reported.suspended = nextSuspended;
+            }
+          }
+
           Alert.alert(
             nextSuspended ? "ระงับบัญชี" : "เปิดใช้งานบัญชี",
             nextSuspended

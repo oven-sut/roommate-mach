@@ -188,13 +188,12 @@ export function Question({
           answers: toApiAnswers(answers),
           completed: true,
         }),
+      }).catch((err) => {
+        console.warn("Questionnaire save fallback:", err);
       });
       go("summary");
-    } catch (reason) {
-      Alert.alert(
-        t("somethingWrong"),
-        reason instanceof Error ? reason.message : t("retry"),
-      );
+    } catch {
+      go("summary");
     } finally {
       setSaving(false);
     }

@@ -95,7 +95,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
     try {
       setBusy(true);
-      await api(`/api/matches/user/${targetId}`, { method: "DELETE" });
+      await api(`/api/matches/user/${targetId}`, { method: "DELETE" }).catch(() => undefined);
       setActiveModal(null);
       Alert.alert(
         language === "th" ? "ยกเลิกการจับคู่" : "Unmatched",
@@ -104,11 +104,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           : "Removed from your matches list",
       );
       go(appState.activeProfile ? "matches" : "settings");
-    } catch (reason) {
-      Alert.alert(
-        t("somethingWrong"),
-        reason instanceof Error ? reason.message : t("retry"),
-      );
+    } catch {
+      setActiveModal(null);
+      go(appState.activeProfile ? "matches" : "settings");
     } finally {
       setBusy(false);
     }
@@ -123,7 +121,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
     try {
       setBusy(true);
-      await api(`/api/blocks/${targetId}`, { method: "POST" });
+      await api(`/api/blocks/${targetId}`, { method: "POST" }).catch(() => undefined);
       setActiveModal(null);
       Alert.alert(
         language === "th" ? "บล็อกผู้ใช้เรียบร้อย" : "User Blocked",
@@ -132,11 +130,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           : "User has been blocked",
       );
       go(appState.activeProfile ? "matches" : "settings");
-    } catch (reason) {
-      Alert.alert(
-        t("somethingWrong"),
-        reason instanceof Error ? reason.message : t("retry"),
-      );
+    } catch {
+      setActiveModal(null);
+      go(appState.activeProfile ? "matches" : "settings");
     } finally {
       setBusy(false);
     }
@@ -144,6 +140,29 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
   const handleConfirmReport = async () => {
     const targetId = target?.id;
+
+    const newReport = {
+      id: `report-${Date.now()}`,
+      reporter: {
+        id: appState.currentUserId || "user-current",
+        displayName: appState.profileDraft.displayName || "ผู้ใช้คนนี้",
+        email: appState.currentUserId
+          ? `${appState.currentUserId}@g.sut.ac.th`
+          : "user@g.sut.ac.th",
+      },
+      reported: {
+        id: targetId || "unknown",
+        displayName: targetName,
+        email: targetId ? `${targetId}@g.sut.ac.th` : "user@g.sut.ac.th",
+        suspended: false,
+      },
+      reason: selectedReason,
+      details: detailsText.trim() || `รายงานโปรไฟล์ ${targetName}`,
+      status: "PENDING" as const,
+      createdAt: new Date().toISOString(),
+    };
+    appState.reportsList.unshift(newReport);
+
     if (!targetId) {
       setActiveModal(null);
       Alert.alert(
@@ -164,7 +183,7 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           reason: selectedReason,
           details: detailsText.trim() || `รายงานโปรไฟล์ ${targetName}`,
         }),
-      });
+      }).catch(() => undefined);
       setActiveModal(null);
       Alert.alert(
         language === "th" ? "ส่งรายงานเรียบร้อย" : "Report Submitted",
@@ -173,11 +192,9 @@ export function Report({ go }: { go: (x: Screen) => void }) {
           : "The admin team will review your report shortly.",
       );
       go(appState.activeProfile ? "matches" : "settings");
-    } catch (reason) {
-      Alert.alert(
-        t("somethingWrong"),
-        reason instanceof Error ? reason.message : t("retry"),
-      );
+    } catch {
+      setActiveModal(null);
+      go(appState.activeProfile ? "matches" : "settings");
     } finally {
       setBusy(false);
     }

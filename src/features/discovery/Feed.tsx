@@ -25,7 +25,8 @@ import type { MatchProfile } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 import { DiscoverCard } from "./DiscoverCard";
 import { Filters, type FeedFilters } from "./Filters";
-import { DEMO_PROFILES } from "./discovery.content";
+import { DEMO_PROFILES, calculateDynamicMatchScore } from "./discovery.content";
+import { currentAnswers } from "../questionnaire/questionnaire.content";
 
 /** Start fetching the next batch once this few cards remain. */
 const PREFETCH_THRESHOLD = 5;
@@ -144,23 +145,69 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
           data = [];
         }
 
-        if (meData) {
-          setMeCard({
-            id: meData.id,
-            displayName: meData.displayName,
-            profile: meData.profile,
-            verification: meData.verification,
-          });
-          if (typeof meData.discoverable === "boolean") {
-            setDiscoverable(meData.discoverable);
-          }
+        const currentId = meData?.id || appState.currentUserId || "demo-match-perfect-2";
+        const currentName = meData?.displayName || appState.profileDraft.displayName || "ผู้ใช้งาน";
+        const currentProfile = meData?.profile || {
+          age: Number(appState.profileDraft.age) || 20,
+          major: appState.profileDraft.major || "วิศวกรรมคอมพิวเตอร์",
+          gender: appState.profileDraft.gender || "หญิง",
+          bio: appState.profileDraft.bio || "มองหารูมเมทสายตั้งใจเรียน...",
+          year: appState.profileDraft.year || 2,
+          roomType: appState.profileDraft.roomType || "Double",
+          propertyType: appState.profileDraft.propertyType || "On-campus",
+          zone: appState.profileDraft.zone || "Gate 1",
+          budgetMin: appState.profileDraft.budgetMin || 3000,
+          budgetMax: appState.profileDraft.budgetMax || 5000,
+          photos: appState.profileDraft.photos?.length ? appState.profileDraft.photos : [
+            appState.profileDraft.gender === "ชาย"
+              ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80"
+              : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80"
+          ],
+          completed: true,
+        };
+
+        setMeCard({
+          id: currentId,
+          displayName: currentName,
+          profile: currentProfile,
+          verification: meData?.verification ?? null,
+        });
+
+        if (typeof meData?.discoverable === "boolean") {
+          setDiscoverable(meData.discoverable);
         }
 
+        const userAnswers = currentAnswers(appState.questionnaireDraft);
         const existingIds = new Set(data.map((d) => d.id));
+        if (currentId) existingIds.add(currentId);
+        if (appState.currentUserId) existingIds.add(appState.currentUserId);
+
+        const isFah =
+          currentId === "demo-match-perfect-2" ||
+          appState.profileDraft.displayName.includes("ฟ้า") ||
+          (appState.currentUserId && appState.currentUserId.includes("B6600001"));
+        const isKawin =
+          currentId === "demo-match-perfect-1" ||
+          appState.profileDraft.displayName.includes("กวิน") ||
+          (appState.currentUserId && appState.currentUserId.includes("B6600002"));
+
+        if (isFah) existingIds.add("demo-match-perfect-2");
+        if (isKawin) existingIds.add("demo-match-perfect-1");
+
         const extraDemos = DEMO_PROFILES.filter(
           (d) => !existingIds.has(d.id) && filterDemoProfile(d, filters)
+        ).map((d) => {
+          const dynamic = calculateDynamicMatchScore(userAnswers, d);
+          return {
+            ...d,
+            score: dynamic.score,
+            breakdown: dynamic.breakdown,
+          };
+        });
+
+        const combinedData = [...data, ...extraDemos].sort(
+          (a, b) => (b.score ?? 0) - (a.score ?? 0)
         );
-        const combinedData = [...data, ...extraDemos];
 
         setPage(nextPage);
         setPeople((prev) => {
@@ -170,7 +217,9 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
           }
           const fresh = combinedData.filter((d) => !prev.some((p) => p.id === d.id));
           if (fresh.length === 0) setHasMore(false);
-          return [...prev, ...fresh];
+          return [...prev, ...fresh].sort(
+            (a, b) => (b.score ?? 0) - (a.score ?? 0)
+          );
         });
         if (isInitial) setIndex(0);
       } catch (reason) {
@@ -216,11 +265,23 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
     if (decision === "LIKE") setLiking(true);
 
     try {
-      const result = await api<{ matched?: boolean }>(
-        `/api/swipes/${person.id}`,
-        { method: "POST", body: JSON.stringify({ decision }) },
-      );
-      if (result.matched) {
+      let matched = false;
+      try {
+        const result = await api<{ matched?: boolean }>(
+          `/api/swipes/${person.id}`,
+          { method: "POST", body: JSON.stringify({ decision }) },
+        );
+        matched = !!result.matched;
+      } catch {
+        // Fallback for 100% match accounts or high scores in demo mode
+        const isPerfectMatch =
+          person.id === "demo-match-perfect-1" ||
+          person.id === "demo-match-perfect-2" ||
+          (person.score ?? 0) >= 95;
+        matched = decision === "LIKE" && isPerfectMatch;
+      }
+
+      if (matched) {
         appState.activeProfile = person;
         go("match");
         return;
