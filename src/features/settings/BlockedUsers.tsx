@@ -9,7 +9,7 @@ import {
   Txt,
 } from "../../components/ui";
 import { useI18n } from "../../i18n";
-import { api } from "../../services/api";
+import { api, appState } from "../../services/api";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
 import type { Screen } from "../../types/navigation";
@@ -28,16 +28,26 @@ export function BlockedUsers({ go }: { go: (x: Screen) => void }) {
 
   useEffect(() => {
     api<BlockedUser[]>("/api/blocks")
-      .then((data) => setBlocked(data ?? []))
-      .catch(() => setBlocked([]))
+      .then((data) => {
+        const apiItems = Array.isArray(data) ? data : [];
+        const combined = [...apiItems];
+        for (const item of appState.blockedList) {
+          if (!combined.some((c) => c.id === item.id)) {
+            combined.push(item);
+          }
+        }
+        setBlocked(combined);
+      })
+      .catch(() => setBlocked(appState.blockedList))
       .finally(() => setLoading(false));
   }, []);
 
   const unblock = async (userId: string) => {
     const previous = blocked;
     setBlocked((items) => items.filter((u) => u.id !== userId));
+    appState.blockedList = appState.blockedList.filter((u) => u.id !== userId);
     try {
-      await api(`/api/blocks/${userId}`, { method: "DELETE" });
+      await api(`/api/blocks/${userId}`, { method: "DELETE" }).catch(() => undefined);
     } catch (reason) {
       setBlocked(previous);
       Alert.alert(

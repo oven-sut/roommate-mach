@@ -332,7 +332,14 @@ export function Chat({ go }: { go: (x: Screen) => void }) {
     }
     try {
       setBusy(true);
-      await api(`/api/blocks/${otherUserId}`, { method: "POST" });
+      if (otherUserId && !appState.blockedList.some((b) => b.id === otherUserId)) {
+        appState.blockedList.push({
+          id: otherUserId,
+          displayName: name,
+          profile: photo ? { photos: [photo] } : undefined,
+        });
+      }
+      await api(`/api/blocks/${otherUserId}`, { method: "POST" }).catch(() => undefined);
       setActiveModal(null);
       Alert.alert(
         language === "th" ? "บล็อกผู้ใช้เรียบร้อย" : "User Blocked",

@@ -421,15 +421,6 @@ const dict: Dict = {
   accountStatus: { en: "Account status", th: "สถานะบัญชี" },
   activeVisible: { en: "Active · visible in Discover", th: "ใช้งานอยู่ · แสดงในหน้าค้นหา" },
   hiddenFromDiscover: { en: "Hidden from Discover", th: "ซ่อนจากหน้าค้นหา" },
-  accountHiddenNotice: {
-    en: "Your account is hidden from Discover",
-    th: "สถานะบัญชีของคุณถูกซ่อนจากหน้าค้นหา",
-  },
-  enableStatusToMatch: {
-    en: "Enable your account status in profile to start sliding and matching with roommates.",
-    th: "เปิดสถานะบัญชีในโปรไฟล์ของคุณเพื่อเริ่มปัดจับคู่กับเพื่อนร่วมห้อง",
-  },
-  goToProfile: { en: "Go to Profile", th: "ไปที่โปรไฟล์" },
   settingTitle: { en: "Setting", th: "ตั้งค่า" },
   blockUsers: { en: "Block users", th: "ผู้ใช้ที่บล็อก" },
   messageNotif: { en: "Message", th: "ข้อความ" },

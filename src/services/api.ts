@@ -245,6 +245,17 @@ export const appState = {
     mustMatch: [] as string[],
     minScore: 25,
   },
+  /** Blocked users list in memory. */
+  blockedList: [
+    {
+      id: "demo-25",
+      displayName: "ชลธิชา ศรีสุข (Fern)",
+      profile: {
+        photos: ["https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=600&q=80"],
+        major: "วิศวกรรมคอมพิวเตอร์",
+      },
+    },
+  ] as { id: string; displayName?: string; profile?: { photos?: string[]; major?: string } }[],
   /** User-submitted reports list, shared in-memory between client and admin views. */
   reportsList: [
     {

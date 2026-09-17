@@ -102,8 +102,8 @@ function ActionButton({
 function filterDemoProfile(d: MatchProfile, filters: FeedFilters): boolean {
   if (d.score !== undefined && d.score < filters.minScore) return false;
   if (filters.major && d.profile?.major !== filters.major) return false;
-  if (d.profile?.budgetMin !== undefined && d.profile.budgetMin > filters.budgetMax) return false;
-  if (d.profile?.budgetMax !== undefined && d.profile.budgetMax < filters.budgetMin) return false;
+  if (d.profile?.budgetMin != null && d.profile.budgetMin > filters.budgetMax) return false;
+  if (d.profile?.budgetMax != null && d.profile.budgetMax < filters.budgetMin) return false;
   return true;
 }
 

@@ -121,6 +121,13 @@ export function Report({ go }: { go: (x: Screen) => void }) {
 
     try {
       setBusy(true);
+      if (targetId && !appState.blockedList.some((b) => b.id === targetId)) {
+        appState.blockedList.push({
+          id: targetId,
+          displayName: targetName,
+          profile: { photos: target?.profile?.photos || [], major: target?.profile?.major || "" },
+        });
+      }
       await api(`/api/blocks/${targetId}`, { method: "POST" }).catch(() => undefined);
       setActiveModal(null);
       Alert.alert(
