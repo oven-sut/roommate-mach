@@ -10,7 +10,7 @@ import {
   Txt,
 } from "../../components/ui";
 import { useI18n } from "../../i18n";
-import { api } from "../../services/api";
+import { api, appState } from "../../services/api";
 import { C } from "../../theme/colors";
 import { s } from "../../theme/styles";
 import { F } from "../../theme/typography";
@@ -56,11 +56,25 @@ export function SearchUsers({ go }: { go: (x: Screen) => void }) {
         item.id === user.id ? { ...item, isBlocked: nextBlocked } : item,
       ),
     );
+
+    if (nextBlocked) {
+      if (!appState.blockedList.some((b) => b.id === user.id)) {
+        appState.blockedList.push({
+          id: user.id,
+          displayName: user.displayName,
+          profile: user.profile,
+        });
+      }
+    } else {
+      appState.blockedList = appState.blockedList.filter((b) => b.id !== user.id);
+    }
+
     try {
-      await api(nextBlocked ? "/api/users/block" : "/api/users/unblock", {
-        method: "POST",
-        body: JSON.stringify({ userId: user.id }),
-      });
+      if (nextBlocked) {
+        await api(`/api/blocks/${user.id}`, { method: "POST" }).catch(() => undefined);
+      } else {
+        await api(`/api/blocks/${user.id}`, { method: "DELETE" }).catch(() => undefined);
+      }
     } catch (reason) {
       setResults((items) =>
         items.map((item) =>

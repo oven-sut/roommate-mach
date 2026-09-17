@@ -388,7 +388,7 @@ function generate100DemoProfiles(): (MatchProfile & { candidateAnswers?: DemoAns
       breakdown: { sleep, cleanliness, guests, temperature },
       candidateAnswers,
       tags,
-      verification: { status: "NOT_SUBMITTED" },
+      verification: { status: "REJECTED" },
       profile: {
         age,
         gender: isFemale ? "หญิง" : "ชาย",
