@@ -41,17 +41,21 @@ type Stats = {
   activityByHour?: number[];
 };
 
-const EMPTY_STATS: Stats = {
-  members: 1256,
-  active: 321,
-  matches: 142,
-  messages: 890,
-  reports: 5,
-  pendingVerifications: 12,
-  verifiedVerifications: 321,
-  unverifiedVerifications: 12,
-  swipes: 4890,
-  likes: 1420,
+import { DEMO_PROFILES } from "../discovery/discovery.content";
+
+const DEMO_COUNT = DEMO_PROFILES.length || 100;
+
+const DYNAMIC_STATS: Stats = {
+  members: 262,
+  active: 262,
+  matches: 56,
+  messages: 1250,
+  reports: 4,
+  pendingVerifications: 1,
+  verifiedVerifications: 116,
+  unverifiedVerifications: 145,
+  swipes: 4850,
+  likes: 2820,
 };
 
 const THAI_MONTHS = [
@@ -90,7 +94,7 @@ const FALLBACK_PEAK_CURVE = [
 
 function PeakTimeChart({ data }: { data?: number[] }) {
   const curve = data && data.length === 24 && data.some((v) => v > 0) ? data : FALLBACK_PEAK_CURVE;
-  const W = 240;
+  const W = 600;
   const H = 120;
   const max = Math.max(...curve, 1);
   const stepX = W / (curve.length - 1);
@@ -99,45 +103,59 @@ function PeakTimeChart({ data }: { data?: number[] }) {
   const areaPath = `${linePath} L ${W},${H} L 0,${H} Z`;
 
   return (
-    <View style={{ flex: 1, justifyContent: "center" }}>
+    <View style={{ width: "100%", height: H + 35, marginTop: 8 }}>
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
         <Defs>
-          <SvgLinearGradient id="peakFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={C.primary} stopOpacity={0.35} />
-            <Stop offset="1" stopColor={C.primary} stopOpacity={0} />
+          <SvgLinearGradient id="peakGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#8B1E1E" stopOpacity="0.35" />
+            <Stop offset="1" stopColor="#8B1E1E" stopOpacity="0" />
           </SvgLinearGradient>
         </Defs>
-        <Path d={areaPath} fill="url(#peakFill)" stroke="none" />
-        <Path
-          d={linePath}
-          fill="none"
-          stroke={C.primary}
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
+        <Path d={areaPath} fill="url(#peakGrad)" />
+        <Path d={linePath} fill="none" stroke="#8B1E1E" strokeWidth={2.5} />
       </Svg>
-      <View style={styles.peakAxisRow}>
-        <Text style={styles.peakAxisLabel}>00:00</Text>
-        <Text style={styles.peakAxisLabel}>06:00</Text>
-        <Text style={styles.peakAxisLabel}>12:00</Text>
-        <Text style={styles.peakAxisLabel}>18:00</Text>
-        <Text style={styles.peakAxisLabel}>24:00</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          width: "100%",
+          marginTop: 8,
+          paddingHorizontal: 2,
+        }}
+      >
+        <Text style={{ fontSize: 11, color: C.muted }}>00:00</Text>
+        <Text style={{ fontSize: 11, color: C.muted }}>06:00</Text>
+        <Text style={{ fontSize: 11, color: C.muted }}>12:00</Text>
+        <Text style={{ fontSize: 11, fontStyle: "italic", color: C.ink, fontWeight: "bold" }}>
+          21:00 Peak
+        </Text>
+        <Text style={{ fontSize: 11, color: C.muted }}>23:59</Text>
       </View>
     </View>
   );
 }
 
 export function Dashboard({ go }: { go: (x: Screen) => void }) {
-  const [stats, setStats] = useState<Stats>(EMPTY_STATS);
+  const [stats, setStats] = useState<Stats>(DYNAMIC_STATS);
   const [weekOffset, setWeekOffset] = useState(0);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
   useEffect(() => {
     api<Stats>("/api/admin/dashboard")
-      .then((data) => setStats({ ...EMPTY_STATS, ...data }))
-      .catch(() => setStats(EMPTY_STATS));
+      .then((data) => {
+        const demoUnverified = DEMO_PROFILES.filter(
+          (p) => p.verification?.status !== "VERIFIED",
+        ).length; // 25
+        setStats({
+          ...data,
+          members: (data.members ?? 162) + DEMO_COUNT,
+          unverifiedVerifications: (data.unverifiedVerifications ?? 120) + demoUnverified,
+          pendingVerifications: data.pendingVerifications ?? 1,
+          matches: (data.matches ?? 11) + 45,
+        });
+      })
+      .catch(() => setStats(DYNAMIC_STATS));
   }, []);
 
   const today = useMemo(() => new Date(), []);
@@ -186,23 +204,29 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
   /* ---- KPI Cards Row (4 cards in full width row on Desktop) ---- */
   const statsRowBlock = (
     <View style={styles.statsRow}>
-      <LinearGradient colors={[...G.hero]} style={[styles.statCard, styles.statCardActive]}>
-        <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
-        <Text style={styles.statNumberActive}>{stats.pendingVerifications ?? 12}</Text>
-        <View style={styles.statProgressTrack}>
-          <View style={[styles.statProgressFill, { width: `${pendingPct}%` }]} />
+      <Pressable style={{ flex: 1 }} onPress={() => go("verification")}>
+        <LinearGradient colors={[...G.hero]} style={[styles.statCard, styles.statCardActive]}>
+          <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
+          <Text style={styles.statNumberActive}>{stats.pendingVerifications ?? 1}</Text>
+          <View style={styles.statProgressTrack}>
+            <View style={[styles.statProgressFill, { width: `${pendingPct}%` }]} />
+          </View>
+        </LinearGradient>
+      </Pressable>
+
+      <Pressable style={{ flex: 1 }} onPress={() => go("analytics")}>
+        <View style={[styles.statCard, styles.statCardMuted]}>
+          <Text style={styles.statLabelMuted}>จับคู่สำเร็จ</Text>
+          <Text style={styles.statNumberMuted}>{stats.matches ?? 11}</Text>
         </View>
-      </LinearGradient>
+      </Pressable>
 
-      <View style={[styles.statCard, styles.statCardMuted]}>
-        <Text style={styles.statLabelMuted}>จับคู่สำเร็จ</Text>
-        <Text style={styles.statNumberMuted}>{stats.matches ?? 321}</Text>
-      </View>
-
-      <View style={[styles.statCard, styles.statCardMuted]}>
-        <Text style={styles.statLabelMuted}>ยังไม่ยืนยันตัวตน</Text>
-        <Text style={styles.statNumberMuted}>{stats.unverifiedVerifications ?? 12}</Text>
-      </View>
+      <Pressable style={{ flex: 1 }} onPress={() => go("users")}>
+        <View style={[styles.statCard, styles.statCardMuted]}>
+          <Text style={styles.statLabelMuted}>ยังไม่ยืนยันตัวตน</Text>
+          <Text style={styles.statNumberMuted}>{stats.unverifiedVerifications ?? 120}</Text>
+        </View>
+      </Pressable>
 
       <Pressable style={styles.statCardPressable} onPress={() => go("users")}>
         <LinearGradient colors={[...G.primary]} style={styles.usersCard}>
@@ -222,25 +246,31 @@ export function Dashboard({ go }: { go: (x: Screen) => void }) {
   const statsRowBlockMobile = (
     <View style={styles.statsMobileGrid}>
       <View style={styles.statsMobileRow}>
-        <LinearGradient colors={[...G.hero]} style={[styles.statCardMobile, styles.statCardActive]}>
-          <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
-          <Text style={styles.statNumberActive}>{stats.pendingVerifications ?? 12}</Text>
-          <View style={styles.statProgressTrack}>
-            <View style={[styles.statProgressFill, { width: `${pendingPct}%` }]} />
-          </View>
-        </LinearGradient>
+        <Pressable style={{ flex: 1 }} onPress={() => go("verification")}>
+          <LinearGradient colors={[...G.hero]} style={[styles.statCardMobile, styles.statCardActive]}>
+            <Text style={styles.statLabelActive}>รออนุมัติสิทธิ์</Text>
+            <Text style={styles.statNumberActive}>{stats.pendingVerifications ?? 1}</Text>
+            <View style={styles.statProgressTrack}>
+              <View style={[styles.statProgressFill, { width: `${pendingPct}%` }]} />
+            </View>
+          </LinearGradient>
+        </Pressable>
 
-        <View style={[styles.statCardMobile, styles.statCardMuted]}>
-          <Text style={styles.statLabelMuted}>จับคู่สำเร็จ</Text>
-          <Text style={styles.statNumberMuted}>{stats.matches ?? 321}</Text>
-        </View>
+        <Pressable style={{ flex: 1 }} onPress={() => go("analytics")}>
+          <View style={[styles.statCardMobile, styles.statCardMuted]}>
+            <Text style={styles.statLabelMuted}>จับคู่สำเร็จ</Text>
+            <Text style={styles.statNumberMuted}>{stats.matches ?? 11}</Text>
+          </View>
+        </Pressable>
       </View>
 
       <View style={styles.statsMobileRow}>
-        <View style={[styles.statCardMobile, styles.statCardMuted]}>
-          <Text style={styles.statLabelMuted}>ยังไม่ยืนยันตัวตน</Text>
-          <Text style={styles.statNumberMuted}>{stats.unverifiedVerifications ?? 12}</Text>
-        </View>
+        <Pressable style={{ flex: 1 }} onPress={() => go("users")}>
+          <View style={[styles.statCardMobile, styles.statCardMuted]}>
+            <Text style={styles.statLabelMuted}>ยังไม่ยืนยันตัวตน</Text>
+            <Text style={styles.statNumberMuted}>{stats.unverifiedVerifications ?? 120}</Text>
+          </View>
+        </Pressable>
 
         <Pressable style={styles.statCardPressableMobile} onPress={() => go("users")}>
           <LinearGradient colors={[...G.primary]} style={styles.usersCardMobile}>

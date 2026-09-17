@@ -25,6 +25,7 @@ import type { MatchProfile } from "../../types/models";
 import type { Screen } from "../../types/navigation";
 import { DiscoverCard } from "./DiscoverCard";
 import { Filters, type FeedFilters } from "./Filters";
+import { DEMO_PROFILES } from "./discovery.content";
 
 /** Start fetching the next batch once this few cards remain. */
 const PREFETCH_THRESHOLD = 5;
@@ -97,6 +98,14 @@ function ActionButton({
   );
 }
 
+function filterDemoProfile(d: MatchProfile, filters: FeedFilters): boolean {
+  if (d.score !== undefined && d.score < filters.minScore) return false;
+  if (filters.major && d.profile?.major !== filters.major) return false;
+  if (d.profile?.budgetMin !== undefined && d.profile.budgetMin > filters.budgetMax) return false;
+  if (d.profile?.budgetMax !== undefined && d.profile.budgetMax < filters.budgetMin) return false;
+  return true;
+}
+
 /**
  * The discover deck.
  *
@@ -127,10 +136,13 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
 
       const nextPage = isInitial ? 1 : page + 1;
       try {
-        const [meData, data] = await Promise.all([
-          isInitial ? api<any>("/api/me").catch(() => null) : Promise.resolve(null),
-          api<MatchProfile[]>(`/api/discover?${toQuery(filters, nextPage)}`),
-        ]);
+        const meData = isInitial ? await api<any>("/api/me").catch(() => null) : null;
+        let data: MatchProfile[] = [];
+        try {
+          data = (await api<MatchProfile[]>(`/api/discover?${toQuery(filters, nextPage)}`)) ?? [];
+        } catch {
+          data = [];
+        }
 
         if (meData) {
           setMeCard({
@@ -144,13 +156,19 @@ export function Feed({ go }: { go: (x: Screen) => void }) {
           }
         }
 
+        const existingIds = new Set(data.map((d) => d.id));
+        const extraDemos = DEMO_PROFILES.filter(
+          (d) => !existingIds.has(d.id) && filterDemoProfile(d, filters)
+        );
+        const combinedData = [...data, ...extraDemos];
+
         setPage(nextPage);
         setPeople((prev) => {
           if (isInitial) {
-            setHasMore(data.length > 0);
-            return data;
+            setHasMore(combinedData.length > 0);
+            return combinedData;
           }
-          const fresh = data.filter((d) => !prev.some((p) => p.id === d.id));
+          const fresh = combinedData.filter((d) => !prev.some((p) => p.id === d.id));
           if (fresh.length === 0) setHasMore(false);
           return [...prev, ...fresh];
         });

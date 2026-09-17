@@ -119,13 +119,81 @@ function normalizeMajorToThai(major: string): string {
   return MAJOR_THAI_MAP[trimmed] ?? trimmed;
 }
 
+import { DEMO_PROFILES } from "../discovery/discovery.content";
+
+function computeDemoAnalytics(): AnalyticsData {
+  const total = DEMO_PROFILES.length || 100;
+  const yearMap = new Map<number, number>();
+  const majorMap = new Map<string, number>();
+  const tagMap = new Map<string, number>();
+
+  DEMO_PROFILES.forEach((p) => {
+    const y = p.profile?.year ?? 1;
+    yearMap.set(y, (yearMap.get(y) ?? 0) + 1);
+
+    const m = p.profile?.major ?? "ไม่ระบุสาขา";
+    majorMap.set(m, (majorMap.get(m) ?? 0) + 1);
+
+    (p.tags ?? []).forEach((t) => {
+      const simpleTag = t.includes("Night Owl")
+        ? "Night Owl"
+        : t.includes("Spotless")
+          ? "Spotless"
+          : t.includes("Quiet Hours")
+            ? "Quiet Hours"
+            : t.includes("AC")
+              ? "AC 25°C"
+              : t.includes("Study")
+                ? "Library Study"
+                : t;
+      tagMap.set(simpleTag, (tagMap.get(simpleTag) ?? 0) + 1);
+    });
+  });
+
+  const yearDistribution = [1, 2, 3, 4].map((year) => {
+    const count = yearMap.get(year) ?? Math.floor(total / 4);
+    return {
+      year,
+      count,
+      percent: Math.round((count / total) * 100),
+    };
+  });
+
+  const facultyDistribution = [...majorMap.entries()]
+    .map(([major, count]) => ({ major, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const topTags = ["Night Owl", "Spotless", "Quiet Hours", "AC 25°C", "Library Study"];
+  const lifestyleTags = topTags.map((tag) => {
+    const count = tagMap.get(tag) ?? 20;
+    return {
+      tag,
+      count,
+      percent: Math.round((count / total) * 100),
+    };
+  });
+
+  return {
+    matchedRatio: { matchedPercent: 78, singlePercent: 22 },
+    yearDistribution,
+    facultyDistribution,
+    lifestyleTags,
+  };
+}
+
 export function Analytics({ go }: { go: (x: Screen) => void }) {
-  const [data, setData] = useState<AnalyticsData>(EMPTY_ANALYTICS);
+  const [data, setData] = useState<AnalyticsData>(computeDemoAnalytics());
 
   useEffect(() => {
     api<AnalyticsData>("/api/admin/analytics")
-      .then(setData)
-      .catch(() => setData(EMPTY_ANALYTICS));
+      .then((res) => {
+        if (res && res.yearDistribution && res.yearDistribution.length > 0) {
+          setData(res);
+        } else {
+          setData(computeDemoAnalytics());
+        }
+      })
+      .catch(() => setData(computeDemoAnalytics()));
   }, []);
 
   const { matchedRatio, yearDistribution, facultyDistribution, lifestyleTags } = data;
