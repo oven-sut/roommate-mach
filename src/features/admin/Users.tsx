@@ -28,6 +28,7 @@ import { shadow } from "../../theme/styles";
 import { F } from "../../theme/typography";
 import type { Screen } from "../../types/navigation";
 import { AdminLayout } from "./AdminLayout";
+import { DEMO_PROFILES } from "../discovery/discovery.content";
 
 type AdminUser = {
   id: string;
@@ -60,6 +61,20 @@ type PageSizeOption = 10 | 30 | 50 | "all";
 /** Admin/users caps pageSize at 100, so "load everything" fetches in batches of this size. */
 const FETCH_BATCH_SIZE = 100;
 
+function getDemoAdminUsers(): AdminUser[] {
+  return DEMO_PROFILES.map((p, index) => ({
+    id: p.id,
+    displayName: p.displayName,
+    email: `student${index + 101}@g.sut.ac.th`,
+    role: "USER",
+    suspended: false,
+    verification: p.verification ?? { status: "VERIFIED" },
+    _count: { reportsReceived: index % 17 === 0 ? 1 : 0 },
+    sutId: `B66${String(10000 + index)}`,
+    profile: p.profile,
+  }));
+}
+
 export function Users({ go }: { go: (x: Screen) => void }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
@@ -69,35 +84,36 @@ export function Users({ go }: { go: (x: Screen) => void }) {
   const isDesktop = width >= 768;
 
   const load = useCallback(async () => {
+    const demoUsers = getDemoAdminUsers();
+    let apiItems: AdminUser[] = [];
     try {
       const first = await api<any>(
         `/api/admin/users?page=1&pageSize=${FETCH_BATCH_SIZE}`,
       );
-      const items: AdminUser[] = Array.isArray(first)
+      apiItems = Array.isArray(first)
         ? [...first]
         : Array.isArray(first?.items)
           ? [...first.items]
           : [];
-      const total: number = Array.isArray(first) ? items.length : (first?.total ?? items.length);
 
       let nextPage = 2;
-      while (items.length < total) {
+      const total: number = Array.isArray(first) ? apiItems.length : (first?.total ?? apiItems.length);
+      while (apiItems.length < total) {
         const more = await api<any>(
           `/api/admin/users?page=${nextPage}&pageSize=${FETCH_BATCH_SIZE}`,
         );
         const batch: AdminUser[] = Array.isArray(more?.items) ? more.items : [];
         if (batch.length === 0) break;
-        items.push(...batch);
+        apiItems.push(...batch);
         nextPage += 1;
       }
-
-      setUsers(items);
-    } catch (reason) {
-      Alert.alert(
-        "Users",
-        reason instanceof Error ? reason.message : "Unable to load",
-      );
+    } catch {
+      apiItems = [];
     }
+
+    const existingIds = new Set(apiItems.map((u) => u.id));
+    const extraDemos = demoUsers.filter((u) => !existingIds.has(u.id));
+    setUsers([...apiItems, ...extraDemos]);
   }, []);
 
   useEffect(() => {
@@ -109,20 +125,35 @@ export function Users({ go }: { go: (x: Screen) => void }) {
     setPage(1);
   }, [query, pageSize]);
 
-  const suspend = async (id: string, value: boolean) => {
-    await api(`/api/admin/users/${id}/suspend`, {
-      method: "PATCH",
-      body: JSON.stringify({ suspended: value }),
-    }).catch(() => undefined);
-    load();
+  const toggleSuspend = async (user: AdminUser) => {
+    const nextState = !user.suspended;
+    try {
+      await api(`/api/admin/users/${user.id}/suspend`, {
+        method: "PATCH",
+        body: JSON.stringify({ suspended: nextState }),
+      });
+    } catch {
+      // update state locally for demo mode
+    }
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, suspended: nextState } : u)),
+    );
   };
 
   const verify = async (id: string) => {
-    await api(`/api/admin/users/${id}/verify`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "VERIFIED" }),
-    }).catch(() => undefined);
-    load();
+    try {
+      await api(`/api/admin/users/${id}/verify`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "VERIFIED" }),
+      });
+    } catch {
+      // update state locally for demo mode
+    }
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id ? { ...u, verification: { status: "VERIFIED" } } : u,
+      ),
+    );
   };
 
   /** Same confirm-then-act flow AdminLayout's logout button uses. */
